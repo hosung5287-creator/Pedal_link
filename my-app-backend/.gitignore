@@ -46,3 +46,4 @@ build/
 .settings/
 .classpath
 .project
+/.metadata/

@@ -13,7 +13,6 @@ export default function MapPage({ onBackHome }) {
   const [isRouting, setIsRouting] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState('전체');
   const [cyclewayData, setCyclewayData] = useState(null);
-  const [incheonLayer, setIncheonLayer] = useState(null);
   const [searchMode, setSearchMode] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -41,7 +40,7 @@ export default function MapPage({ onBackHome }) {
   useEffect(() => { selectedRegionRef.current = selectedRegion; }, [selectedRegion]);
 
   useEffect(() => {
-    fetch('/data/seoul_cycleway.geojson')
+    fetch('http://localhost:8080/api/cycleways')
       .then(r => r.json())
       .then(data => setCyclewayData(data))
       .catch(() => {});
@@ -338,44 +337,6 @@ export default function MapPage({ onBackHome }) {
     }
   }, []);
 
-  // 인천 자전거도로 불러오기 함수
-  const loadIncheonCycleway = async () => {
-    // 이미 표시중이면 제거
-    if (incheonLayer) {
-      mapRef.current.removeLayer(incheonLayer);
-      setIncheonLayer(null);
-      return;
-    }
-
-    try {
-      const res = await fetch('http://localhost:8080/api/cycleway/incheon');
-      const geojsonText = await res.json();
-      const geojson = typeof geojsonText === 'string' 
-        ? JSON.parse(geojsonText) 
-        : geojsonText;
-
-      const layer = L.geoJSON(geojson, {
-        style: {
-          color: '#2563eb',
-          weight: 2,
-          opacity: 0.7,
-          fillColor: '#2563eb',
-          fillOpacity: 0.2
-        }
-      }).addTo(mapRef.current);
-
-      // 인천으로 지도 이동
-      mapRef.current.flyToBounds(layer.getBounds(), { 
-        padding: [40, 40], 
-        duration: 0.8 
-      });
-
-      setIncheonLayer(layer);
-    } catch (e) {
-      console.error('인천 자전거도로 로딩 실패:', e);
-    }
-  };
-
   const resetPlanner = useCallback(() => {
     setStartPoint(null);
     setEndPoint(null);
@@ -404,16 +365,9 @@ export default function MapPage({ onBackHome }) {
           </label>
           <label className="regionSelect">
             <span>{text.regionLabel}</span>
-            <select value={selectedRegion} onChange={(e) => {
-              const val = e.target.value;
-              setSelectedRegion(val);
-              if (val === '인천') {
-                loadIncheonCycleway();
-              }
-            }}>
+            <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
               <option value="전체">{text.regionAll}</option>
               {GU_LIST.map(gu => <option key={gu} value={gu}>{gu}</option>)}
-              <option value="인천">인천</option>
             </select>
           </label>
           <a className="mapCloseButton" href="/" onClick={onBackHome}>{text.close}</a>

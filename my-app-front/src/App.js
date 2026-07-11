@@ -9,6 +9,8 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
+import SignupPage from './pages/SignupPage';
+import PartyPage from './pages/PartyPage';
 
 // webpack이 Leaflet 마커 아이콘 경로를 잘못 처리하는 문제 수정
 delete L.Icon.Default.prototype._getIconUrl;
@@ -35,9 +37,13 @@ function App() {
 
   const openMap = (e) => { e.preventDefault(); window.open('/map', '_blank', 'noopener,noreferrer'); };
   const moveHome = (e) => { e.preventDefault(); moveTo('/'); };
+  const moveSignup = (e) => { e.preventDefault(); moveTo('/signup'); };
+  const moveParty = (e) => { e.preventDefault(); moveTo('/party'); };
 
   if (currentPath === '/map') return <MapPage onBackHome={moveHome} />;
-  return <HomePage onOpenMap={openMap} onMoveHome={moveHome} />;
+  if (currentPath === '/signup') return <SignupPage onMoveHome={moveHome} />;
+  if (currentPath === '/party') return <PartyPage onMoveHome={moveHome} />;
+  return <HomePage onOpenMap={openMap} onMoveHome={moveHome} onMoveSignup={moveSignup} onMoveParty={moveParty} />;
 }
 
 export default App;

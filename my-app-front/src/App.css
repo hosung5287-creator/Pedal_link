@@ -776,6 +776,340 @@ main {
   font-weight: 900;
 }
 
+/* ── 내비게이션 우측 액션 (회원가입 + 지도 보기) ── */
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.signupLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.signupLink:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #ffffff;
+}
+
+/* ── 회원가입 페이지 ── */
+.signupPage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding-bottom: 64px;
+}
+
+.signupPage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(9, 27, 22, 0.82) 0%, rgba(9, 27, 22, 0.58) 52%, rgba(9, 27, 22, 0.3) 100%);
+  z-index: 1;
+}
+
+.signupPage .navbar {
+  flex-shrink: 0;
+}
+
+.signupBackLink {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.96rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.signupBackLink:hover {
+  color: #ffffff;
+}
+
+.signupLayout {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+  width: min(1180px, calc(100% - 40px));
+  margin: auto;
+  padding: 48px 0;
+}
+
+.signupIntro {
+  color: #ffffff;
+}
+
+.signupHeadline {
+  margin: 0 0 18px;
+  font-size: clamp(2.2rem, 4.6vw, 3.7rem);
+  line-height: 1.06;
+  white-space: pre-line;
+}
+
+.signupSub {
+  margin: 0 0 28px;
+  max-width: 420px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.signupPerks {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signupPerks li {
+  position: relative;
+  padding-left: 30px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.signupPerks li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px 11px no-repeat;
+}
+
+.signupCard {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 32px 80px rgba(4, 18, 14, 0.45);
+  padding: clamp(26px, 4vw, 40px);
+}
+
+.signupCardTitle {
+  margin: 0 0 6px;
+  font-size: 1.65rem;
+  letter-spacing: 0;
+}
+
+.signupCardSub {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.signupForm {
+  display: grid;
+  gap: 16px;
+}
+
+.signupField {
+  display: grid;
+  gap: 7px;
+}
+
+.signupField span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.signupField input {
+  min-height: 48px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.signupField input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.signupField input:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+  outline: none;
+}
+
+.signupError {
+  margin: 0;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 11px 14px;
+}
+
+.signupButton {
+  min-height: 52px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mint);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.signupButton:hover {
+  background: var(--mint-dark);
+}
+
+.signupButton:active {
+  transform: translateY(1px);
+}
+
+.signupDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.signupDivider::before,
+.signupDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.signupSocial {
+  display: grid;
+  gap: 10px;
+}
+
+.socialButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 700;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+
+.socialButton:active {
+  transform: translateY(1px);
+}
+
+.socialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.socialGoogle {
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #3c4043;
+}
+
+.socialGoogle:hover {
+  background: #f7f8f8;
+  border-color: #c6cace;
+}
+
+.socialNaver {
+  border: 0;
+  background: #03c75a;
+  color: #ffffff;
+}
+
+.socialNaver:hover {
+  background: #02b350;
+}
+
+.signupDone {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 18px 0;
+}
+
+.signupDoneIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  color: var(--mint-dark);
+}
+
+.signupDone h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.signupDone p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.signupDone .signupButton {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .signupLayout {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding: 28px 0 12px;
+  }
+
+  .signupIntro {
+    text-align: left;
+  }
+}
+
 @keyframes slideLeft {
   from {
     transform: translateX(0);
@@ -879,5 +1213,272 @@ main {
 
   .plannerSearchRow {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 파티 페이지 ===== */
+.partyPage {
+  min-height: 100vh;
+  background: var(--wash);
+}
+
+/* 파티 페이지 상단 네비는 밝은 배경 위에 있으므로 글씨를 어둡게 */
+.partyPage .brand,
+.partyPage .signupBackLink {
+  color: var(--ink);
+}
+
+.partyPage .signupBackLink:hover {
+  color: var(--mint-dark);
+}
+
+.partyHero {
+  padding: 48px 24px 40px;
+  background-size: cover;
+  background-position: center;
+  color: #ffffff;
+  text-align: center;
+}
+
+.partyHero .eyebrow {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.partyHero h1 {
+  margin: 6px 0 10px;
+  font-size: 2.4rem;
+}
+
+.partyHeroSub {
+  margin: 0;
+  font-size: 1.02rem;
+  opacity: 0.92;
+}
+
+.partyLayout {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  display: grid;
+  gap: 40px;
+}
+
+.partySection > h2 {
+  margin: 0 0 16px;
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.partyEmpty {
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--paper);
+  text-align: center;
+}
+
+/* 저장 경로 목록 */
+.routePickList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.routePick {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.routePickInfo h4 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.routePickInfo p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* 공통 버튼 */
+.partyPrimaryBtn {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.partyPrimaryBtn:hover:not(:disabled) {
+  background: var(--mint-dark);
+}
+
+.partyPrimaryBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.partyPrimaryBtn:disabled {
+  background: #b8c4c0;
+  cursor: not-allowed;
+}
+
+.partyGhostBtn {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 번개 만들기 폼 */
+.partyForm {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.partyForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.partyForm input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font: inherit;
+  color: var(--ink);
+}
+
+.partyForm input:focus {
+  outline: none;
+  border-color: var(--mint);
+}
+
+.partyFormRow {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  gap: 12px;
+}
+
+.partyFormActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* 번개 카드 */
+.partyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.partyCard {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 6px 18px rgba(20, 34, 29, 0.05);
+}
+
+.partyCard.isFull {
+  opacity: 0.72;
+}
+
+.partyCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.partyCardHead h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.partyRouteTag {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--wash);
+  color: var(--mint-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.partyCardRoute {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.partyCardMeta {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.partyCardMeta > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.partyCardMeta dt {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 700;
+  min-width: 40px;
+}
+
+.partyCardMeta dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.partyJoinBtn {
+  justify-self: stretch;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .partyFormRow {
+    grid-template-columns: 1fr;
+  }
+  .partyHero h1 {
+    font-size: 2rem;
   }
 }

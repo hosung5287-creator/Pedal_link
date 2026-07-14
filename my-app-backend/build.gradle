@@ -37,10 +37,9 @@ dependencies {
     implementation 'org.postgresql:postgresql'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-     implementation 'org.hibernate.orm:hibernate-spatial'
+    implementation 'org.hibernate.orm:hibernate-spatial'
 
-	 //시큐리티 의존성 
-	 implementation 'org.springframework.boot:spring-boot-starter-security'
+
 
     
 }

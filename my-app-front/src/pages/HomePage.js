@@ -31,7 +31,7 @@ function RecentRoutes({ routeLoop }) {
   );
 }
 
-export default function HomePage({ onOpenMap, onMoveHome }) {
+export default function HomePage({ onOpenMap, onMoveHome, onMoveSignup, onMoveParty }) {
   const routeLoop = useMemo(() => [...routes, ...routes], []);
 
   return (
@@ -42,9 +42,13 @@ export default function HomePage({ onOpenMap, onMoveHome }) {
           <div className="navLinks">
             <a href="/">{text.browse}</a>
             <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
-            <a href="/">{text.premium}</a>
+            <a href="/">{text.nearby}</a>
+            <a href="/party" onClick={onMoveParty}>{text.party}</a>
           </div>
-          <button className="appButton" type="button" onClick={onOpenMap}>{text.mapButton}</button>
+          <div className="navActions">
+            <a className="signupLink" href="/signup" onClick={onMoveSignup}>{text.signup}</a>
+            <button className="appButton" type="button" onClick={onOpenMap}>{text.mapButton}</button>
+          </div>
         </nav>
         <div className="heroContent">
           <h1>{text.headline}</h1>

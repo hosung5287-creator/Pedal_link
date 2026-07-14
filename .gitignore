@@ -1,0 +1,22 @@
+# Claude Code 로컬 설정
+.claude/
+
+# Eclipse IDE 워크스페이스 캐시
+.metadata/
+
+# Eclipse 프로젝트 로컬 설정
+.settings/
+.project
+.classpath
+bin/
+
+# Gradle
+.gradle/
+build/
+
+# Obsidian 로컬 UI 상태 (나머지 .obsidian 설정은 공유)
+.obsidian/workspace.json
+
+# OS
+.DS_Store
+Thumbs.db

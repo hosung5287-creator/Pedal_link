@@ -2,6 +2,7 @@ import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
 import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways } from '../utils/leaflet';
+import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi } from '../api/routes';
 
 export default function MapPage({ onBackHome }) {
   const [mapLayer, setMapLayer] = useState('mapnik');
@@ -40,8 +41,7 @@ export default function MapPage({ onBackHome }) {
   useEffect(() => { selectedRegionRef.current = selectedRegion; }, [selectedRegion]);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/cycleways')
-      .then(r => r.json())
+    getCycleways()
       .then(data => setCyclewayData(data))
       .catch(() => {});
   }, []);
@@ -257,26 +257,24 @@ export default function MapPage({ onBackHome }) {
       shortestRoute: shortestRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
     };
 
-    await fetch('http://localhost:8080/api/routes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    alert('저장 완료!');
+    try {
+      await saveRouteApi(body);
+      alert('저장 완료!');
+    } catch (e) {
+      alert('저장 실패: ' + e.message);
+    }
   };
 
   // 목록 불러오기
   const loadRouteList = async () => {
-    const res = await fetch('http://localhost:8080/api/routes');
-    const data = await res.json();
+    const data = await getRoutes();
     setRouteList(data);
     setShowRouteList(true);
   };
 
   // 특정 경로 선택해서 지도에 표시
  const loadRouteById = async (id) => {
-    const res = await fetch(`http://localhost:8080/api/routes/${id}`);
-    const data = await res.json();
+    const data = await getRouteById(id);
 
     console.log('불러온 데이터:', data); // 콘솔에서 확인용
 

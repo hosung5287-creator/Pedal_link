@@ -1062,6 +1062,25 @@ main {
   background: #02b350;
 }
 
+/* 로그인 ↔ 회원가입 전환 링크 */
+.authSwitch {
+  margin: 18px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.authSwitch a {
+  color: var(--mint-dark);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.authSwitch a:hover {
+  text-decoration: underline;
+}
+
 .signupDone {
   display: grid;
   justify-items: center;

@@ -26,5 +26,6 @@ yarn-error.log*
 src/*.py
 
 # Claude Code internal files
+.claude/
 CLAUDE.md
 WORK_LOG.md

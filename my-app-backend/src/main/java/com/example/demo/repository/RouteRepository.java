@@ -15,4 +15,6 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
     //Optional<Route> findTopByOrderByCreatedAtDesc();
     
     List<Route> findAllByOrderByCreatedAtDesc();
+
+    List<Route> findByUserIdOrderByCreatedAtDesc(Long userId);
 }

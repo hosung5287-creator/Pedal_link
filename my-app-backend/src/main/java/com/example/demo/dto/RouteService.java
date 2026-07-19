@@ -48,6 +48,7 @@ public class RouteService {
     // 저장
     public Long saveRoute(RouteRequest req) {
         Route route = new Route();
+        route.setUserId(req.getUserId());
         route.setRouteName(req.getRouteName());
         route.setFromLat(req.getFromLat());
         route.setFromLng(req.getFromLng());
@@ -60,9 +61,11 @@ public class RouteService {
         return routeRepository.save(route).getId();
     }
 
-    public List<Map<String, Object>> getRouteList() {
-        return routeRepository.findAllByOrderByCreatedAtDesc()
-            .stream()
+    public List<Map<String, Object>> getRouteList(Long userId) {
+        List<Route> routes = (userId != null)
+            ? routeRepository.findByUserIdOrderByCreatedAtDesc(userId)
+            : routeRepository.findAllByOrderByCreatedAtDesc();
+        return routes.stream()
             .map(r -> {
                 Map<String, Object> m = new HashMap<>();
                 m.put("id", r.getId());
@@ -73,6 +76,11 @@ public class RouteService {
                 return m;
             })
             .collect(Collectors.toList());
+    }
+
+    // 여러 경로 삭제
+    public void deleteRoutes(java.util.List<Long> ids) {
+        routeRepository.deleteAllById(ids);
     }
 
     // 특정 경로 1개 조회 (id로)

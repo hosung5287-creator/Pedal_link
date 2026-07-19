@@ -9,6 +9,9 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
+import SignupPage from './pages/SignupPage';
+import LoginPage from './pages/LoginPage';
+import PartyPage from './pages/PartyPage';
 
 // webpack이 Leaflet 마커 아이콘 경로를 잘못 처리하는 문제 수정
 delete L.Icon.Default.prototype._getIconUrl;
@@ -20,6 +23,9 @@ L.Icon.Default.mergeOptions({
 
 function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
+  });
 
   useEffect(() => {
     const handlePopState = () => setCurrentPath(window.location.pathname);
@@ -35,9 +41,39 @@ function App() {
 
   const openMap = (e) => { e.preventDefault(); window.open('/map', '_blank', 'noopener,noreferrer'); };
   const moveHome = (e) => { e.preventDefault(); moveTo('/'); };
+  const moveSignup = (e) => { e.preventDefault(); moveTo('/signup'); };
+  const moveLogin = (e) => { e.preventDefault(); moveTo('/login'); };
+  const moveParty = (e) => { e.preventDefault(); moveTo('/party'); };
 
-  if (currentPath === '/map') return <MapPage onBackHome={moveHome} />;
-  return <HomePage onOpenMap={openMap} onMoveHome={moveHome} />;
+  const handleLogin = (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    moveTo('/');
+  };
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    moveTo('/');
+  };
+
+  // 로그인 상태에서 로그인/회원가입 페이지 접근 시 홈으로
+  if (user && (currentPath === '/login' || currentPath === '/signup')) moveTo('/');
+
+  if (currentPath === '/map') return <MapPage user={user} onBackHome={moveHome} />;
+  if (currentPath === '/signup') return <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
+  if (currentPath === '/login') return <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
+  if (currentPath === '/party') return <PartyPage onMoveHome={moveHome} />;
+  return (
+    <HomePage
+      user={user}
+      onOpenMap={openMap}
+      onMoveHome={moveHome}
+      onMoveSignup={moveSignup}
+      onMoveLogin={moveLogin}
+      onMoveParty={moveParty}
+      onLogout={handleLogout}
+    />
+  );
 }
 
 export default App;

@@ -5,6 +5,7 @@ import java.util.List;
 
 @Data
 public class RouteRequest {
+    private Long userId;
 	private String routeName;
     private Double fromLat;
     private Double fromLng;

@@ -2,8 +2,10 @@ import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
 import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways } from '../utils/leaflet';
+import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 
-export default function MapPage({ onBackHome }) {
+export default function MapPage({ user: userProp, onBackHome }) {
+  const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
   const [mapLayer, setMapLayer] = useState('mapnik');
   const [startQuery, setStartQuery] = useState('');
   const [endQuery, setEndQuery] = useState('');
@@ -18,6 +20,7 @@ export default function MapPage({ onBackHome }) {
   const [searchResults, setSearchResults] = useState([]);
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
+  const [checkedIds, setCheckedIds] = useState([]);
 
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -40,8 +43,7 @@ export default function MapPage({ onBackHome }) {
   useEffect(() => { selectedRegionRef.current = selectedRegion; }, [selectedRegion]);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/cycleways')
-      .then(r => r.json())
+    getCycleways()
       .then(data => setCyclewayData(data))
       .catch(() => {});
   }, []);
@@ -246,6 +248,7 @@ export default function MapPage({ onBackHome }) {
     if (!name) return;
 
     const body = {
+      userId: user?.id ?? null,
       routeName: name,
       fromLat: startPoint.lat,
       fromLng: startPoint.lng,
@@ -257,30 +260,47 @@ export default function MapPage({ onBackHome }) {
       shortestRoute: shortestRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
     };
 
-    await fetch('http://localhost:8080/api/routes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    alert('저장 완료!');
+    try {
+      await saveRouteApi(body);
+      alert('저장 완료!');
+    } catch (e) {
+      alert('저장 실패: ' + e.message);
+    }
   };
 
   // 목록 불러오기
   const loadRouteList = async () => {
-    const res = await fetch('http://localhost:8080/api/routes');
-    const data = await res.json();
+    const data = await getRoutes(user?.id ?? null);
     setRouteList(data);
+    setCheckedIds([]);
     setShowRouteList(true);
+  };
+
+  const toggleCheck = (id) => {
+    setCheckedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleDelete = async () => {
+    if (checkedIds.length === 0) return;
+    if (!window.confirm(`선택한 ${checkedIds.length}개 경로를 삭제할까요?`)) return;
+    try {
+      await deleteRoutesApi(checkedIds);
+      setRouteList(prev => prev.filter(r => !checkedIds.includes(r.id)));
+      setCheckedIds([]);
+    } catch (e) {
+      alert('삭제 실패: ' + e.message);
+    }
   };
 
   // 특정 경로 선택해서 지도에 표시
  const loadRouteById = async (id) => {
-    const res = await fetch(`http://localhost:8080/api/routes/${id}`);
-    const data = await res.json();
+    const data = await getRouteById(id);
 
     console.log('불러온 데이터:', data); // 콘솔에서 확인용
 
-    if (!data.bikeRoute || !data.shortestRoute) {
+    if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
         alert('경로 데이터가 없습니다');
         return;
     }
@@ -460,17 +480,32 @@ export default function MapPage({ onBackHome }) {
                 <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '6px', maxHeight: '300px', overflowY: 'auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <h3 style={{ margin: '0', fontSize: '14px', fontWeight: '600' }}>저장된 경로</h3>
-                    <button type="button" onClick={() => setShowRouteList(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {checkedIds.length > 0 && (
+                        <button type="button" onClick={handleDelete} style={{ fontSize: '12px', padding: '3px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                          삭제 ({checkedIds.length})
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setShowRouteList(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+                    </div>
                   </div>
                   {routeList.length === 0 ? (
                     <p style={{ margin: '8px 0', fontSize: '12px', color: '#666' }}>저장된 경로가 없습니다.</p>
                   ) : (
                     <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
                       {routeList.map(r => (
-                        <li key={r.id} onClick={() => loadRouteById(r.id)} style={{ padding: '8px', marginBottom: '6px', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', borderLeft: '3px solid #2563eb' }}>
-                          <div style={{ fontWeight: '600', fontSize: '13px', marginBottom: '4px' }}>{r.routeName}</div>
-                          <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>{r.fromLabel} → {r.toLabel}</div>
-                          <div style={{ fontSize: '11px', color: '#999' }}>{new Date(r.createdAt).toLocaleDateString()}</div>
+                        <li key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px', marginBottom: '6px', backgroundColor: checkedIds.includes(r.id) ? '#eff6ff' : '#fff', borderRadius: '4px', borderLeft: `3px solid ${checkedIds.includes(r.id) ? '#ef4444' : '#2563eb'}` }}>
+                          <input
+                            type="checkbox"
+                            checked={checkedIds.includes(r.id)}
+                            onChange={() => toggleCheck(r.id)}
+                            style={{ marginTop: '3px', cursor: 'pointer', flexShrink: 0 }}
+                          />
+                          <div style={{ cursor: 'pointer', flex: 1 }} onClick={() => loadRouteById(r.id)}>
+                            <div style={{ fontWeight: '600', fontSize: '13px', marginBottom: '4px' }}>{r.routeName}</div>
+                            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>{r.fromLabel} → {r.toLabel}</div>
+                            <div style={{ fontSize: '11px', color: '#999' }}>{new Date(r.createdAt).toLocaleDateString()}</div>
+                          </div>
                         </li>
                       ))}
                     </ul>

@@ -4,7 +4,7 @@
 
 -- Started on 2026-06-27 21:25:30
 
-\restrict Vq6ErMJQddsYTVB7VtIuXiNcSVQlHrbdN7YwmfRe4eUwd7GarVGCLFe1cVdgWNW
+restrict Vq6ErMJQddsYTVB7VtIuXiNcSVQlHrbdN7YwmfRe4eUwd7GarVGCLFe1cVdgWNW
 
 SET default_transaction_read_only = off;
 

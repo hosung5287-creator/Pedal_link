@@ -15,8 +15,11 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, { method = 'GET', body, headers } = {}) {
+async function request(path, { method = 'GET', body, headers, withCredentials = false } = {}) {
   const options = { method, headers: { ...headers } };
+
+  // 로그인 세션 쿠키를 함께 보내야 하는 요청(인증 API)에서 사용
+  if (withCredentials) options.credentials = 'include';
 
   if (body !== undefined) {
     options.body = JSON.stringify(body);
@@ -37,8 +40,8 @@ async function request(path, { method = 'GET', body, headers } = {}) {
 }
 
 export const api = {
-  get: (path) => request(path, { method: 'GET' }),
-  post: (path, body) => request(path, { method: 'POST', body }),
-  put: (path, body) => request(path, { method: 'PUT', body }),
-  del: (path) => request(path, { method: 'DELETE' }),
+  get: (path, opts) => request(path, { ...opts, method: 'GET' }),
+  post: (path, body, opts) => request(path, { ...opts, method: 'POST', body }),
+  put: (path, body, opts) => request(path, { ...opts, method: 'PUT', body }),
+  del: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
 };

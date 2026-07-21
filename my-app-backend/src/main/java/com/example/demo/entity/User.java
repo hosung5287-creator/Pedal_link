@@ -17,6 +17,8 @@ public class User {
 
     private String email;
 
+    private String password;
+
     // 로그인 제공자: google, naver
     private String provider;
 

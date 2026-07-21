@@ -57,6 +57,7 @@ export function drawMarkers(startPoint, endPoint, layer) {
 
 export function drawRoutes(bikeRoute, shortestRoute, layer, map) {
   if (!layer || !map) return;
+  if (!bikeRoute?.length || !shortestRoute?.length) return;
   layer.clearLayers();
 
   const shortestLine = L.polyline(shortestRoute, {

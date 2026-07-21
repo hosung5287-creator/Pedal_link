@@ -16,6 +16,8 @@ public class Route {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    private Long userId;
+
     private String routeName;
 
     private Double fromLat;

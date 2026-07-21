@@ -6,8 +6,9 @@ import { api } from './client';
 // 자전거도로 GeoJSON 조회
 export const getCycleways = () => api.get('/api/cycleways');
 
-// 저장된 경로 전체 목록
-export const getRoutes = () => api.get('/api/routes');
+// 저장된 경로 목록 (userId 있으면 해당 유저 것만)
+export const getRoutes = (userId) =>
+  api.get(userId ? `/api/routes?userId=${userId}` : '/api/routes');
 
 // 경로 1개 상세 (bikeRoute / shortestRoute 좌표 포함)
 export const getRouteById = (id) => api.get(`/api/routes/${id}`);
@@ -16,3 +17,6 @@ export const getRouteById = (id) => api.get(`/api/routes/${id}`);
 // { routeName, fromLat, fromLng, fromLabel, toLat, toLng, toLabel,
 //   bikeRoute: [{lat,lng}], shortestRoute: [{lat,lng}] }
 export const saveRoute = (route) => api.post('/api/routes', route);
+
+// 경로 삭제 (ids: number[])
+export const deleteRoutes = (ids) => api.post('/api/routes/delete', ids);

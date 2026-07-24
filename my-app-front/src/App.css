@@ -1,0 +1,1503 @@
+:root {
+  --ink: #14221d;
+  --muted: #5c6f68;
+  --line: #dde7e2;
+  --mint: #0ea5e9;
+  --mint-dark: #0284c7;
+  --sun: #ffcc4d;
+  --paper: #ffffff;
+  --wash: #f4f8f6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.app {
+  min-height: 100vh;
+  color: var(--ink);
+  background: var(--wash);
+}
+
+.hero {
+  position: relative;
+  min-height: 680px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding-bottom: 60px;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(9, 27, 22, 0.72) 0%, rgba(9, 27, 22, 0.42) 50%, rgba(9, 27, 22, 0.1) 100%);
+  z-index: 1;
+}
+
+.navbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+.brand {
+  color: #ffffff;
+  font-size: 1.45rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.navLinks {
+  display: flex;
+  gap: 30px;
+}
+
+.navLinks a {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.96rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.appButton {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--mint);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+  transition: background 0.15s;
+}
+
+.appButton:hover {
+  background: var(--mint-dark);
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  width: min(1180px, calc(100% - 40px));
+  margin: 108px auto 0;
+  color: #ffffff;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--mint);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.hero .eyebrow {
+  color: var(--mint);
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  max-width: 620px;
+  margin: 0 0 28px;
+  font-size: clamp(2.6rem, 7vw, 5.9rem);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  width: min(580px, 100%);
+  height: 62px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.07);
+  padding: 0 8px 0 22px;
+  gap: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.searchBar:focus-within {
+  border-color: var(--mint);
+  box-shadow: 0 4px 32px rgba(14, 165, 233, 0.18);
+}
+
+.searchIcon {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.searchBar input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-size: 0.97rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+}
+
+.searchBar input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.searchBar button {
+  flex-shrink: 0;
+  height: 46px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.searchBar button:hover {
+  background: var(--mint-dark);
+}
+
+main {
+  margin-top: 0;
+  position: relative;
+  z-index: 3;
+}
+
+.mapSection {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto 38px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 22px 64px rgba(22, 41, 34, 0.14);
+}
+
+.mapPage {
+  margin-bottom: 72px;
+}
+
+.mapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+}
+
+.mapHeader h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+  letter-spacing: 0;
+}
+
+.mapCloseButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 16px;
+  text-decoration: none;
+}
+
+.osmMap {
+  display: block;
+  width: 100%;
+  height: min(62vh, 560px);
+  min-height: 360px;
+  border: 0;
+}
+
+.mapOnlyPage {
+  /* 네이버지도처럼: viewport 전체를 고정 점유 → 스크롤바 원천 차단 */
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  background: var(--wash);
+}
+
+.mapOnlyHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.mapBrand {
+  color: var(--ink);
+}
+
+.mapOnlyHeader .eyebrow {
+  margin-bottom: 4px;
+}
+
+.mapOnlyHeader h1 {
+  max-width: none;
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.mapActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.layerSelect {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.layerSelect select {
+  min-width: 150px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0 36px 0 12px;
+}
+
+.layerSelect select:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+  outline: none;
+}
+
+.regionSelect {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.regionSelect select {
+  min-width: 130px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0 36px 0 12px;
+}
+
+.regionSelect select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+  outline: none;
+}
+
+.mapOnlyFrame {
+  height: 100%;
+}
+
+.mapWorkspace {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  /* 부모(.mapOnlyPage 1fr 행)를 꽉 채움, min-height:0 은 grid 오버플로 방지 필수 */
+  min-height: 0;
+  overflow: hidden;
+}
+
+.routePlanner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border-right: 1px solid var(--line);
+  background: var(--paper);
+  /* 사이드바 내부만 스크롤, 전체 페이지 스크롤 없음 */
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.routePlanner.searchActive {
+  padding: 0;
+  gap: 0;
+}
+
+.plannerSearch {
+  display: grid;
+  gap: 8px;
+}
+
+.plannerSearch label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.plannerSearchRow {
+  display: grid;
+  grid-template-columns: 1fr 104px;
+  gap: 8px;
+}
+
+.plannerSearchRow input,
+.plannerSearchRow button,
+.resetButton {
+  min-height: 42px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.plannerSearchRow input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 0 12px;
+}
+
+.plannerSearchRow input:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+  outline: none;
+}
+
+.plannerSearchRow button,
+.resetButton {
+  border: 0;
+  background: var(--mint);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.routeLegend {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.routeSample {
+  display: block;
+  width: 36px;
+  height: 0;
+  border-top: 5px solid #2563eb;
+  border-radius: 999px;
+}
+
+.shortestSample {
+  border-top-color: #60a5fa;
+  border-top-style: dashed;
+}
+
+.suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.suggestions li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+
+.suggestions li:last-child {
+  border-bottom: none;
+}
+
+.suggestions li:hover {
+  background: #eff6ff;
+}
+
+.sug-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sug-addr {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── 검색 오버레이 ── */
+.searchOverlayHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.backBtn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--ink);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backBtn:hover { background: var(--wash); }
+
+.searchOverlayInput {
+  flex: 1;
+  min-height: 38px;
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  outline: none;
+  min-width: 0;
+}
+
+.searchOverlayInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.clearBtn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: #e2e8f0;
+  color: var(--muted);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchResultsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.searchResultsList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+
+.searchResultsList li:hover { background: #eff6ff; }
+
+.searchResultsList .noResult {
+  padding: 24px 16px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+  cursor: default;
+}
+.searchResultsList .noResult:hover { background: none; }
+
+.resultPin {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #64748b;
+}
+
+.resultInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* ── 출발/도착 입력 필드 ── */
+.pointInputWrapper {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.dotsColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.pointDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.startDot { background: #2563eb; }
+.endDot { background: #16a34a; }
+
+.pointLine {
+  width: 2px;
+  flex: 1;
+  min-height: 14px;
+  background: #cbd5e1;
+  margin: 4px 0;
+}
+
+.fieldsColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pointField {
+  width: 100%;
+  min-height: 44px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  text-align: left;
+  padding: 0 14px;
+  cursor: pointer;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pointField:hover {
+  border-color: #93c5fd;
+  background: #fff;
+}
+
+.pointLabel {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.pointPlaceholder {
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.routeStatus {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.resetButton {
+  margin-top: auto;
+  background: #24352e;
+}
+
+.leafletMap {
+  /* 그리드 셀을 100% 채움, min-height:0 은 grid 오버플로 방지 */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.recentRoutes {
+  padding: 0 0 72px;
+  /* 뷰포트 밖 콘텐츠의 렌더링·레이아웃 비용 절감 */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 480px;
+}
+
+.sectionHeader {
+  width: min(1180px, calc(100% - 40px));
+  margin: 40px auto 22px;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  letter-spacing: 0;
+}
+
+.routeCarousel {
+  overflow: hidden;
+  padding: 8px 0 20px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.routeTrack {
+  display: flex;
+  gap: 22px;
+  width: max-content;
+  animation: slideLeft 34s linear infinite;
+  /* GPU 레이어 생성으로 애니메이션 렉 방지 */
+  will-change: transform;
+}
+
+.routeCarousel:hover .routeTrack {
+  animation-play-state: paused;
+}
+
+.routeCard {
+  width: 326px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 18px 48px rgba(22, 41, 34, 0.1);
+}
+
+.routeCard img {
+  display: block;
+  width: 100%;
+  height: 172px;
+  object-fit: cover;
+}
+
+.routeBody {
+  padding: 18px;
+}
+
+.routeBody span {
+  display: inline-flex;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: var(--mint-dark);
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 6px 10px;
+}
+
+.routeBody h3 {
+  min-height: 52px;
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  line-height: 1.22;
+}
+
+.routeBody p {
+  min-height: 24px;
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.routeBody dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0;
+}
+
+.routeBody dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.routeBody dd {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+/* ── 내비게이션 우측 액션 (회원가입 + 지도 보기) ── */
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.signupLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.96rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.signupLink:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #ffffff;
+}
+
+/* ── 회원가입 페이지 ── */
+.signupPage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding-bottom: 64px;
+}
+
+.signupPage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(9, 27, 22, 0.82) 0%, rgba(9, 27, 22, 0.58) 52%, rgba(9, 27, 22, 0.3) 100%);
+  z-index: 1;
+}
+
+.signupPage .navbar {
+  flex-shrink: 0;
+}
+
+.signupBackLink {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.96rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.signupBackLink:hover {
+  color: #ffffff;
+}
+
+.signupLayout {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+  width: min(1180px, calc(100% - 40px));
+  margin: auto;
+  padding: 48px 0;
+}
+
+.signupIntro {
+  color: #ffffff;
+}
+
+.signupHeadline {
+  margin: 0 0 18px;
+  font-size: clamp(2.2rem, 4.6vw, 3.7rem);
+  line-height: 1.06;
+  white-space: pre-line;
+}
+
+.signupSub {
+  margin: 0 0 28px;
+  max-width: 420px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.signupPerks {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signupPerks li {
+  position: relative;
+  padding-left: 30px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.signupPerks li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px 11px no-repeat;
+}
+
+.signupCard {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 32px 80px rgba(4, 18, 14, 0.45);
+  padding: clamp(26px, 4vw, 40px);
+}
+
+.signupCardTitle {
+  margin: 0 0 6px;
+  font-size: 1.65rem;
+  letter-spacing: 0;
+}
+
+.signupCardSub {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.signupForm {
+  display: grid;
+  gap: 16px;
+}
+
+.signupField {
+  display: grid;
+  gap: 7px;
+}
+
+.signupField span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.signupField input {
+  min-height: 48px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.signupField input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.signupField input:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+  outline: none;
+}
+
+.signupError {
+  margin: 0;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 11px 14px;
+}
+
+.signupButton {
+  min-height: 52px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mint);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.signupButton:hover {
+  background: var(--mint-dark);
+}
+
+.signupButton:active {
+  transform: translateY(1px);
+}
+
+.signupDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.signupDivider::before,
+.signupDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.signupSocial {
+  display: grid;
+  gap: 10px;
+}
+
+.socialButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 700;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+
+.socialButton:active {
+  transform: translateY(1px);
+}
+
+.socialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.socialGoogle {
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #3c4043;
+}
+
+.socialGoogle:hover {
+  background: #f7f8f8;
+  border-color: #c6cace;
+}
+
+.socialNaver {
+  border: 0;
+  background: #03c75a;
+  color: #ffffff;
+}
+
+.socialNaver:hover {
+  background: #02b350;
+}
+
+/* 로그인 ↔ 회원가입 전환 링크 */
+.authSwitch {
+  margin: 18px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.authSwitch a {
+  color: var(--mint-dark);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.authSwitch a:hover {
+  text-decoration: underline;
+}
+
+.signupDone {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 18px 0;
+}
+
+.signupDoneIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  color: var(--mint-dark);
+}
+
+.signupDone h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.signupDone p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.signupDone .signupButton {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .signupLayout {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding: 28px 0 12px;
+  }
+
+  .signupIntro {
+    text-align: left;
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 11px));
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    min-height: 620px;
+  }
+
+  .navbar {
+    width: min(100% - 28px, 1180px);
+  }
+
+  .navLinks {
+    display: none;
+  }
+
+  .heroContent,
+  .sectionHeader,
+  .mapSection {
+    width: min(100% - 28px, 1180px);
+  }
+
+  .heroContent {
+    margin-top: 88px;
+  }
+
+  main {
+    margin-top: -72px;
+  }
+
+  .routeCard {
+    width: 286px;
+  }
+
+  .mapHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .osmMap {
+    height: 430px;
+    min-height: 430px;
+  }
+
+  .mapOnlyHeader {
+    grid-template-columns: 1fr auto;
+  }
+
+  .mapOnlyHeader > div {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .mapActions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .layerSelect,
+  .regionSelect {
+    flex: 1;
+  }
+
+  .layerSelect select,
+  .regionSelect select {
+    width: 100%;
+  }
+
+  .mapOnlyFrame {
+    height: 100%;
+  }
+
+  .mapWorkspace {
+    /* 모바일: 세로 배치, 사이드바 + 지도 순서 */
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+  }
+
+  .routePlanner {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    /* 모바일 사이드바: 내용이 적을 때 줄어들고 넘치면 스크롤 */
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  .leafletMap {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .plannerSearchRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 파티 페이지 ===== */
+.partyPage {
+  min-height: 100vh;
+  background: var(--wash);
+}
+
+/* 파티 페이지 상단 네비는 밝은 배경 위에 있으므로 글씨를 어둡게 */
+.partyPage .brand,
+.partyPage .signupBackLink {
+  color: var(--ink);
+}
+
+.partyPage .signupBackLink:hover {
+  color: var(--mint-dark);
+}
+
+.partyHero {
+  padding: 48px 24px 40px;
+  background-size: cover;
+  background-position: center;
+  color: #ffffff;
+  text-align: center;
+}
+
+.partyHero .eyebrow {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.partyHero h1 {
+  margin: 6px 0 10px;
+  font-size: 2.4rem;
+}
+
+.partyHeroSub {
+  margin: 0;
+  font-size: 1.02rem;
+  opacity: 0.92;
+}
+
+.partyLayout {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  display: grid;
+  gap: 40px;
+}
+
+.partySection > h2 {
+  margin: 0 0 16px;
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.partyEmpty {
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--paper);
+  text-align: center;
+}
+
+/* 저장 경로 목록 */
+.routePickList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.routePick {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.routePickInfo h4 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.routePickInfo p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* 공통 버튼 */
+.partyPrimaryBtn {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.partyPrimaryBtn:hover:not(:disabled) {
+  background: var(--mint-dark);
+}
+
+.partyPrimaryBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.partyPrimaryBtn:disabled {
+  background: #b8c4c0;
+  cursor: not-allowed;
+}
+
+.partyGhostBtn {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 번개 만들기 폼 */
+.partyForm {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.partyForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.partyForm input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font: inherit;
+  color: var(--ink);
+}
+
+.partyForm input:focus {
+  outline: none;
+  border-color: var(--mint);
+}
+
+.partyFormRow {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  gap: 12px;
+}
+
+.partyFormActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* 번개 카드 */
+.partyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.partyCard {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 6px 18px rgba(20, 34, 29, 0.05);
+}
+
+.partyCard.isFull {
+  opacity: 0.72;
+}
+
+.partyCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.partyCardHead h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.partyRouteTag {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--wash);
+  color: var(--mint-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.partyCardRoute {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.partyCardMeta {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.partyCardMeta > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.partyCardMeta dt {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 700;
+  min-width: 40px;
+}
+
+.partyCardMeta dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.partyJoinBtn {
+  justify-self: stretch;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .partyFormRow {
+    grid-template-columns: 1fr;
+  }
+  .partyHero h1 {
+    font-size: 2rem;
+  }
+}

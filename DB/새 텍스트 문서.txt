@@ -1,0 +1,82 @@
+-- 테이블 목록 확인
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public';
+
+--컬럼 구조 확인 
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'a';
+
+-- geom 컬럼의 SRID 확인
+SELECT ST_SRID(geom) FROM a LIMIT 1;
+
+-- 1개만 먼저 테스트
+SELECT 
+    ST_Y(ST_Transform(ST_Centroid(geom), 4326)) AS 위도,
+    ST_X(ST_Transform(ST_Centroid(geom), 4326)) AS 경도
+FROM a
+LIMIT 1;
+
+-- 1단계: 컬럼 추가
+ALTER TABLE "a" ADD COLUMN "위도" NUMERIC;
+ALTER TABLE "a" ADD COLUMN "경도" NUMERIC;
+
+
+UPDATE a
+SET 
+    위도 = ST_Y(ST_Transform(ST_Centroid(geom), 4326)),
+    경도 = ST_X(ST_Transform(ST_Centroid(geom), 4326));
+
+-- 확인
+SELECT 위도, 경도 FROM a LIMIT 5;
+
+
+-- 깨진 폴리곤 확인
+SELECT gid, ST_IsValidReason(geom)
+FROM a
+WHERE ST_IsValid(geom) = false;
+
+-- 자동 수정
+UPDATE a
+SET geom = ST_MakeValid(geom)
+WHERE ST_IsValid(geom) = false;
+
+-- 가장 먼 두 점 = 도로 방향 반영
+SELECT
+    gid,
+    ST_Y(ST_Transform(
+        ST_PointN(ST_LongestLine(geom,geom),1), 4326)) AS 시작위도,
+    ST_X(ST_Transform(
+        ST_PointN(ST_LongestLine(geom,geom),1), 4326)) AS 시작경도,
+    ST_Y(ST_Transform(
+        ST_PointN(ST_LongestLine(geom,geom),2), 4326)) AS 끝위도,
+    ST_X(ST_Transform(
+        ST_PointN(ST_LongestLine(geom,geom),2), 4326)) AS 끝경도
+FROM a
+WHERE ST_IsValid(geom) = true;
+
+
+-- psql에서 실행
+CREATE DATABASE pedallink;
+\c pedallink
+CREATE EXTENSION postgis;
+
+-- JPA가 자동 생성하지만 수동으로 확인할 때
+SELECT ST_AsGeoJSON(bike_path) FROM routes ORDER BY created_at DESC LIMIT 1;
+
+//postGIS 설치 
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+SELECT id, route_name, from_label, to_label, bike_path, shortest_path 
+FROM routes;
+
+-- 테이블 구조 확인
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'a';
+
+-- 데이터 샘플 확인
+SELECT gid, ST_AsGeoJSON(ST_Transform(geom, 4326)) 
+FROM a 
+LIMIT 2;
+

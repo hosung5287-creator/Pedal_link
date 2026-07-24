@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
-import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways } from '../utils/leaflet';
+import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon } from '../utils/leaflet';
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 
 export default function MapPage({ user: userProp, onBackHome }) {
@@ -36,6 +36,8 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const selectedRegionRef = useRef(selectedRegion);
   const bikeRouteRef = useRef([]);
   const shortestRouteRef = useRef([]);
+  const currentLocMarkerRef = useRef(null);
+  const geoWatchIdRef = useRef(null);
 
   useEffect(() => { startPointRef.current = startPoint; }, [startPoint]);
   useEffect(() => { endPointRef.current = endPoint; }, [endPoint]);
@@ -123,6 +125,41 @@ export default function MapPage({ user: userProp, onBackHome }) {
     tileLayerRef.current.remove();
     tileLayerRef.current = makeTileLayer(mapLayer).addTo(map);
   }, [mapLayer]);
+
+  // 실시간 현재 위치 추적 마커
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !navigator.geolocation) return;
+
+    geoWatchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (!currentLocMarkerRef.current) {
+          currentLocMarkerRef.current = L.marker([latitude, longitude], {
+            icon: makeCurrentLocationIcon(),
+            zIndexOffset: 1000,
+            interactive: false,
+          }).addTo(map);
+          map.setView([latitude, longitude], 15);
+        } else {
+          currentLocMarkerRef.current.setLatLng([latitude, longitude]);
+        }
+      },
+      (err) => {
+        console.warn('위치 추적 실패:', err.message);
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+
+    return () => {
+      if (geoWatchIdRef.current != null) {
+        navigator.geolocation.clearWatch(geoWatchIdRef.current);
+        geoWatchIdRef.current = null;
+      }
+      currentLocMarkerRef.current?.remove();
+      currentLocMarkerRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;

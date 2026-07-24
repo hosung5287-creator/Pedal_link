@@ -11,6 +11,10 @@ export function makeTileLayer(key) {
   });
 }
 
+navigator.geolocation.getCurrentPosition((position) => {
+	console.log(position)
+});
+
 export function makeBikeIcon(borderColor) {
   return L.divIcon({
     html: `<div style="display:flex;flex-direction:column;align-items:center;width:38px;height:50px;">
@@ -37,6 +41,25 @@ export function makeBikeIcon(borderColor) {
     iconSize: [38, 50],
     iconAnchor: [19, 50],
     popupAnchor: [0, -52],
+  });
+}
+
+export function makeCurrentLocationIcon() {
+  return L.divIcon({
+    html: `<style>
+      @keyframes locPulse {
+        0% { transform: scale(1); opacity: 0.6; }
+        100% { transform: scale(2.4); opacity: 0; }
+      }
+    </style>
+    <div style="position:relative;width:22px;height:22px;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:#2563eb;animation:locPulse 1.8s ease-out infinite;"></div>
+      <div style="position:absolute;top:4px;left:4px;width:14px;height:14px;background:#2563eb;border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>
+    </div>`,
+    className: '',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -14],
   });
 }
 

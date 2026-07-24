@@ -1,8 +1,12 @@
 spring.application.name=my-app-backend
-spring.datasource.url=jdbc:postgresql://localhost:5432/testbike
+
+# DB명은 Pedal_link (testbike 아님) — 자전거도로 데이터(cycleways)가 이 DB에 있음
+# 클론 후 이 파일을 application.properties로 복사하고 비밀번호를 본인 환경에 맞게 수정
+spring.datasource.url=jdbc:postgresql://localhost:5432/Pedal_link
 spring.datasource.username=postgres
-spring.datasource.password=pass
+spring.datasource.password=YOUR_DB_PASSWORD
 spring.datasource.driver-class-name=org.postgresql.Driver
 
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect

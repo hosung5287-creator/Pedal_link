@@ -63,6 +63,16 @@ export function makeCurrentLocationIcon() {
   });
 }
 
+export function makeOtherUserIcon() {
+  return L.divIcon({
+    html: `<div style="width:16px;height:16px;background:#f97316;border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+    className: '',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -10],
+  });
+}
+
 export function drawMarkers(startPoint, endPoint, layer) {
   if (!layer) return;
   layer.clearLayers();

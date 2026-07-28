@@ -1,8 +1,22 @@
 import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
-import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon } from '../utils/leaflet';
+import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon, makeOtherUserIcon } from '../utils/leaflet';
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
+import { reportLocation, getOtherLocations } from '../api/locations';
+
+const GEOFENCE_RADIUS_M = 220;
+const GEOFENCE_EXIT_M = 250;
+
+function getLiveId(user) {
+  if (user?.id) return user.id;
+  let id = sessionStorage.getItem('liveLocId');
+  if (!id) {
+    id = String(1_000_000_000 + Math.floor(Math.random() * 1_000_000_000));
+    sessionStorage.setItem('liveLocId', id);
+  }
+  return Number(id);
+}
 
 export default function MapPage({ user: userProp, onBackHome }) {
   const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
@@ -21,6 +35,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
   const [checkedIds, setCheckedIds] = useState([]);
+  const [locationShareEnabled, setLocationShareEnabled] = useState(false);
 
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -38,6 +53,10 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const shortestRouteRef = useRef([]);
   const currentLocMarkerRef = useRef(null);
   const geoWatchIdRef = useRef(null);
+  const geofenceCircleRef = useRef(null);
+  const lastPosRef = useRef(null);
+  const otherMarkersRef = useRef(new Map());
+  const othersInsideRef = useRef(new Map());
 
   useEffect(() => { startPointRef.current = startPoint; }, [startPoint]);
   useEffect(() => { endPointRef.current = endPoint; }, [endPoint]);
@@ -134,15 +153,26 @@ export default function MapPage({ user: userProp, onBackHome }) {
     geoWatchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
+        lastPosRef.current = { lat: latitude, lng: longitude };
         if (!currentLocMarkerRef.current) {
           currentLocMarkerRef.current = L.marker([latitude, longitude], {
             icon: makeCurrentLocationIcon(),
             zIndexOffset: 1000,
             interactive: false,
           }).addTo(map);
+          geofenceCircleRef.current = L.circle([latitude, longitude], {
+            radius: GEOFENCE_RADIUS_M,
+            color: '#2563eb',
+            weight: 2,
+            opacity: 0.6,
+            fillColor: '#2563eb',
+            fillOpacity: 0.08,
+            interactive: false,
+          });
           map.setView([latitude, longitude], 15);
         } else {
           currentLocMarkerRef.current.setLatLng([latitude, longitude]);
+          geofenceCircleRef.current?.setLatLng([latitude, longitude]);
         }
       },
       (err) => {
@@ -158,8 +188,90 @@ export default function MapPage({ user: userProp, onBackHome }) {
       }
       currentLocMarkerRef.current?.remove();
       currentLocMarkerRef.current = null;
+      geofenceCircleRef.current?.remove();
+      geofenceCircleRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const myId = getLiveId(user);
+    const myName = user?.name || `게스트${String(myId).slice(-4)}`;
+    const markers = otherMarkersRef.current;
+    const insideMap = othersInsideRef.current;
+
+    const timer = setInterval(async () => {
+      const myPos = lastPosRef.current;
+      if (!myPos || !locationShareEnabled) return;
+
+      try {
+        await reportLocation({ userId: myId, name: myName, lat: myPos.lat, lng: myPos.lng });
+        const others = (await getOtherLocations(myId)) || [];
+
+        const seen = new Set();
+        for (const o of others) {
+          seen.add(o.userId);
+
+          let marker = markers.get(o.userId);
+          if (!marker) {
+            marker = L.marker([o.lat, o.lng], { icon: makeOtherUserIcon(), zIndexOffset: 900 })
+              .bindTooltip(o.name, { permanent: true, direction: 'top', offset: [0, -10] })
+              .addTo(map);
+            markers.set(o.userId, marker);
+          } else {
+            marker.setLatLng([o.lat, o.lng]);
+          }
+
+          const dist = map.distance([myPos.lat, myPos.lng], [o.lat, o.lng]);
+          const wasInside = insideMap.get(o.userId) || false;
+          const isInside = wasInside ? dist <= GEOFENCE_EXIT_M : dist <= GEOFENCE_RADIUS_M;
+          if (isInside && !wasInside) {
+            setStatus(`⚠️ ${o.name}님이 ${GEOFENCE_RADIUS_M}m 안에 접근! (거리 ${Math.round(dist)}m)`);
+            marker.bindPopup(`${o.name} — ${Math.round(dist)}m 거리`).openPopup();
+          } else if (!isInside && wasInside) {
+            setStatus(`🚨 ${o.name}님이 범위를 벗어났습니다 (거리 ${Math.round(dist)}m)`);
+            marker.bindPopup(`${o.name} — 범위 이탈 (${Math.round(dist)}m)`).openPopup();
+          }
+          insideMap.set(o.userId, isInside);
+        }
+
+        for (const [id, marker] of markers) {
+          if (!seen.has(id)) {
+            const name = marker.getTooltip()?.getContent() || '상대방';
+            if (insideMap.get(id)) {
+              setStatus(`📡 ${name}님 연결 끊김`);
+            }
+            marker.remove();
+            markers.delete(id);
+            insideMap.delete(id);
+          }
+        }
+      } catch {
+        // 오류는 다음 폴링에서 재시도
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(timer);
+      markers.forEach(m => m.remove());
+      markers.clear();
+      insideMap.clear();
+    };
+  }, [user?.id, locationShareEnabled]);
+
+  // 위치 공유 토글에 따라 원(동그라미) 보이기/숨기기
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !geofenceCircleRef.current) return;
+
+    if (locationShareEnabled) {
+      geofenceCircleRef.current.addTo(map);
+    } else {
+      geofenceCircleRef.current.remove();
+    }
+  }, [locationShareEnabled]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -473,6 +585,18 @@ export default function MapPage({ user: userProp, onBackHome }) {
             </>
           ) : (
             <>
+              <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#f9fafb', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  id="locationToggle"
+                  checked={locationShareEnabled}
+                  onChange={(e) => setLocationShareEnabled(e.target.checked)}
+                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                />
+                <label htmlFor="locationToggle" style={{ cursor: 'pointer', fontSize: '14px', fontWeight: '500', margin: '0' }}>
+                  위치 공유
+                </label>
+              </div>
               <div className="pointInputWrapper">
                 <div className="dotsColumn">
                   <span className="pointDot startDot" />

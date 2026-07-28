@@ -6,8 +6,6 @@
 // 따라서 프론트에 구글/네이버 SDK나 client-secret 이 들어갈 일이 없다.
 import { api, API_BASE } from './client';
 
-const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
-
 // ── 소셜 로그인 ──────────────────────────────────
 // Spring Security OAuth2 의 기본 인가 URL 규격: /oauth2/authorization/{registrationId}
 export const socialLoginUrl = (provider) => `${API_BASE}/oauth2/authorization/${provider}`;

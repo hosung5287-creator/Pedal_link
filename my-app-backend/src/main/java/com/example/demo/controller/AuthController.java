@@ -54,7 +54,22 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
             "id", user.getId(),
             "name", user.getName(),
-            "email", user.getEmail()
+            "email", user.getEmail(),
+            "locationShareEnabled", user.isLocationShareEnabled()
+        ));
+    }
+
+    @PutMapping("/users/{id}/location-sharing")
+    public ResponseEntity<?> updateLocationSharing(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+        user.setLocationShareEnabled(body.get("enabled"));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of(
+            "id", user.getId(),
+            "locationShareEnabled", user.isLocationShareEnabled()
         ));
     }
 }

@@ -22,5 +22,7 @@ public class User {
     // 제공자별 고유 식별자
     private String providerId;
 
+    private boolean locationShareEnabled = false;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 }

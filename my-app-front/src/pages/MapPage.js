@@ -4,6 +4,7 @@ import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
 import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon, makeOtherUserIcon } from '../utils/leaflet';
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 import { reportLocation, getOtherLocations } from '../api/locations';
+import { updateLocationSharing } from '../api/auth';
 
 const GEOFENCE_RADIUS_M = 220;
 const GEOFENCE_EXIT_M = 250;
@@ -35,7 +36,14 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
   const [checkedIds, setCheckedIds] = useState([]);
-  const [locationShareEnabled, setLocationShareEnabled] = useState(false);
+  const [locationShareEnabled, setLocationShareEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('locationShareEnabled');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
 
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -193,6 +201,19 @@ export default function MapPage({ user: userProp, onBackHome }) {
     };
   }, []);
 
+  const handleLocationShareChange = useCallback(async (checked) => {
+    setLocationShareEnabled(checked);
+    localStorage.setItem('locationShareEnabled', JSON.stringify(checked));
+
+    if (user?.id) {
+      try {
+        await updateLocationSharing(user.id, checked);
+      } catch (error) {
+        console.warn('오프라인: localStorage에만 저장됨', error);
+      }
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -272,6 +293,22 @@ export default function MapPage({ user: userProp, onBackHome }) {
       geofenceCircleRef.current.remove();
     }
   }, [locationShareEnabled]);
+
+  // 온라인 복귀 시 localStorage의 설정을 DB와 동기화
+  useEffect(() => {
+    const handleOnline = async () => {
+      if (!user?.id) return;
+      const localValue = JSON.parse(localStorage.getItem('locationShareEnabled') || 'false');
+      try {
+        await updateLocationSharing(user.id, localValue);
+      } catch (error) {
+        console.warn('동기화 실패', error);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -590,7 +627,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
                   type="checkbox"
                   id="locationToggle"
                   checked={locationShareEnabled}
-                  onChange={(e) => setLocationShareEnabled(e.target.checked)}
+                  onChange={(e) => handleLocationShareChange(e.target.checked)}
                   style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                 />
                 <label htmlFor="locationToggle" style={{ cursor: 'pointer', fontSize: '14px', fontWeight: '500', margin: '0' }}>

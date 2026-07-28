@@ -35,3 +35,8 @@ export async function getMe() {
 export async function logout() {
   return api.post('/api/auth/logout', undefined, { withCredentials: true });
 }
+
+// ── 위치 공유 설정 업데이트 ──
+export async function updateLocationSharing(userId, enabled) {
+  return api.put(`/api/auth/users/${userId}/location-sharing`, { enabled });
+}

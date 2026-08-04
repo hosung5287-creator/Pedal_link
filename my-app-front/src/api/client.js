@@ -2,9 +2,17 @@
 // 컴포넌트는 fetch 를 직접 부르지 말고 항상 이 client 를 통해 호출한다.
 //
 // base URL 은 환경변수로 관리한다. (.env.local 의 REACT_APP_API_BASE)
+<<<<<<< HEAD
 export const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
 
 // 서버가 에러 상태코드를 주면 이 에러로 던진다.
+=======
+// 로컬 개발 기본값은 Spring Boot 서버 주소.
+export const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+
+// 서버가 에러 상태코드를 주면 이 에러로 던진다.
+// 컴포넌트에서 err.status 로 분기 처리할 수 있다.
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
 export class ApiError extends Error {
   constructor(status, message) {
     super(message || `요청 실패 (HTTP ${status})`);
@@ -43,6 +51,7 @@ export const api = {
   put: (path, body, opts) => request(path, { ...opts, method: 'PUT', body }),
   del: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
 };
+<<<<<<< HEAD
 
 // ==========================================
 // 기존 주행 기록 관련 API (단일 기록)
@@ -69,3 +78,5 @@ export const riderApi = {
   saveActivityHistory: (historyData) =>
     api.post('/api/rider/history', historyData),
 };
+=======
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3

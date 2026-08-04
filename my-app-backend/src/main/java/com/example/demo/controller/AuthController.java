@@ -28,7 +28,10 @@ public class AuthController {
         }
 
         User user = new User();
+<<<<<<< HEAD
         
+=======
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
         user.setName(req.getName());
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
@@ -55,7 +58,29 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
             "id", user.getId(),
             "name", user.getName(),
+<<<<<<< HEAD
             "email", user.getEmail()
         ));
     }
 }
+=======
+            "email", user.getEmail(),
+            "locationShareEnabled", user.isLocationShareEnabled()
+        ));
+    }
+
+    @PutMapping("/users/{id}/location-sharing")
+    public ResponseEntity<?> updateLocationSharing(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+        user.setLocationShareEnabled(body.get("enabled"));
+        userRepository.save(user);
+        return ResponseEntity.ok(Map.of(
+            "id", user.getId(),
+            "locationShareEnabled", user.isLocationShareEnabled()
+        ));
+    }
+}
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3

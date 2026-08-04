@@ -1,9 +1,29 @@
 import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
+<<<<<<< HEAD
 import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon } from '../utils/leaflet';
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 import { riderApi } from '../api/client'; // riderApi 불러오기
+=======
+import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon, makeOtherUserIcon } from '../utils/leaflet';
+import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
+import { reportLocation, getOtherLocations } from '../api/locations';
+import { updateLocationSharing } from '../api/auth';
+
+const GEOFENCE_RADIUS_M = 220;
+const GEOFENCE_EXIT_M = 250;
+
+function getLiveId(user) {
+  if (user?.id) return user.id;
+  let id = sessionStorage.getItem('liveLocId');
+  if (!id) {
+    id = String(1_000_000_000 + Math.floor(Math.random() * 1_000_000_000));
+    sessionStorage.setItem('liveLocId', id);
+  }
+  return Number(id);
+}
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
 
 export default function MapPage({ user: userProp, onBackHome }) {
   const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
@@ -22,6 +42,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
   const [checkedIds, setCheckedIds] = useState([]);
+<<<<<<< HEAD
 
   // 실시간 GPS 라이딩 관련 State 및 Ref
   const [isRiding, setIsRiding] = useState(false);       // 라이딩 중 여부
@@ -31,6 +52,16 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const rideTimerRef = useRef(null);
   const lastPosRef = useRef(null);                       // 직전 GPS 좌표
   const rideWatchIdRef = useRef(null);                   // GPS 감시 ID
+=======
+  const [locationShareEnabled, setLocationShareEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('locationShareEnabled');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
 
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -48,6 +79,13 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const shortestRouteRef = useRef([]);
   const currentLocMarkerRef = useRef(null);
   const geoWatchIdRef = useRef(null);
+<<<<<<< HEAD
+=======
+  const geofenceCircleRef = useRef(null);
+  const lastPosRef = useRef(null);
+  const otherMarkersRef = useRef(new Map());
+  const othersInsideRef = useRef(new Map());
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
 
   useEffect(() => { startPointRef.current = startPoint; }, [startPoint]);
   useEffect(() => { endPointRef.current = endPoint; }, [endPoint]);
@@ -144,15 +182,35 @@ export default function MapPage({ user: userProp, onBackHome }) {
     geoWatchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
+<<<<<<< HEAD
+=======
+        lastPosRef.current = { lat: latitude, lng: longitude };
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
         if (!currentLocMarkerRef.current) {
           currentLocMarkerRef.current = L.marker([latitude, longitude], {
             icon: makeCurrentLocationIcon(),
             zIndexOffset: 1000,
             interactive: false,
           }).addTo(map);
+<<<<<<< HEAD
           map.setView([latitude, longitude], 15);
         } else {
           currentLocMarkerRef.current.setLatLng([latitude, longitude]);
+=======
+          geofenceCircleRef.current = L.circle([latitude, longitude], {
+            radius: GEOFENCE_RADIUS_M,
+            color: '#2563eb',
+            weight: 2,
+            opacity: 0.6,
+            fillColor: '#2563eb',
+            fillOpacity: 0.08,
+            interactive: false,
+          });
+          map.setView([latitude, longitude], 15);
+        } else {
+          currentLocMarkerRef.current.setLatLng([latitude, longitude]);
+          geofenceCircleRef.current?.setLatLng([latitude, longitude]);
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
         }
       },
       (err) => {
@@ -168,9 +226,126 @@ export default function MapPage({ user: userProp, onBackHome }) {
       }
       currentLocMarkerRef.current?.remove();
       currentLocMarkerRef.current = null;
+<<<<<<< HEAD
     };
   }, []);
 
+=======
+      geofenceCircleRef.current?.remove();
+      geofenceCircleRef.current = null;
+    };
+  }, []);
+
+  const handleLocationShareChange = useCallback(async (checked) => {
+    setLocationShareEnabled(checked);
+    localStorage.setItem('locationShareEnabled', JSON.stringify(checked));
+
+    if (user?.id) {
+      try {
+        await updateLocationSharing(user.id, checked);
+      } catch (error) {
+        console.warn('오프라인: localStorage에만 저장됨', error);
+      }
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const myId = getLiveId(user);
+    const myName = user?.name || `게스트${String(myId).slice(-4)}`;
+    const markers = otherMarkersRef.current;
+    const insideMap = othersInsideRef.current;
+
+    const timer = setInterval(async () => {
+      const myPos = lastPosRef.current;
+      if (!myPos || !locationShareEnabled) return;
+
+      try {
+        await reportLocation({ userId: myId, name: myName, lat: myPos.lat, lng: myPos.lng });
+        const others = (await getOtherLocations(myId)) || [];
+
+        const seen = new Set();
+        for (const o of others) {
+          seen.add(o.userId);
+
+          let marker = markers.get(o.userId);
+          if (!marker) {
+            marker = L.marker([o.lat, o.lng], { icon: makeOtherUserIcon(), zIndexOffset: 900 })
+              .bindTooltip(o.name, { permanent: true, direction: 'top', offset: [0, -10] })
+              .addTo(map);
+            markers.set(o.userId, marker);
+          } else {
+            marker.setLatLng([o.lat, o.lng]);
+          }
+
+          const dist = map.distance([myPos.lat, myPos.lng], [o.lat, o.lng]);
+          const wasInside = insideMap.get(o.userId) || false;
+          const isInside = wasInside ? dist <= GEOFENCE_EXIT_M : dist <= GEOFENCE_RADIUS_M;
+          if (isInside && !wasInside) {
+            setStatus(`⚠️ ${o.name}님이 ${GEOFENCE_RADIUS_M}m 안에 접근! (거리 ${Math.round(dist)}m)`);
+            marker.bindPopup(`${o.name} — ${Math.round(dist)}m 거리`).openPopup();
+          } else if (!isInside && wasInside) {
+            setStatus(`🚨 ${o.name}님이 범위를 벗어났습니다 (거리 ${Math.round(dist)}m)`);
+            marker.bindPopup(`${o.name} — 범위 이탈 (${Math.round(dist)}m)`).openPopup();
+          }
+          insideMap.set(o.userId, isInside);
+        }
+
+        for (const [id, marker] of markers) {
+          if (!seen.has(id)) {
+            const name = marker.getTooltip()?.getContent() || '상대방';
+            if (insideMap.get(id)) {
+              setStatus(`📡 ${name}님 연결 끊김`);
+            }
+            marker.remove();
+            markers.delete(id);
+            insideMap.delete(id);
+          }
+        }
+      } catch {
+        // 오류는 다음 폴링에서 재시도
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(timer);
+      markers.forEach(m => m.remove());
+      markers.clear();
+      insideMap.clear();
+    };
+  }, [user?.id, locationShareEnabled]);
+
+  // 위치 공유 토글에 따라 원(동그라미) 보이기/숨기기
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !geofenceCircleRef.current) return;
+
+    if (locationShareEnabled) {
+      geofenceCircleRef.current.addTo(map);
+    } else {
+      geofenceCircleRef.current.remove();
+    }
+  }, [locationShareEnabled]);
+
+  // 온라인 복귀 시 localStorage의 설정을 DB와 동기화
+  useEffect(() => {
+    const handleOnline = async () => {
+      if (!user?.id) return;
+      const localValue = JSON.parse(localStorage.getItem('locationShareEnabled') || 'false');
+      try {
+        await updateLocationSharing(user.id, localValue);
+      } catch (error) {
+        console.warn('동기화 실패', error);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [user]);
+
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -284,7 +459,11 @@ export default function MapPage({ user: userProp, onBackHome }) {
     setSearchResults([]);
   }, [searchMode]);
 
+<<<<<<< HEAD
   // 저장 - 경로 이름 입력받아서 전송
+=======
+  // 저장 - 이름 입력받아서 전송
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
   const saveRoute = async () => {
     if (!startPoint || !endPoint) {
       alert('출발지와 도착지를 선택하세요');
@@ -315,6 +494,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     }
   };
 
+<<<<<<< HEAD
   // 🚴‍♂️ 1) 실시간 라이딩 시작
   const handleStartRide = () => {
     const riderId = user?.id || 1; // 유저 ID가 없으면 기본값 1 적용
@@ -390,6 +570,8 @@ export default function MapPage({ user: userProp, onBackHome }) {
     }
   };
 
+=======
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
   // 목록 불러오기
   const loadRouteList = async () => {
     const data = await getRoutes(user?.id ?? null);
@@ -417,6 +599,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
   };
 
   // 특정 경로 선택해서 지도에 표시
+<<<<<<< HEAD
   const loadRouteById = async (id) => {
     const data = await getRouteById(id);
 
@@ -425,6 +608,16 @@ export default function MapPage({ user: userProp, onBackHome }) {
     if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
       alert('경로 데이터가 없습니다');
       return;
+=======
+ const loadRouteById = async (id) => {
+    const data = await getRouteById(id);
+
+    console.log('불러온 데이터:', data); // 콘솔에서 확인용
+
+    if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
+        alert('경로 데이터가 없습니다');
+        return;
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
     }
 
     const bike = data.bikeRoute.map(p => [p.lat, p.lng]);
@@ -434,7 +627,11 @@ export default function MapPage({ user: userProp, onBackHome }) {
     setEndPoint({ lat: data.toLat, lng: data.toLng, label: data.toLabel });
     drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
     setShowRouteList(false);
+<<<<<<< HEAD
   };
+=======
+};
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
 
   const findRoutes = useCallback(async (from, to) => {
     setIsRouting(true);
@@ -453,6 +650,27 @@ export default function MapPage({ user: userProp, onBackHome }) {
         ? (region === '전체' ? data.features : data.features.filter(f => f.properties.gu === region))
         : [];
       setStatus(routeHasCycleways(bikeRoute, features) ? text.routeReady : text.noCycleways);
+<<<<<<< HEAD
+=======
+
+      // 경도/위도 데이터 콘솔 출력
+      console.log('=== 경로 데이터 ===');
+      console.log('출발지:', { 위도: from.lat, 경도: from.lng, 장소: from.label });
+      console.log('도착지:', { 위도: to.lat, 경도: to.lng, 장소: to.label });
+      console.log('자전거경로 좌표수:', bikeRoute.length);
+      console.log('최단경로 좌표수:', shortestRoute.length);
+      console.log('자전거경로 경도위도 데이터:', bikeRoute.map((p, i) => ({ 순번: i + 1, 위도: p[0], 경도: p[1] })));
+      console.log('최단경로 경도위도 데이터:', shortestRoute.map((p, i) => ({ 순번: i + 1, 위도: p[0], 경도: p[1] })));
+      console.log('선택된 경로', {
+        출발지: { lat: from.lat, lng: from.lng, label: from.label },
+        도착지: { lat: to.lat, lng: to.lng, label: to.label },
+        자전거경로좌표수: bikeRoute.length,
+        최단경로좌표수: shortestRoute.length,
+        자전거경로: bikeRoute,
+        최단경로: shortestRoute,
+        timestamp: new Date().toISOString(),
+      });
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
     } catch {
       setStatus(text.routeFailed);
       routeLayerRef.current?.clearLayers();
@@ -540,6 +758,21 @@ export default function MapPage({ user: userProp, onBackHome }) {
             </>
           ) : (
             <>
+<<<<<<< HEAD
+=======
+              <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#f9fafb', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  id="locationToggle"
+                  checked={locationShareEnabled}
+                  onChange={(e) => handleLocationShareChange(e.target.checked)}
+                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                />
+                <label htmlFor="locationToggle" style={{ cursor: 'pointer', fontSize: '14px', fontWeight: '500', margin: '0' }}>
+                  위치 공유
+                </label>
+              </div>
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
               <div className="pointInputWrapper">
                 <div className="dotsColumn">
                   <span className="pointDot startDot" />
@@ -570,6 +803,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
               <p className="routeStatus" aria-live="polite">
                 {isRouting ? text.searching : status}
               </p>
+<<<<<<< HEAD
 
               {/* 실시간 라이딩 제어 대시보드 */}
               <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
@@ -610,6 +844,12 @@ export default function MapPage({ user: userProp, onBackHome }) {
                 경로 저장
               </button>
 
+=======
+              {/* 저장/목록 버튼 */}
+              <button className="resetButton" type="button" onClick={saveRoute}>
+                경로 저장
+              </button>
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
               <button className="resetButton" type="button" onClick={loadRouteList}>
                 저장된 경로 목록
               </button>
@@ -660,4 +900,8 @@ export default function MapPage({ user: userProp, onBackHome }) {
       </section>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3

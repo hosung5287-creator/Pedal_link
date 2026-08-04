@@ -6,8 +6,11 @@
 // 따라서 프론트에 구글/네이버 SDK나 client-secret 이 들어갈 일이 없다.
 import { api, API_BASE } from './client';
 
+<<<<<<< HEAD
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
+=======
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3
 // ── 소셜 로그인 ──────────────────────────────────
 // Spring Security OAuth2 의 기본 인가 URL 규격: /oauth2/authorization/{registrationId}
 export const socialLoginUrl = (provider) => `${API_BASE}/oauth2/authorization/${provider}`;
@@ -37,3 +40,11 @@ export async function getMe() {
 export async function logout() {
   return api.post('/api/auth/logout', undefined, { withCredentials: true });
 }
+<<<<<<< HEAD
+=======
+
+// ── 위치 공유 설정 업데이트 ──
+export async function updateLocationSharing(userId, enabled) {
+  return api.put(`/api/auth/users/${userId}/location-sharing`, { enabled });
+}
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3

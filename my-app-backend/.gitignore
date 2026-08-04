@@ -47,6 +47,9 @@ build/
 .classpath
 .project
 /.metadata/
+<<<<<<< HEAD
 
 node_modules/
 .env
+=======
+>>>>>>> 3af1c9094048a33754471530997cd084719dfbd3

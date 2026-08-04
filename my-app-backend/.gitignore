@@ -47,3 +47,6 @@ build/
 .classpath
 .project
 /.metadata/
+
+node_modules/
+.env

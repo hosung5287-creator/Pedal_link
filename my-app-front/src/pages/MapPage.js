@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
 import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon } from '../utils/leaflet';
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
+import { riderApi } from '../api/client'; // riderApi 불러오기
 
 export default function MapPage({ user: userProp, onBackHome }) {
   const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
@@ -21,6 +22,15 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
   const [checkedIds, setCheckedIds] = useState([]);
+
+  // 실시간 GPS 라이딩 관련 State 및 Ref
+  const [isRiding, setIsRiding] = useState(false);       // 라이딩 중 여부
+  const [rideTime, setRideTime] = useState(0);           // 경과 시간 (초)
+  const [rideDistance, setRideDistance] = useState(0);   // 누적 이동 거리 (m)
+
+  const rideTimerRef = useRef(null);
+  const lastPosRef = useRef(null);                       // 직전 GPS 좌표
+  const rideWatchIdRef = useRef(null);                   // GPS 감시 ID
 
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -274,7 +284,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     setSearchResults([]);
   }, [searchMode]);
 
-  // 저장 - 이름 입력받아서 전송
+  // 저장 - 경로 이름 입력받아서 전송
   const saveRoute = async () => {
     if (!startPoint || !endPoint) {
       alert('출발지와 도착지를 선택하세요');
@@ -301,6 +311,81 @@ export default function MapPage({ user: userProp, onBackHome }) {
       await saveRouteApi(body);
       alert('저장 완료!');
     } catch (e) {
+      alert('저장 실패: ' + e.message);
+    }
+  };
+
+  // 🚴‍♂️ 1) 실시간 라이딩 시작
+  const handleStartRide = () => {
+    const riderId = user?.id || 1; // 유저 ID가 없으면 기본값 1 적용
+
+    setIsRiding(true);
+    setRideTime(0);
+    setRideDistance(0);
+    lastPosRef.current = null;
+
+    // 타이머 (1초마다 시간 증가)
+    rideTimerRef.current = setInterval(() => {
+      setRideTime(prev => prev + 1);
+    }, 1000);
+
+    // GPS 위치 실시간 추적 및 DB 실시간 업데이트 (rider_real_time_location)
+    if (navigator.geolocation) {
+      rideWatchIdRef.current = navigator.geolocation.watchPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const currentLatLng = L.latLng(latitude, longitude);
+
+          // A. 실시간 위치 DB 업데이트 전송 (1번 테이블)
+          await riderApi.updateRealTimeLocation(riderId, latitude, longitude);
+
+          // B. 누적 이동 거리 계산
+          if (lastPosRef.current) {
+            const dist = lastPosRef.current.distanceTo(currentLatLng);
+            // GPS 오차 보정 (0.5m ~ 50m 사이의 이동만 누적)
+            if (dist > 0.5 && dist < 50) {
+              setRideDistance(prev => prev + dist);
+            }
+          }
+          lastPosRef.current = currentLatLng;
+        },
+        (err) => console.warn('GPS 추적 실패:', err.message),
+        { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+      );
+    }
+  };
+
+  // 🚴‍♂️ 2) 라이딩 종료 및 히스토리 DB 저장 (rider_activity_history)
+  const handleStopRideAndSave = async () => {
+    clearInterval(rideTimerRef.current);
+    if (rideWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(rideWatchIdRef.current);
+    }
+    setIsRiding(false);
+
+    const riderId = user?.id || 1;
+    const finalDistanceKm = Number((rideDistance / 1000).toFixed(2));  // km 단위
+    const durationMinutes = Math.max(1, Math.round(rideTime / 60));    // 분 단위 (최소 1분)
+
+    // 평균 속도 (km/h) = 이동거리(km) / 시간(시간)
+    const hours = rideTime / 3600;
+    const averageSpeed = hours > 0 ? Number((finalDistanceKm / hours).toFixed(2)) : 0;
+
+    const historyData = {
+      riderId: riderId,
+      routeDistance: finalDistanceKm,
+      durationMinutes: durationMinutes,
+      averageSpeed: averageSpeed,
+      startedAt: new Date(Date.now() - rideTime * 1000).toISOString(),
+      endedAt: new Date().toISOString()
+    };
+
+    try {
+      const res = await riderApi.saveActivityHistory(historyData);
+      alert(`주행 완료!\n- 주행 거리: ${finalDistanceKm} km\n- 주행 시간: ${durationMinutes} 분\n- 평균 속도: ${averageSpeed} km/h\n\n히스토리가 성공적으로 DB에 저장되었습니다.`);
+      console.log('저장 결과:', res);
+    } catch (e) {
+      console.error('주행 기록 저장 실패:', e);
       alert('저장 실패: ' + e.message);
     }
   };
@@ -332,14 +417,14 @@ export default function MapPage({ user: userProp, onBackHome }) {
   };
 
   // 특정 경로 선택해서 지도에 표시
- const loadRouteById = async (id) => {
+  const loadRouteById = async (id) => {
     const data = await getRouteById(id);
 
-    console.log('불러온 데이터:', data); // 콘솔에서 확인용
+    console.log('불러온 데이터:', data);
 
     if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
-        alert('경로 데이터가 없습니다');
-        return;
+      alert('경로 데이터가 없습니다');
+      return;
     }
 
     const bike = data.bikeRoute.map(p => [p.lat, p.lng]);
@@ -349,7 +434,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     setEndPoint({ lat: data.toLat, lng: data.toLng, label: data.toLabel });
     drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
     setShowRouteList(false);
-};
+  };
 
   const findRoutes = useCallback(async (from, to) => {
     setIsRouting(true);
@@ -368,24 +453,6 @@ export default function MapPage({ user: userProp, onBackHome }) {
         ? (region === '전체' ? data.features : data.features.filter(f => f.properties.gu === region))
         : [];
       setStatus(routeHasCycleways(bikeRoute, features) ? text.routeReady : text.noCycleways);
-
-      // 경도/위도 데이터 콘솔 출력
-      console.log('=== 경로 데이터 ===');
-      console.log('출발지:', { 위도: from.lat, 경도: from.lng, 장소: from.label });
-      console.log('도착지:', { 위도: to.lat, 경도: to.lng, 장소: to.label });
-      console.log('자전거경로 좌표수:', bikeRoute.length);
-      console.log('최단경로 좌표수:', shortestRoute.length);
-      console.log('자전거경로 경도위도 데이터:', bikeRoute.map((p, i) => ({ 순번: i + 1, 위도: p[0], 경도: p[1] })));
-      console.log('최단경로 경도위도 데이터:', shortestRoute.map((p, i) => ({ 순번: i + 1, 위도: p[0], 경도: p[1] })));
-      console.log('선택된 경로', {
-        출발지: { lat: from.lat, lng: from.lng, label: from.label },
-        도착지: { lat: to.lat, lng: to.lng, label: to.label },
-        자전거경로좌표수: bikeRoute.length,
-        최단경로좌표수: shortestRoute.length,
-        자전거경로: bikeRoute,
-        최단경로: shortestRoute,
-        timestamp: new Date().toISOString(),
-      });
     } catch {
       setStatus(text.routeFailed);
       routeLayerRef.current?.clearLayers();
@@ -503,10 +570,46 @@ export default function MapPage({ user: userProp, onBackHome }) {
               <p className="routeStatus" aria-live="polite">
                 {isRouting ? text.searching : status}
               </p>
-              {/* 저장/목록 버튼 */}
+
+              {/* 실시간 라이딩 제어 대시보드 */}
+              <div style={{ margin: '12px 0', padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                {isRiding ? (
+                  <>
+                    <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: 'bold' }}>실시간 라이딩 중...</span>
+                      <h2 style={{ margin: '4px 0', fontSize: '24px', color: '#0284c7' }}>
+                        {(rideDistance / 1000).toFixed(2)} <span style={{ fontSize: '14px' }}>km</span>
+                      </h2>
+                      <p style={{ margin: 0, fontSize: '14px', color: '#555' }}>
+                        {Math.floor(rideTime / 60)}분 {rideTime % 60}초
+                      </p>
+                    </div>
+                    <button
+                      className="resetButton"
+                      type="button"
+                      onClick={handleStopRideAndSave}
+                      style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', width: '100%' }}
+                    >
+                      주행 종료 및 DB 저장
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="resetButton"
+                    type="button"
+                    onClick={handleStartRide}
+                    style={{ backgroundColor: '#16a34a', color: '#fff', fontWeight: 'bold', width: '100%' }}
+                  >
+                    라이딩 시작하기
+                  </button>
+                )}
+              </div>
+              
+              {/* 경로 저장 버튼 */}
               <button className="resetButton" type="button" onClick={saveRoute}>
                 경로 저장
               </button>
+
               <button className="resetButton" type="button" onClick={loadRouteList}>
                 저장된 경로 목록
               </button>

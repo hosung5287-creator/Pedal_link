@@ -5,6 +5,7 @@ import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCy
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { updateLocationSharing } from '../api/auth';
+import { api } from '../api/client';
 
 const GEOFENCE_RADIUS_M = 220;
 const GEOFENCE_EXIT_M = 250;
@@ -45,6 +46,11 @@ export default function MapPage({ user: userProp, onBackHome }) {
     }
   });
 
+  // 라이딩 관련 상태
+  const [isRiding, setIsRiding] = useState(false);
+  const [rideTime, setRideTime] = useState(0);
+  const [rideDistance, setRideDistance] = useState(0);
+
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
   const tileLayerRef = useRef(null);
@@ -65,6 +71,12 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const lastPosRef = useRef(null);
   const otherMarkersRef = useRef(new Map());
   const othersInsideRef = useRef(new Map());
+
+  // 라이딩 관련 ref
+  const rideTimerRef = useRef(null);
+  const rideWatchIdRef = useRef(null);
+  const rideStartPosRef = useRef(null);
+  const rideStartTimeRef = useRef(null);
 
   useEffect(() => { startPointRef.current = startPoint; }, [startPoint]);
   useEffect(() => { endPointRef.current = endPoint; }, [endPoint]);
@@ -213,6 +225,88 @@ export default function MapPage({ user: userProp, onBackHome }) {
       }
     }
   }, [user?.id]);
+
+  // 거리 계산 함수 (Haversine)
+  const calculateDistance = (lat1, lng1, lat2, lng2) => {
+    const R = 6371000; // 지구 반지름 (미터)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.asin(Math.sqrt(a));
+  };
+
+  // 라이딩 시작
+  const handleRideStart = useCallback(() => {
+    setIsRiding(true);
+    setRideTime(0);
+    setRideDistance(0);
+    rideStartTimeRef.current = Date.now();
+
+    if (!navigator.geolocation) return;
+
+    rideWatchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+
+        if (!rideStartPosRef.current) {
+          rideStartPosRef.current = { lat: latitude, lng: longitude };
+        } else {
+          const dist = calculateDistance(
+            rideStartPosRef.current.lat, rideStartPosRef.current.lng,
+            latitude, longitude
+          );
+          if (dist > 5) { // 5m 이상만 거리 계산
+            setRideDistance(prev => prev + dist);
+            rideStartPosRef.current = { lat: latitude, lng: longitude };
+          }
+        }
+      }
+    );
+
+    // 타이머 시작
+    rideTimerRef.current = setInterval(() => {
+      setRideTime(prev => prev + 1);
+    }, 1000);
+  }, []);
+
+  // 라이딩 종료
+  const handleRideStop = useCallback(async () => {
+    setIsRiding(false);
+
+    // GPS 감시 중지
+    if (rideWatchIdRef.current) {
+      navigator.geolocation.clearWatch(rideWatchIdRef.current);
+      rideWatchIdRef.current = null;
+    }
+
+    // 타이머 중지
+    if (rideTimerRef.current) {
+      clearInterval(rideTimerRef.current);
+      rideTimerRef.current = null;
+    }
+
+    // 주행 기록 저장
+    if (user?.id && rideDistance > 0) {
+      try {
+        const duration = Math.floor(rideTime / 60); // 분 단위
+        await api.post('/api/ride-records', {
+          userId: user.id,
+          distance: rideDistance / 1000, // km로 변환
+          duration
+        });
+        alert(`주행 기록 저장됨!\n거리: ${(rideDistance / 1000).toFixed(2)}km\n시간: ${duration}분`);
+      } catch (error) {
+        console.error('주행 기록 저장 실패:', error);
+        alert('주행 기록 저장에 실패했습니다.');
+      }
+    }
+
+    // 리셋
+    rideStartPosRef.current = null;
+    rideStartTimeRef.current = null;
+  }, [user?.id, rideTime, rideDistance]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -634,6 +728,35 @@ export default function MapPage({ user: userProp, onBackHome }) {
                   위치 공유
                 </label>
               </div>
+
+              {/* 라이딩 섹션 */}
+              <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <button
+                    onClick={isRiding ? handleRideStop : handleRideStart}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: isRiding ? '#ef4444' : '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {isRiding ? '라이딩 종료' : '라이딩 시작'}
+                  </button>
+                </div>
+                {isRiding && (
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    <div>⏱️ 시간: {Math.floor(rideTime / 60)}:{(rideTime % 60).toString().padStart(2, '0')}</div>
+                    <div>📍 거리: {(rideDistance / 1000).toFixed(2)}km</div>
+                  </div>
+                )}
+              </div>
+
               <div className="pointInputWrapper">
                 <div className="dotsColumn">
                   <span className="pointDot startDot" />

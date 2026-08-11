@@ -751,8 +751,8 @@ export default function MapPage({ user: userProp, onBackHome }) {
                 </div>
                 {isRiding && (
                   <div style={{ fontSize: '12px', color: '#666' }}>
-                    <div>⏱️ 시간: {Math.floor(rideTime / 60)}:{(rideTime % 60).toString().padStart(2, '0')}</div>
-                    <div>📍 거리: {(rideDistance / 1000).toFixed(2)}km</div>
+                    <div>시간: {Math.floor(rideTime / 60)}:{(rideTime % 60).toString().padStart(2, '0')}</div>
+                    <div>거리: {(rideDistance / 1000).toFixed(2)}km</div>
                   </div>
                 )}
               </div>

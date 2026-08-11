@@ -1,6 +1,9 @@
 # Claude Code 로컬 설정
 .claude/
 
+# Superpowers SDD 스크래치(진행 원장 등)
+.superpowers/
+
 # Eclipse IDE 워크스페이스 캐시
 .metadata/
 

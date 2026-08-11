@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { text, routes } from '../constants';
-import heroBg from '../backglound1.png';
 
 function RecentRoutes({ routeLoop }) {
   return (
@@ -36,7 +35,9 @@ export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, on
 
   return (
     <div className="app">
-      <section className="hero" style={{ backgroundImage: `url(${heroBg})` }}>
+      <section className="hero">
+        <div className="heroMotion" aria-hidden="true" />
+        <div className="heroShade" aria-hidden="true" />
         <nav className="navbar" aria-label={text.nav}>
           <a className="brand" href="/" onClick={onMoveHome}>PedalLink</a>
           <div className="navLinks">

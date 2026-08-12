@@ -39,7 +39,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const openMap = (e) => { e.preventDefault(); window.open('/map', '_blank', 'noopener,noreferrer'); };
+  const openMap = (e) => { e.preventDefault(); moveTo('/map'); };
   const moveHome = (e) => { e.preventDefault(); moveTo('/'); };
   const moveSignup = (e) => { e.preventDefault(); moveTo('/signup'); };
   const moveLogin = (e) => { e.preventDefault(); moveTo('/login'); };
@@ -62,7 +62,7 @@ function App() {
   if (currentPath === '/map') return <MapPage user={user} onBackHome={moveHome} />;
   if (currentPath === '/signup') return <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   if (currentPath === '/login') return <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
-  if (currentPath === '/party') return <PartyPage onMoveHome={moveHome} />;
+  if (currentPath === '/party') return <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   return (
     <HomePage
       user={user}

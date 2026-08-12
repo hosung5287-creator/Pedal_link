@@ -20,6 +20,49 @@ function getLiveId(user) {
   return Number(id);
 }
 
+// 경로 분석 표시용 — 노면/도로종류 한글 라벨 + 색상 팔레트
+const SURFACE_LABELS = {
+  asphalt: '아스팔트', paving_stones: '보도블록', concrete: '콘크리트', sett: '돌포장',
+  compacted: '다짐길', fine_gravel: '고운자갈', gravel: '자갈', unpaved: '비포장',
+  ground: '흙길', dirt: '흙길', sand: '모래', grass: '잔디', wood: '목재', unknown: '미표기',
+};
+const HIGHWAY_LABELS = {
+  cycleway: '자전거도로', path: '소로', footway: '보행로', pedestrian: '보행자도로',
+  residential: '주택가길', living_street: '생활도로', service: '이면도로', track: '농로',
+  unclassified: '기타도로', tertiary: '3차로', secondary: '2차로', primary: '간선도로',
+  trunk: '자동차도로', steps: '계단', unknown: '미표기',
+};
+const ANALYSIS_PALETTE = ['#0ea5e9', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#14b8a6', '#64748b', '#eab308'];
+
+// 노면/도로종류 분포 — 가로 막대 + 범례
+function AnalysisBar({ title, items, labels }) {
+  const top = items.slice(0, 6);
+  return (
+    <div className="analysisGroup">
+      <h4 className="analysisTitle">{title}</h4>
+      <div className="analysisTrack">
+        {top.map((it, i) => (
+          <span
+            key={it.key}
+            className="analysisSeg"
+            style={{ width: `${it.pct}%`, background: ANALYSIS_PALETTE[i % ANALYSIS_PALETTE.length] }}
+            title={`${labels[it.key] || it.key} ${it.pct}%`}
+          />
+        ))}
+      </div>
+      <ul className="analysisLegend">
+        {top.map((it, i) => (
+          <li key={it.key}>
+            <span className="legendDot" style={{ background: ANALYSIS_PALETTE[i % ANALYSIS_PALETTE.length] }} />
+            <span className="legendName">{labels[it.key] || it.key}</span>
+            <span className="legendPct">{it.pct}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function MapPage({ user: userProp, onBackHome }) {
   const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
   const [mapLayer, setMapLayer] = useState('mapnik');
@@ -37,6 +80,8 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
   const [checkedIds, setCheckedIds] = useState([]);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [routeStats, setRouteStats] = useState(null);
   const [locationShareEnabled, setLocationShareEnabled] = useState(() => {
     try {
       const saved = localStorage.getItem('locationShareEnabled');
@@ -128,12 +173,15 @@ export default function MapPage({ user: userProp, onBackHome }) {
     if (!container) return;
 
     const map = L.map(container, {
-      zoomControl: true,
+      zoomControl: false, // 기본(왼쪽 위) 끄고 아래에서 오른쪽 위로 추가
       keepBuffer: 1,
       zoomSnap: 1,
       zoomDelta: 1,
       preferCanvas: true,
     }).setView(seoulCenter, 12);
+
+    // 확대/축소 버튼을 오른쪽 위로 (왼쪽 검색 패널에 안 가리게)
+    L.control.zoom({ position: 'topright' }).addTo(map);
 
     tileLayerRef.current = makeTileLayer('cyclemap').addTo(map);
     markerLayerRef.current = L.layerGroup().addTo(map);
@@ -170,8 +218,11 @@ export default function MapPage({ user: userProp, onBackHome }) {
     const map = mapRef.current;
     if (!map || !navigator.geolocation) return;
 
+    let cancelled = false;
     geoWatchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        // 지도가 이미 제거됐거나(언마운트) 재생성됐으면 무시 — 옛 지도에 마커 추가 방지
+        if (cancelled || !mapRef.current) return;
         const { latitude, longitude } = pos.coords;
         lastPosRef.current = { lat: latitude, lng: longitude };
         if (!currentLocMarkerRef.current) {
@@ -202,6 +253,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     );
 
     return () => {
+      cancelled = true;
       if (geoWatchIdRef.current != null) {
         navigator.geolocation.clearWatch(geoWatchIdRef.current);
         geoWatchIdRef.current = null;
@@ -312,6 +364,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     const map = mapRef.current;
     if (!map) return;
 
+    let cancelled = false;
     const myId = getLiveId(user);
     const myName = user?.name || `게스트${String(myId).slice(-4)}`;
     const markers = otherMarkersRef.current;
@@ -324,6 +377,8 @@ export default function MapPage({ user: userProp, onBackHome }) {
       try {
         await reportLocation({ userId: myId, name: myName, lat: myPos.lat, lng: myPos.lng });
         const others = (await getOtherLocations(myId)) || [];
+        // 네트워크 대기 중 지도가 제거됐으면 중단 — 옛 지도에 마커 추가 방지
+        if (cancelled || !mapRef.current) return;
 
         const seen = new Set();
         for (const o of others) {
@@ -369,11 +424,14 @@ export default function MapPage({ user: userProp, onBackHome }) {
     }, 3000);
 
     return () => {
+      cancelled = true;
       clearInterval(timer);
       markers.forEach(m => m.remove());
       markers.clear();
       insideMap.clear();
     };
+    // user 객체는 매 렌더마다 새로 생성되므로 안정적인 user?.id 에만 의존 (의도된 것)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, locationShareEnabled]);
 
   // 위치 공유 토글에 따라 원(동그라미) 보이기/숨기기
@@ -598,10 +656,13 @@ export default function MapPage({ user: userProp, onBackHome }) {
     setIsRouting(true);
     setStatus(text.searching);
     try {
-      const [bikeRoute, shortestRoute] = await Promise.all([
+      const [bike, short] = await Promise.all([
         requestBrouterRoute(from, to, 'trekking'),
         requestBrouterRoute(from, to, 'shortest'),
       ]);
+      const bikeRoute = bike.coords;
+      const shortestRoute = short.coords;
+      setRouteStats(bike.stats);
       bikeRouteRef.current = bikeRoute;
       shortestRouteRef.current = shortestRoute;
       drawRoutes(bikeRoute, shortestRoute, routeLayerRef.current, mapRef.current);
@@ -643,9 +704,10 @@ export default function MapPage({ user: userProp, onBackHome }) {
     setStartQuery('');
     setEndQuery('');
     setStatus(text.routeHint);
+    setRouteStats(null);
     markerLayerRef.current?.clearLayers();
     routeLayerRef.current?.clearLayers();
-    mapRef.current?.setView(seoulCenter, 12);
+    // 지도 시점(중심·줌)은 그대로 유지 — 보던 위치에서 튀지 않게
   }, []);
 
   return (
@@ -674,7 +736,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
         </div>
       </header>
 
-      <section className="mapWorkspace">
+      <section className={`mapWorkspace${panelOpen ? '' : ' panelClosed'}`}>
         <aside className={`routePlanner${searchMode ? ' searchActive' : ''}`} aria-label="Route planner">
           {searchMode ? (
             <>
@@ -787,14 +849,37 @@ export default function MapPage({ user: userProp, onBackHome }) {
               <p className="routeStatus" aria-live="polite">
                 {isRouting ? text.searching : status}
               </p>
+
+              {/* 경로 분석 (BRouter 데이터) */}
+              {routeStats && (
+                <div className="routeAnalysis">
+                  <div className="analysisStats">
+                    <div className="statTile">
+                      <span className="statValue">{routeStats.distanceKm}</span>
+                      <span className="statLabel">km</span>
+                    </div>
+                    <div className="statTile">
+                      <span className="statValue">{routeStats.ascendM}</span>
+                      <span className="statLabel">m 상승</span>
+                    </div>
+                    <div className="statTile">
+                      <span className="statValue">{routeStats.timeMin}</span>
+                      <span className="statLabel">분</span>
+                    </div>
+                  </div>
+                  <AnalysisBar title="노면" items={routeStats.surfaces} labels={SURFACE_LABELS} />
+                  <AnalysisBar title="도로 종류" items={routeStats.highways} labels={HIGHWAY_LABELS} />
+                </div>
+              )}
+
               {/* 저장/목록 버튼 */}
-              <button className="resetButton" type="button" onClick={saveRoute}>
+              <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
                 경로 저장
               </button>
-              <button className="resetButton" type="button" onClick={loadRouteList}>
+              <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
                 저장된 경로 목록
               </button>
-              <button className="resetButton" type="button" onClick={resetPlanner}>{text.reset}</button>
+              <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
 
               {/* 경로 목록 패널 */}
               {showRouteList && (
@@ -836,6 +921,16 @@ export default function MapPage({ user: userProp, onBackHome }) {
             </>
           )}
         </aside>
+
+        <button
+          className="panelToggle"
+          type="button"
+          onClick={() => setPanelOpen((o) => !o)}
+          aria-label={panelOpen ? '검색 패널 접기' : '검색 패널 펼치기'}
+          title={panelOpen ? '검색 패널 접기' : '검색 패널 펼치기'}
+        >
+          {panelOpen ? '‹' : '›'}
+        </button>
 
         <div className="leafletMap" ref={mapNodeRef} />
       </section>

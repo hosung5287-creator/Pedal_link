@@ -138,6 +138,51 @@ export function routeHasCycleways(routePoints, features) {
   return false;
 }
 
+// BRouter 응답의 properties(요약) + messages(구간별 도로정보)를 분석 데이터로 가공
+function parseBrouterStats(props) {
+  const distanceM = Number(props['track-length']) || 0;
+  const ascendM = Number(props['filtered ascend']) || 0;
+  const timeSec = Number(props['total-time']) || 0;
+
+  const messages = props.messages || [];
+  const header = messages[0] || [];
+  const dIdx = header.indexOf('Distance');
+  const wIdx = header.indexOf('WayTags');
+
+  const surfaceM = {};
+  const highwayM = {};
+  if (dIdx >= 0 && wIdx >= 0) {
+    for (let i = 1; i < messages.length; i++) {
+      const seg = Number(messages[i][dIdx]) || 0;
+      const tags = messages[i][wIdx] || '';
+      let surface = 'unknown';
+      let highway = 'unknown';
+      tags.split(/\s+/).forEach((t) => {
+        const [k, v] = t.split('=');
+        if (k === 'surface') surface = v;
+        else if (k === 'highway') highway = v;
+      });
+      surfaceM[surface] = (surfaceM[surface] || 0) + seg;
+      highwayM[highway] = (highwayM[highway] || 0) + seg;
+    }
+  }
+
+  const toSorted = (obj) => {
+    const total = Object.values(obj).reduce((a, b) => a + b, 0) || 1;
+    return Object.entries(obj)
+      .map(([key, meters]) => ({ key, meters, pct: Math.round((meters / total) * 100) }))
+      .sort((a, b) => b.meters - a.meters);
+  };
+
+  return {
+    distanceKm: Math.round(distanceM / 100) / 10,
+    ascendM,
+    timeMin: Math.round(timeSec / 60),
+    surfaces: toSorted(surfaceM),
+    highways: toSorted(highwayM),
+  };
+}
+
 export async function requestBrouterRoute(from, to, profile) {
   const url = new URL('https://brouter.de/brouter');
   url.searchParams.set('lonlats', `${from.lng},${from.lat}|${to.lng},${to.lat}`);
@@ -149,11 +194,13 @@ export async function requestBrouterRoute(from, to, profile) {
   if (!response.ok) throw new Error('Route request failed');
 
   const geojson = await response.json();
-  const coordinates =
-    geojson.type === 'FeatureCollection'
-      ? geojson.features?.[0]?.geometry?.coordinates
-      : geojson.geometry?.coordinates;
+  const feature = geojson.type === 'FeatureCollection' ? geojson.features?.[0] : geojson;
+  const coordinates = feature?.geometry?.coordinates;
 
   if (!coordinates?.length) throw new Error('Route geometry missing');
-  return coordinates.map(([lng, lat]) => [lat, lng]);
+
+  return {
+    coords: coordinates.map(([lng, lat]) => [lat, lng]),
+    stats: parseBrouterStats(feature?.properties || {}),
+  };
 }

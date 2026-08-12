@@ -113,6 +113,23 @@ export const text = {
   partyPendingTitle: '승인 대기',
   partyNoPending: '대기 중인 신청이 없어요.',
   partyParticipants: '참여',
+  heroScrollCue: '아래로 스크롤',
+  instantEyebrow: '즉석 링크',
+  instantTitle: '지금 근처에서 바로',
+  instantSub: '주변에 있는 라이더와 지금 바로 연결해서 함께 달려요. 약속을 미리 잡지 않아도, 마음이 맞으면 그대로 출발합니다.',
+  instantCta: '지금 링크 만들기',
+  instantAria: '지금 모집 중인 즉석 링크',
+  plannedEyebrow: '미리 모집',
+  plannedTitle: '미리 모아서 함께',
+  plannedSub: '날짜와 코스를 정해두고 같이 탈 사람을 모아요. 호스트가 신청을 확인하고 수락하면 참여가 확정됩니다.',
+  plannedCta: '모집 중인 링크 보기',
+  plannedAria: '미리 모집 중인 링크',
+  plannedHostLabel: '호스트',
+  plannedWhenLabel: '출발',
+  closingTitle: '오늘, 어디까지 달려볼까요?',
+  closingSub: '지도에서 코스를 직접 그려 저장하고, 그 코스로 링크를 열어보세요.',
+  closingMap: '지도 보기',
+  closingParty: '파티 보기',
 };
 
 export const seoulCenter = [37.5665, 126.978];
@@ -136,6 +153,65 @@ export const tileLayers = {
     attribution: '&copy; OpenStreetMap contributors',
   },
 };
+
+// 홈 화면 "지금 근처에서 바로" 섹션용 예시 데이터 (디자인용 정적 데이터)
+export const instantLinks = [
+  {
+    title: '퇴근길 한강 20km 가볍게',
+    routeName: '한강 노을 순환 코스',
+    startLabel: '반포한강공원 잠수교 입구',
+    nearbyLabel: '1.2km 근처',
+    leaveInLabel: '12분 뒤 출발',
+    members: 3,
+    maxMembers: 6,
+  },
+  {
+    title: '양재천 저녁 회복 주행',
+    routeName: '양재천 회복 라이딩',
+    startLabel: '양재시민의숲 정문',
+    nearbyLabel: '2.8km 근처',
+    leaveInLabel: '35분 뒤 출발',
+    members: 2,
+    maxMembers: 4,
+  },
+  {
+    title: '남산 한 바퀴 치고 옵니다',
+    routeName: '남산 업힐 반복 코스',
+    startLabel: '숭례문 광장',
+    nearbyLabel: '4.1km 근처',
+    leaveInLabel: '1시간 뒤 출발',
+    members: 4,
+    maxMembers: 5,
+  },
+];
+
+// 홈 화면 "미리 모아서 함께" 섹션용 예시 데이터 (디자인용 정적 데이터)
+export const plannedLinks = [
+  {
+    title: '주말 북한강 라이딩 같이 가요',
+    routeName: '북한강 강변 라이딩',
+    whenLabel: '8월 15일 토 오전 7시',
+    members: 4,
+    maxMembers: 8,
+    hostName: '라이더A',
+  },
+  {
+    title: '남산 업힐 도전 링크',
+    routeName: '남산 업힐 반복 코스',
+    whenLabel: '8월 16일 일 오전 6시 30분',
+    members: 3,
+    maxMembers: 4,
+    hostName: '바이크박',
+  },
+  {
+    title: '제주 해안 아침 투어링',
+    routeName: '제주 해안 아침 코스',
+    whenLabel: '8월 22일 토 오전 8시',
+    members: 5,
+    maxMembers: 10,
+    hostName: '한강러너',
+  },
+];
 
 export const routes = [
   {

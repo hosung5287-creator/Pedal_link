@@ -32,7 +32,7 @@ public class AuthController {
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setProvider("local");
-
+        
         userRepository.save(user);
         return ResponseEntity.ok(Map.of("message", "회원가입 완료"));
     }

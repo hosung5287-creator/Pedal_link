@@ -10,6 +10,7 @@ import { api } from '../api/client';
 const GEOFENCE_RADIUS_M = 220;
 const GEOFENCE_EXIT_M = 250;
 
+// 사용자 ID 가져오기 — 로그인한 경우 DB ID, 비로그인 시 세션 스토리지에 임의 생성
 function getLiveId(user) {
   if (user?.id) return user.id;
   let id = sessionStorage.getItem('liveLocId');
@@ -79,6 +80,17 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const [searchResults, setSearchResults] = useState([]);
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [saveRouteName, setSaveRouteName] = useState('');
+  const [toast, setToast] = useState(null); // { msg, type: 'info'|'error' }
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const toastTimer = useRef(null);
+
+  const showToast = (msg, type = 'info') => {
+    clearTimeout(toastTimer.current);
+    setToast({ msg, type });
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  };
   const [checkedIds, setCheckedIds] = useState([]);
   const [panelOpen, setPanelOpen] = useState(true);
   const [routeStats, setRouteStats] = useState(null);
@@ -348,10 +360,10 @@ export default function MapPage({ user: userProp, onBackHome }) {
           distance: rideDistance / 1000, // km로 변환
           duration
         });
-        alert(`주행 기록 저장됨!\n거리: ${(rideDistance / 1000).toFixed(2)}km\n시간: ${duration}분`);
+        showToast(`주행 기록 저장됨! ${(rideDistance / 1000).toFixed(2)}km · ${duration}분`);
       } catch (error) {
         console.error('주행 기록 저장 실패:', error);
-        alert('주행 기록 저장에 실패했습니다.');
+        showToast('주행 기록 저장에 실패했습니다.', 'error');
       }
     }
 
@@ -575,19 +587,22 @@ export default function MapPage({ user: userProp, onBackHome }) {
     setSearchResults([]);
   }, [searchMode]);
 
-  // 저장 - 이름 입력받아서 전송
-  const saveRoute = async () => {
+  // 저장 버튼 → 모달 열기
+  const saveRoute = () => {
     if (!startPoint || !endPoint) {
-      alert('출발지와 도착지를 선택하세요');
+      showToast('출발지와 도착지를 선택하세요', 'error');
       return;
     }
+    setSaveRouteName('');
+    setSaveModalOpen(true);
+  };
 
-    const name = prompt('경로 이름을 입력하세요');
-    if (!name) return;
-
+  // 모달 확인 → 실제 저장
+  const confirmSaveRoute = async () => {
+    if (!saveRouteName.trim()) return;
     const body = {
       userId: user?.id ?? null,
-      routeName: name,
+      routeName: saveRouteName.trim(),
       fromLat: startPoint.lat,
       fromLng: startPoint.lng,
       fromLabel: startPoint.label,
@@ -597,12 +612,12 @@ export default function MapPage({ user: userProp, onBackHome }) {
       bikeRoute: bikeRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
       shortestRoute: shortestRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
     };
-
     try {
       await saveRouteApi(body);
-      alert('저장 완료!');
+      setSaveModalOpen(false);
+      showToast('경로가 저장되었습니다');
     } catch (e) {
-      alert('저장 실패: ' + e.message);
+      showToast('저장 실패: ' + e.message, 'error');
     }
   };
 
@@ -620,15 +635,20 @@ export default function MapPage({ user: userProp, onBackHome }) {
     );
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (checkedIds.length === 0) return;
-    if (!window.confirm(`선택한 ${checkedIds.length}개 경로를 삭제할까요?`)) return;
+    setConfirmDelete(true);
+  };
+
+  const confirmHandleDelete = async () => {
+    setConfirmDelete(false);
     try {
       await deleteRoutesApi(checkedIds);
       setRouteList(prev => prev.filter(r => !checkedIds.includes(r.id)));
       setCheckedIds([]);
+      showToast('삭제되었습니다');
     } catch (e) {
-      alert('삭제 실패: ' + e.message);
+      showToast('삭제 실패: ' + e.message, 'error');
     }
   };
 
@@ -639,7 +659,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     console.log('불러온 데이터:', data); // 콘솔에서 확인용
 
     if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
-        alert('경로 데이터가 없습니다');
+        showToast('경로 데이터가 없습니다', 'error');
         return;
     }
 
@@ -712,6 +732,19 @@ export default function MapPage({ user: userProp, onBackHome }) {
 
   return (
     <div className="mapOnlyPage">
+      {/* 토스트 알림 */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, padding: '10px 20px', borderRadius: '8px',
+          backgroundColor: toast.type === 'error' ? '#ef4444' : '#22c55e',
+          color: '#fff', fontSize: '14px', fontWeight: '500',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)', pointerEvents: 'none',
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
       <header className="mapOnlyHeader">
         <a className="brand mapBrand" href="/" onClick={onBackHome}>PedalLink</a>
         <div>
@@ -876,6 +909,26 @@ export default function MapPage({ user: userProp, onBackHome }) {
               <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
                 경로 저장
               </button>
+
+              {/* 경로 이름 입력 모달 */}
+              {saveModalOpen && (
+                <div style={{ marginTop: '10px', padding: '12px', backgroundColor: '#f0f4ff', borderRadius: '8px', border: '1px solid #b0c4f0' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '600' }}>경로 이름을 입력하세요</p>
+                  <input
+                    type="text"
+                    value={saveRouteName}
+                    onChange={(e) => setSaveRouteName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
+                    placeholder="예: 한강 자전거 코스"
+                    autoFocus
+                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button type="button" className="btn btn--solid" style={{ flex: 1 }} onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
+                    <button type="button" className="btn" style={{ flex: 1 }} onClick={() => setSaveModalOpen(false)}>취소</button>
+                  </div>
+                </div>
+              )}
               <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
                 저장된 경로 목록
               </button>
@@ -888,9 +941,17 @@ export default function MapPage({ user: userProp, onBackHome }) {
                     <h3 style={{ margin: '0', fontSize: '14px', fontWeight: '600' }}>저장된 경로</h3>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       {checkedIds.length > 0 && (
-                        <button type="button" onClick={handleDelete} style={{ fontSize: '12px', padding: '3px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                          삭제 ({checkedIds.length})
-                        </button>
+                        confirmDelete ? (
+                          <span style={{ display: 'flex', gap: '4px', alignItems: 'center', fontSize: '12px' }}>
+                            <span>{checkedIds.length}개 삭제?</span>
+                            <button type="button" onClick={confirmHandleDelete} style={{ padding: '2px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>확인</button>
+                            <button type="button" onClick={() => setConfirmDelete(false)} style={{ padding: '2px 8px', backgroundColor: '#6b7280', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>취소</button>
+                          </span>
+                        ) : (
+                          <button type="button" onClick={handleDelete} style={{ fontSize: '12px', padding: '3px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                            삭제 ({checkedIds.length})
+                          </button>
+                        )
                       )}
                       <button type="button" onClick={() => setShowRouteList(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
                     </div>

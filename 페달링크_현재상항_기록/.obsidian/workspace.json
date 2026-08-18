@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "0627데이터베이스 테이블 생성.md",
+                "file": "현재사항/07-21.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "0627데이터베이스 테이블 생성"
+              "title": "07-21"
             }
           }
         ],
@@ -216,8 +216,9 @@
   },
   "active": "5e3a5a1f2a19d275",
   "lastOpenFiles": [
-    "현재사항/06-27 프론트 인천기능 제거.md",
     "0627데이터베이스 테이블 생성.md",
+    "현재사항/07-21.md",
+    "현재사항/06-27 프론트 인천기능 제거.md",
     "환영합니다!.md",
     "Pasted image 20260627190253.png",
     "현재사항"

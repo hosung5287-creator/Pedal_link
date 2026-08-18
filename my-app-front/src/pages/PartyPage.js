@@ -16,7 +16,7 @@ function formatStartAt(iso) {
 }
 
 // 저장 경로 한 개 + "링크 만들기" 폼
-function RouteToParty({ route, onCreate }) {
+function RouteToParty({ route, onCreate, isLoggedIn, onLoginNeeded }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [startAt, setStartAt] = useState('');
@@ -35,6 +35,20 @@ function RouteToParty({ route, onCreate }) {
       setSubmitting(false);
     }
   };
+
+  if (!isLoggedIn) {
+    return (
+      <li className="routePick">
+        <div className="routePickInfo">
+          <h4>{route.routeName}</h4>
+          <p>{route.fromLabel} → {route.toLabel}</p>
+        </div>
+        <button type="button" className="partyPrimaryBtn" onClick={onLoginNeeded}>
+          {text.partyLoginNeeded}
+        </button>
+      </li>
+    );
+  }
 
   return (
     <li className="routePick">
@@ -212,7 +226,7 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
           ) : (
             <ul className="routePickList">
               {routes.map((r) => (
-                <RouteToParty key={r.id} route={r} onCreate={handleCreate} />
+                <RouteToParty key={r.id} route={r} onCreate={handleCreate} isLoggedIn={isLoggedIn} onLoginNeeded={onMoveLogin} />
               ))}
             </ul>
           )}

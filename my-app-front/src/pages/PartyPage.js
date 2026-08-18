@@ -168,7 +168,7 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([getMyRoutesForParty(), getParties()]).then(([r, p]) => {
+    Promise.all([getMyRoutesForParty(user?.id), getParties()]).then(([r, p]) => {
       if (!alive) return;
       setRoutes(r);
       setParties(p);

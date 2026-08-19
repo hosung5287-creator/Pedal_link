@@ -30,7 +30,7 @@ function RecentRoutes({ routeLoop }) {
   );
 }
 
-export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, onMoveLogin, onMoveParty, onLogout }) {
+export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, onMoveLogin, onMoveParty, onMoveBrowse, onLogout }) {
   const routeLoop = useMemo(() => [...routes, ...routes], []);
 
   return (
@@ -41,7 +41,7 @@ export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, on
         <nav className="navbar" aria-label={text.nav}>
           <a className="brand" href="/" onClick={onMoveHome}>PedalLink</a>
           <div className="navLinks">
-            <a href="/">{text.browse}</a>
+            <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
             <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
             <a href="/">{text.nearby}</a>
             <a href="/party" onClick={onMoveParty}>{text.party}</a>

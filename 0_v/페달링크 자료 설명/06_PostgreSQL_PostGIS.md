@@ -119,12 +119,10 @@ joined_at  TIMESTAMP
 UNIQUE (party_id, user_id)      -- 같은 파티에 같은 사람 중복 신청 금지
 ```
 
-> `parties` / `party_members` / `ride_records` / `route_likes` 와
-> `routes` 의 분석·게시물 컬럼(`distance_km`, `ascend_m`, `time_min`, `description`, `tags`)은
-> `DB/dump-Pedal_link-202607241122.sql`(7/24 덤프)에 **없다.**
-> 그 이후에 추가된 엔티티/필드라서, 덤프를 복원한 뒤 백엔드를 한 번 실행하면
-> `ddl-auto=update` 가 자동으로 만들어준다.
-> 단, 이미 저장돼 있던 경로의 `distance_km` 는 `NULL` 로 남는다 (기존 행은 채워주지 않는다).
+> 이 테이블·컬럼들은 전부 `ddl-auto=update` 가 엔티티를 보고 자동으로 만든 것이다.
+> 최신 덤프에는 모두 반영돼 있다.
+> 단, 기능이 생기기 **전에** 저장돼 있던 경로의 `distance_km` 등은 `NULL` 로 남는다
+> (`update` 는 새 컬럼을 추가만 하고 기존 행을 채워주지는 않는다).
 
 ---
 
@@ -239,7 +237,15 @@ psql -U postgres -d Pedal_link -f backup.sql
 # 전체 클러스터 덤프
 pg_dumpall -U postgres > cluster_dump.sql
 ```
-저장소의 최신 덤프: `DB/dump-Pedal_link-202607241122.sql` (2026-07-24, PostgreSQL 18.4)
+저장소의 최신 덤프: `DB/dump-Pedal_link-202608191557.sql` (2026-08-19, PostgreSQL 18.4)
+
+```powershell
+# 이 프로젝트에서 덤프를 갱신할 때
+pg_dump -U postgres --encoding=UTF8 Pedal_link > DB/dump-Pedal_link-$(Get-Date -Format yyyyMMddHHmm).sql
+```
+덤프에는 **8개 테이블 + cycleways 2673행**이 들어 있다. 새 PC에서는
+`CREATE DATABASE "Pedal_link"` → `CREATE EXTENSION postgis` → 덤프 복원으로
+`SETUP.md` 의 Step 8~9(테이블 생성 + ogr2ogr 임포트)를 건너뛸 수 있다.
 
 ---
 

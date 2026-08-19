@@ -167,8 +167,8 @@ spring.jpa.hibernate.ddl-auto=update
 `ride_records` 테이블이 자동 생성됐다. `Route` 에 `distanceKm` 을 추가했을 때도 마찬가지로
 `routes.distance_km` 컬럼이 자동으로 붙었다 — **단, 기존 행의 값은 NULL 로 남는다.**
 
-> 그래서 `DB/dump-Pedal_link-202607241122.sql` (7/24 덤프)에는 parties 테이블이 없다.
-> 덤프를 복원해도 서버를 한 번 띄우면 테이블이 생긴다.
+> 이렇게 자동 생성된 테이블은 덤프에도 그대로 담긴다.
+> 최신 덤프 `DB/dump-Pedal_link-202608191557.sql` 에는 8개 테이블이 모두 들어 있다.
 
 **`update` 가 못 하는 일**: 컬럼 삭제, 타입 변경, 이름 변경. 이런 건 직접 SQL을 쳐야 한다.
 

@@ -25,17 +25,6 @@ export async function login({ email, password }) {
   return api.post('/api/auth/login', { email, password });
 }
 
-// ── 현재 로그인 유저 (세션 쿠키 기반) ──
-// 로그인 안 된 상태면 백엔드가 401 → ApiError(status 401) 로 던져진다.
-export async function getMe() {
-  return api.get('/api/auth/me', { withCredentials: true });
-}
-
-// ── 로그아웃 ──
-export async function logout() {
-  return api.post('/api/auth/logout', undefined, { withCredentials: true });
-}
-
 // ── 위치 공유 설정 업데이트 ──
 export async function updateLocationSharing(userId, enabled) {
   return api.put(`/api/auth/users/${userId}/location-sharing`, { enabled });

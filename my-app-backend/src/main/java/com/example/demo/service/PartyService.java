@@ -37,6 +37,7 @@ public class PartyService {
                 r.setRouteName(route.getRouteName());
                 r.setFromLabel(route.getFromLabel());
                 r.setToLabel(route.getToLabel());
+                r.setDistanceKm(route.getDistanceKm());
             });
         }
         return r;

@@ -11,10 +11,6 @@ export function makeTileLayer(key) {
   });
 }
 
-navigator.geolocation.getCurrentPosition((position) => {
-	console.log(position)
-});
-
 export function makeBikeIcon(borderColor) {
   return L.divIcon({
     html: `<div style="display:flex;flex-direction:column;align-items:center;width:38px;height:50px;">

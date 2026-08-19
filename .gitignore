@@ -18,7 +18,8 @@ bin/
 build/
 
 # Obsidian 로컬 UI 상태 (나머지 .obsidian 설정은 공유)
-.obsidian/workspace.json
+# ** 로 시작해야 하위 폴더의 보관함(0_v 등)까지 걸린다
+**/.obsidian/workspace.json
 
 # OS
 .DS_Store

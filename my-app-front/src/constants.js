@@ -161,7 +161,7 @@ export const text = {
 };
 
 export const seoulCenter = [37.5665, 126.978];
-export const KAKAO_API_KEY = process.env.REACT_APP_KAKAO_API_KEY;
+export const KAKAO_API_KEY = import.meta.env.VITE_KAKAO_API_KEY;
 
 export const GU_LIST = [
   '강남구', '강동구', '강북구', '강서구', '관악구',

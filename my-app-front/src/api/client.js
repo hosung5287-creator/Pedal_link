@@ -1,9 +1,9 @@
 // 백엔드 API 호출을 한 곳으로 모으는 공통 클라이언트.
 // 컴포넌트는 fetch 를 직접 부르지 말고 항상 이 client 를 통해 호출한다.
 //
-// base URL 은 환경변수로 관리한다. (.env.local 의 REACT_APP_API_BASE)
+// base URL 은 환경변수로 관리한다. (.env.local 의 VITE_API_BASE)
 // 로컬 개발 기본값은 Spring Boot 서버 주소.
-export const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:8080';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080';
 
 // 서버가 에러 상태코드를 주면 이 에러로 던진다.
 // 컴포넌트에서 err.status 로 분기 처리할 수 있다.

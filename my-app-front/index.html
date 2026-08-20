@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="PedalLink bicycle route planner" />
@@ -11,13 +11,14 @@
     <link rel="preconnect" href="https://a.tile-cyclosm.openstreetmap.fr" />
     <link rel="preconnect" href="https://brouter.de" />
     <link rel="preconnect" href="https://nominatim.openstreetmap.org" />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="manifest" href="/manifest.json" />
     <title>PedalLink - Bicycle Route Planner</title>
     <!-- Leaflet은 npm 패키지로 관리 (CDN 스크립트 제거) -->
   </head>
   <body>
     <noscript>JavaScript is required to run PedalLink.</noscript>
     <div id="root"></div>
+    <script type="module" src="/src/index.jsx"></script>
   </body>
 </html>

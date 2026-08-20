@@ -1,3 +1,5 @@
+import '../styles/party.css';
+
 import { useEffect, useState } from 'react';
 import { text } from '../constants';
 import heroBg from '../backglound1.png';
@@ -189,6 +191,8 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
       setLoading(false);
     });
     return () => { alive = false; };
+    // 마운트 시 1회만 로드 (user?.id 는 최초 렌더 값 사용 의도)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 목록에서 해당 파티만 교체

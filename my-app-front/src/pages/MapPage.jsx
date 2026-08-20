@@ -1,3 +1,5 @@
+import '../styles/map.css';
+
 import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
@@ -718,13 +720,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     <div className="mapOnlyPage">
       {/* 토스트 알림 */}
       {toast && (
-        <div style={{
-          position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 9999, padding: '10px 20px', borderRadius: '8px',
-          backgroundColor: toast.type === 'error' ? '#ef4444' : '#22c55e',
-          color: '#fff', fontSize: '14px', fontWeight: '500',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)', pointerEvents: 'none',
-        }}>
+        <div className={`mapToast${toast.type === 'error' ? ' isError' : ''}`}>
           {toast.msg}
         </div>
       )}
@@ -795,41 +791,30 @@ export default function MapPage({ user: userProp, onBackHome }) {
             </>
           ) : (
             <>
-              <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#f9fafb', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="plannerToggleRow">
                 <input
                   type="checkbox"
                   id="locationToggle"
                   checked={locationShareEnabled}
                   onChange={(e) => handleLocationShareChange(e.target.checked)}
-                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                 />
-                <label htmlFor="locationToggle" style={{ cursor: 'pointer', fontSize: '14px', fontWeight: '500', margin: '0' }}>
+                <label htmlFor="locationToggle">
                   위치 공유
                 </label>
               </div>
 
               {/* 라이딩 섹션 */}
-              <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#f9fafb', borderRadius: '6px' }}>
-                <div style={{ marginBottom: '12px' }}>
+              <div className="plannerRideBox">
+                <div className="plannerRideAction">
                   <button
                     onClick={isRiding ? handleRideStop : handleRideStart}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: isRiding ? '#ef4444' : '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '14px'
-                    }}
+                    className={`plannerRideBtn${isRiding ? ' isRiding' : ''}`}
                   >
                     {isRiding ? '라이딩 종료' : '라이딩 시작'}
                   </button>
                 </div>
                 {isRiding && (
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div className="plannerRideStats">
                     <div>시간: {Math.floor(rideTime / 60)}:{(rideTime % 60).toString().padStart(2, '0')}</div>
                     <div>거리: {(rideDistance / 1000).toFixed(2)}km</div>
                   </div>
@@ -895,24 +880,23 @@ export default function MapPage({ user: userProp, onBackHome }) {
                   경로 저장
                 </button>
 
-                {/* 경로 이름 입력 모달 */}
-                {saveModalOpen && (
-                  <div style={{ padding: '12px', backgroundColor: '#f0f4ff', borderRadius: '8px', border: '1px solid #b0c4f0' }}>
-                    <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '600' }}>경로 이름을 입력하세요</p>
-                    <input
-                      type="text"
-                      value={saveRouteName}
-                      onChange={(e) => setSaveRouteName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
-                      placeholder="예: 한강 자전거 코스"
-                      autoFocus
-                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', boxSizing: 'border-box' }}
-                    />
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <button type="button" className="btn btn--solid" style={{ flex: 1 }} onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
-                      <button type="button" className="btn" style={{ flex: 1 }} onClick={() => setSaveModalOpen(false)}>취소</button>
-                    </div>
+              {/* 경로 이름 입력 모달 */}
+              {saveModalOpen && (
+                <div className="routeSaveModal">
+                  <p>경로 이름을 입력하세요</p>
+                  <input
+                    type="text"
+                    value={saveRouteName}
+                    onChange={(e) => setSaveRouteName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
+                    placeholder="예: 한강 자전거 코스"
+                    autoFocus
+                  />
+                  <div className="routeSaveActions">
+                    <button type="button" className="btn btn--solid" onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
+                    <button type="button" className="btn" onClick={() => setSaveModalOpen(false)}>취소</button>
                   </div>
+                </div>
                 )}
                 <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
                   저장된 경로 목록
@@ -922,42 +906,41 @@ export default function MapPage({ user: userProp, onBackHome }) {
 
               {/* 경로 목록 패널 */}
               {showRouteList && (
-                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '6px', maxHeight: '300px', overflowY: 'auto' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h3 style={{ margin: '0', fontSize: '14px', fontWeight: '600' }}>저장된 경로</h3>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <div className="routeListPanel">
+                  <div className="routeListHead">
+                    <h3>저장된 경로</h3>
+                    <div className="routeListActions">
                       {checkedIds.length > 0 && (
                         confirmDelete ? (
-                          <span style={{ display: 'flex', gap: '4px', alignItems: 'center', fontSize: '12px' }}>
+                          <span className="routeDeleteConfirm">
                             <span>{checkedIds.length}개 삭제?</span>
-                            <button type="button" onClick={confirmHandleDelete} style={{ padding: '2px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>확인</button>
-                            <button type="button" onClick={() => setConfirmDelete(false)} style={{ padding: '2px 8px', backgroundColor: '#6b7280', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>취소</button>
+                            <button type="button" onClick={confirmHandleDelete} className="routeConfirmBtn isDanger">확인</button>
+                            <button type="button" onClick={() => setConfirmDelete(false)} className="routeConfirmBtn isNeutral">취소</button>
                           </span>
                         ) : (
-                          <button type="button" onClick={handleDelete} style={{ fontSize: '12px', padding: '3px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                          <button type="button" onClick={handleDelete} className="routeDeleteBtn">
                             삭제 ({checkedIds.length})
                           </button>
                         )
                       )}
-                      <button type="button" onClick={() => setShowRouteList(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+                      <button type="button" onClick={() => setShowRouteList(false)} className="routeListClose">✕</button>
                     </div>
                   </div>
                   {routeList.length === 0 ? (
-                    <p style={{ margin: '8px 0', fontSize: '12px', color: '#666' }}>저장된 경로가 없습니다.</p>
+                    <p className="routeListEmpty">저장된 경로가 없습니다.</p>
                   ) : (
-                    <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
+                    <ul className="routeListUl">
                       {routeList.map(r => (
-                        <li key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px', marginBottom: '6px', backgroundColor: checkedIds.includes(r.id) ? '#eff6ff' : '#fff', borderRadius: '4px', borderLeft: `3px solid ${checkedIds.includes(r.id) ? '#ef4444' : '#2563eb'}` }}>
+                        <li key={r.id} className={`routeListItem${checkedIds.includes(r.id) ? ' isChecked' : ''}`}>
                           <input
                             type="checkbox"
                             checked={checkedIds.includes(r.id)}
                             onChange={() => toggleCheck(r.id)}
-                            style={{ marginTop: '3px', cursor: 'pointer', flexShrink: 0 }}
                           />
-                          <div style={{ cursor: 'pointer', flex: 1 }} onClick={() => loadRouteById(r.id)}>
-                            <div style={{ fontWeight: '600', fontSize: '13px', marginBottom: '4px' }}>{r.routeName}</div>
-                            <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>{r.fromLabel} → {r.toLabel}</div>
-                            <div style={{ fontSize: '11px', color: '#999' }}>{new Date(r.createdAt).toLocaleDateString()}</div>
+                          <div className="routeListInfo" onClick={() => loadRouteById(r.id)}>
+                            <div className="routeListName">{r.routeName}</div>
+                            <div className="routeListPath">{r.fromLabel} → {r.toLabel}</div>
+                            <div className="routeListDate">{new Date(r.createdAt).toLocaleDateString()}</div>
                           </div>
                         </li>
                       ))}

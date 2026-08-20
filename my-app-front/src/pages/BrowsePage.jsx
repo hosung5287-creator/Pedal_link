@@ -1,3 +1,5 @@
+import '../styles/browse.css';
+
 import { useEffect, useState } from 'react';
 import { text } from '../constants';
 import heroBg from '../backglound1.png';

@@ -1,0 +1,942 @@
+/* 지도 페이지 전용 스타일.
+   MapPage 에서만 사용한다 (경로 플래너 · 검색 오버레이 · 경로 분석 패널 포함). */
+
+/* 브레이크포인트는 App.css 상단의 공통 기준(1023 / 767 / 639)을 따른다. */
+
+
+.mapSection {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto 38px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 22px 64px rgba(22, 41, 34, 0.14);
+}
+
+.mapPage {
+  margin-bottom: 72px;
+}
+
+.mapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+}
+
+.mapHeader h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+  letter-spacing: 0;
+}
+
+.mapCloseButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 16px;
+  text-decoration: none;
+}
+
+.osmMap {
+  display: block;
+  width: 100%;
+  height: min(62vh, 560px);
+  min-height: 360px;
+  border: 0;
+}
+
+.mapOnlyPage {
+  /* 네이버지도처럼: viewport 전체를 고정 점유 → 스크롤바 원천 차단 */
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  background: var(--wash);
+}
+
+.mapOnlyHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.mapBrand {
+  color: var(--ink);
+}
+
+.mapOnlyHeader .eyebrow {
+  margin-bottom: 4px;
+}
+
+.mapOnlyHeader h1 {
+  max-width: none;
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.mapActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.layerSelect {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.layerSelect select {
+  min-width: 150px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0 36px 0 12px;
+}
+
+.layerSelect select:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+  outline: none;
+}
+
+.regionSelect {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.regionSelect select {
+  min-width: 130px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0 36px 0 12px;
+}
+
+.regionSelect select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+  outline: none;
+}
+
+.mapOnlyFrame {
+  height: 100%;
+}
+
+.mapWorkspace {
+  position: relative;
+  display: grid;
+  /* 지도는 항상 전체 폭, 패널은 그 위에 오버레이(드로어)로 겹침 */
+  grid-template-columns: 1fr;
+  /* 부모(.mapOnlyPage 1fr 행)를 꽉 채움, min-height:0 은 grid 오버플로 방지 필수 */
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 패널 접기/펼치기 토글 (지도 왼쪽 가장자리에 붙는 탭, 패널과 함께 슬라이드) */
+.panelToggle {
+  position: absolute;
+  top: 50%;
+  left: 360px;
+  transform: translateY(-50%);
+  z-index: 1001;
+  width: 22px;
+  height: 52px;
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: left 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panelToggle:hover {
+  color: var(--mint-dark);
+  background: var(--wash);
+}
+
+.mapWorkspace.panelClosed .panelToggle {
+  left: 0;
+}
+
+.routePlanner {
+  /* 지도 위에 겹치는 오버레이 드로어 — translateX 로 스르륵 슬라이드 */
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1000;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border-right: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  /* 사이드바 내부만 스크롤, 전체 페이지 스크롤 없음 */
+  overflow-y: auto;
+  min-height: 0;
+  transform: translateX(0);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* 접힘 → 패널을 왼쪽 밖으로 밀어냄 */
+.mapWorkspace.panelClosed .routePlanner {
+  transform: translateX(-100%);
+}
+
+.routePlanner.searchActive {
+  padding: 0;
+  gap: 0;
+}
+
+.plannerSearch {
+  display: grid;
+  gap: 8px;
+}
+
+.plannerSearch label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.plannerSearchRow {
+  display: grid;
+  grid-template-columns: 1fr 104px;
+  gap: 8px;
+}
+
+.plannerSearchRow input,
+.plannerSearchRow button,
+.resetButton {
+  min-height: 42px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.plannerSearchRow input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 0 12px;
+}
+
+.plannerSearchRow input:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+  outline: none;
+}
+
+.plannerSearchRow button,
+.resetButton {
+  border: 0;
+  background: var(--mint);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.routeLegend {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.routeSample {
+  display: block;
+  width: 36px;
+  height: 0;
+  border-top: 5px solid #2563eb;
+  border-radius: 999px;
+}
+
+.shortestSample {
+  border-top-color: #60a5fa;
+  border-top-style: dashed;
+}
+
+.suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.suggestions li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+
+.suggestions li:last-child {
+  border-bottom: none;
+}
+
+.suggestions li:hover {
+  background: #eff6ff;
+}
+
+.sug-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sug-addr {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── 검색 오버레이 ── */
+.searchOverlayHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.backBtn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--ink);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backBtn:hover { background: var(--wash); }
+
+.searchOverlayInput {
+  flex: 1;
+  min-height: 38px;
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  outline: none;
+  min-width: 0;
+}
+
+.searchOverlayInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.clearBtn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: #e2e8f0;
+  color: var(--muted);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchResultsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.searchResultsList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+
+.searchResultsList li:hover { background: #eff6ff; }
+
+.searchResultsList .noResult {
+  padding: 24px 16px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+  cursor: default;
+}
+.searchResultsList .noResult:hover { background: none; }
+
+.resultPin {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #64748b;
+}
+
+.resultInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* ── 출발/도착 입력 필드 ── */
+.pointInputWrapper {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.dotsColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.pointDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.startDot { background: #2563eb; }
+.endDot { background: #16a34a; }
+
+.pointLine {
+  width: 2px;
+  flex: 1;
+  min-height: 14px;
+  background: #cbd5e1;
+  margin: 4px 0;
+}
+
+.fieldsColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pointField {
+  width: 100%;
+  min-height: 44px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  text-align: left;
+  padding: 0 14px;
+  cursor: pointer;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pointField:hover {
+  border-color: #93c5fd;
+  background: #fff;
+}
+
+.pointLabel {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.pointPlaceholder {
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.routeStatus {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.resetButton {
+  margin-top: auto;
+  background: #24352e;
+}
+
+.leafletMap {
+  /* 그리드 셀을 100% 채움, min-height:0 은 grid 오버플로 방지 */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 767px) {
+
+  .mapHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .osmMap {
+    height: 430px;
+    min-height: 430px;
+  }
+
+  .mapOnlyHeader {
+    grid-template-columns: 1fr auto;
+  }
+
+  .mapOnlyHeader > div {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .mapActions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .layerSelect,
+  .regionSelect {
+    flex: 1;
+  }
+
+  .layerSelect select,
+  .regionSelect select {
+    width: 100%;
+  }
+
+  .mapOnlyFrame {
+    height: 100%;
+  }
+
+  .mapWorkspace {
+    /* 모바일: 세로 배치, 사이드바 + 지도 순서 */
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+  }
+
+  .routePlanner {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    /* 모바일 사이드바: 내용이 적을 때 줄어들고 넘치면 스크롤 */
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  .leafletMap {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .plannerSearchRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 경로 분석 패널 ===== */
+.routeAnalysis {
+  display: grid;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--wash);
+}
+
+.analysisStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.statTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.statValue {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.analysisGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.analysisTitle {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.analysisTrack {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.analysisSeg {
+  height: 100%;
+}
+
+.analysisLegend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.analysisLegend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legendName {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.legendPct {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* ── 플래너 패널 UI (MapPage 인라인 style 에서 이관) ──
+   색상 리터럴은 이관 전 값을 그대로 유지했다. 디자인 토큰(--mint, --crit ...)
+   으로의 정리는 화면이 바뀌므로 별도 작업으로 남긴다. */
+
+.mapToast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 9999;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 8px;
+  background-color: #22c55e;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.mapToast.isError {
+  background-color: #ef4444;
+}
+
+.plannerToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9fafb;
+}
+
+.plannerToggleRow input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.plannerToggleRow label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.plannerRideBox {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9fafb;
+}
+
+.plannerRideAction {
+  margin-bottom: 12px;
+}
+
+.plannerRideBtn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: #10b981;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plannerRideBtn.isRiding {
+  background-color: #ef4444;
+}
+
+.plannerRideStats {
+  font-size: 12px;
+  color: #666;
+}
+
+.routeSaveModal {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid #b0c4f0;
+  border-radius: 8px;
+  background-color: #f0f4ff;
+}
+
+.routeSaveModal p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.routeSaveModal input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.routeSaveActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.routeSaveActions .btn {
+  flex: 1;
+}
+
+.routeListPanel {
+  max-height: 300px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f5f5f5;
+  overflow-y: auto;
+}
+
+.routeListHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.routeListHead h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.routeListActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.routeDeleteConfirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+/* 확인/취소 버튼은 font-size 를 지정하지 않는다 — 이관 전에도 브라우저 기본값이었다 */
+.routeConfirmBtn {
+  padding: 2px 8px;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.routeConfirmBtn.isDanger {
+  background-color: #ef4444;
+}
+
+.routeConfirmBtn.isNeutral {
+  background-color: #6b7280;
+}
+
+.routeDeleteBtn {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  background-color: #ef4444;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.routeListClose {
+  border: none;
+  background: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.routeListEmpty {
+  margin: 8px 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.routeListUl {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.routeListItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 8px;
+  border-left: 3px solid #2563eb;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+.routeListItem.isChecked {
+  border-left-color: #ef4444;
+  background-color: #eff6ff;
+}
+
+.routeListItem input {
+  margin-top: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.routeListInfo {
+  flex: 1;
+  cursor: pointer;
+}
+
+.routeListName {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.routeListPath {
+  margin-bottom: 2px;
+  font-size: 11px;
+  color: #666;
+}
+
+.routeListDate {
+  font-size: 11px;
+  color: #999;
+}

@@ -611,6 +611,9 @@ export default function MapPage({ user: userProp, onBackHome }) {
       toLat: endPoint.lat,
       toLng: endPoint.lng,
       toLabel: endPoint.label,
+      distanceKm: routeStats?.distanceKm ?? null,
+      ascendM: routeStats?.ascendM ?? null,
+      timeMin: routeStats?.timeMin ?? null,
       bikeRoute: bikeRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
       shortestRoute: shortestRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
     };
@@ -658,8 +661,6 @@ export default function MapPage({ user: userProp, onBackHome }) {
  const loadRouteById = async (id) => {
     const data = await getRouteById(id);
 
-    console.log('불러온 데이터:', data); // 콘솔에서 확인용
-
     if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
         showToast('경로 데이터가 없습니다', 'error');
         return;
@@ -695,23 +696,6 @@ export default function MapPage({ user: userProp, onBackHome }) {
         : [];
       setStatus(routeHasCycleways(bikeRoute, features) ? text.routeReady : text.noCycleways);
 
-      // 경도/위도 데이터 콘솔 출력
-      console.log('=== 경로 데이터 ===');
-      console.log('출발지:', { 위도: from.lat, 경도: from.lng, 장소: from.label });
-      console.log('도착지:', { 위도: to.lat, 경도: to.lng, 장소: to.label });
-      console.log('자전거경로 좌표수:', bikeRoute.length);
-      console.log('최단경로 좌표수:', shortestRoute.length);
-      console.log('자전거경로 경도위도 데이터:', bikeRoute.map((p, i) => ({ 순번: i + 1, 위도: p[0], 경도: p[1] })));
-      console.log('최단경로 경도위도 데이터:', shortestRoute.map((p, i) => ({ 순번: i + 1, 위도: p[0], 경도: p[1] })));
-      console.log('선택된 경로', {
-        출발지: { lat: from.lat, lng: from.lng, label: from.label },
-        도착지: { lat: to.lat, lng: to.lng, label: to.label },
-        자전거경로좌표수: bikeRoute.length,
-        최단경로좌표수: shortestRoute.length,
-        자전거경로: bikeRoute,
-        최단경로: shortestRoute,
-        timestamp: new Date().toISOString(),
-      });
     } catch {
       setStatus(text.routeFailed);
       routeLayerRef.current?.clearLayers();
@@ -890,10 +874,11 @@ export default function MapPage({ user: userProp, onBackHome }) {
                 </div>
               )}
 
-              {/* 저장/목록 버튼 */}
-              <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
-                경로 저장
-              </button>
+              {/* 저장/목록/초기화 버튼 — 10px 간격으로 붙여둔다 */}
+              <div className="plannerActions">
+                <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
+                  경로 저장
+                </button>
 
               {/* 경로 이름 입력 모달 */}
               {saveModalOpen && (
@@ -912,11 +897,12 @@ export default function MapPage({ user: userProp, onBackHome }) {
                     <button type="button" className="btn" onClick={() => setSaveModalOpen(false)}>취소</button>
                   </div>
                 </div>
-              )}
-              <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
-                저장된 경로 목록
-              </button>
-              <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
+                )}
+                <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
+                  저장된 경로 목록
+                </button>
+                <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
+              </div>
 
               {/* 경로 목록 패널 */}
               {showRouteList && (

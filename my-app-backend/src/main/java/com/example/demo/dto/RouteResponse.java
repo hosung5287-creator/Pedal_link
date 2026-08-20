@@ -16,6 +16,7 @@ public class RouteResponse {
     private Double toLat;
     private Double toLng;
     private String toLabel;
+    private Double distanceKm;
     private List<PointDto> bikeRoute;
     private List<PointDto> shortestRoute;
     private LocalDateTime createdAt;

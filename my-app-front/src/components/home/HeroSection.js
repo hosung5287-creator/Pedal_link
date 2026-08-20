@@ -12,6 +12,7 @@ export default function HeroSection({
   onMoveSignup,
   onMoveLogin,
   onMoveParty,
+  onMoveBrowse,
   onLogout,
 }) {
   const [videoFailed, setVideoFailed] = useState(false);
@@ -43,7 +44,7 @@ export default function HeroSection({
       <nav className="navbar" aria-label={text.nav}>
         <a className="brand" href="/" onClick={onMoveHome}>PedalLink</a>
         <div className="navLinks">
-          <a href="/">{text.browse}</a>
+          <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
           <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
           <a href="/">{text.nearby}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>

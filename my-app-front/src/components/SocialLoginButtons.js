@@ -1,8 +1,13 @@
 import { text } from '../constants';
-import { startSocialLogin } from '../api/auth';
 
 // 로그인/회원가입 페이지에서 함께 쓰는 소셜 로그인 버튼.
-// 클릭하면 백엔드 인가 URL로 이동한다(백엔드 주도 OAuth2).
+//
+// ⚠️ 현재 백엔드에 OAuth2(Spring Security oauth2-client) 설정이 없어서
+//    /oauth2/authorization/{provider} 를 호출하면 404가 난다.
+//    그래서 버튼은 보여주되 비활성 상태로 둔다.
+//    백엔드가 준비되면 disabled 를 제거하고
+//    onClick={() => startSocialLogin('google')} 을 다시 연결하면 된다.
+//    (startSocialLogin 은 api/auth.js 에 그대로 남아있다)
 export default function SocialLoginButtons() {
   return (
     <>
@@ -12,7 +17,8 @@ export default function SocialLoginButtons() {
         <button
           className="socialButton socialGoogle"
           type="button"
-          onClick={() => startSocialLogin('google')}
+          disabled
+          title={text.socialPreparing}
         >
           <span className="socialIcon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20">
@@ -28,7 +34,8 @@ export default function SocialLoginButtons() {
         <button
           className="socialButton socialNaver"
           type="button"
-          onClick={() => startSocialLogin('naver')}
+          disabled
+          title={text.socialPreparing}
         >
           <span className="socialIcon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="#ffffff">
@@ -38,6 +45,8 @@ export default function SocialLoginButtons() {
           {text.signupNaver}
         </button>
       </div>
+
+      <p className="socialNote">{text.socialPreparing}</p>
     </>
   );
 }

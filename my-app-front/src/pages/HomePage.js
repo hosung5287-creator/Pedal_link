@@ -7,7 +7,7 @@ import PlannedLinkSection from '../components/home/PlannedLinkSection';
 import RecentRoutes from '../components/home/RecentRoutes';
 import ClosingCta from '../components/home/ClosingCta';
 
-export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, onMoveLogin, onMoveParty, onLogout }) {
+export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, onMoveLogin, onMoveParty, onMoveBrowse, onLogout }) {
   return (
     <div className="app">
       <HeroSection
@@ -17,6 +17,7 @@ export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, on
         onMoveSignup={onMoveSignup}
         onMoveLogin={onMoveLogin}
         onMoveParty={onMoveParty}
+        onMoveBrowse={onMoveBrowse}
         onLogout={onLogout}
       />
       <main className="homeMain">

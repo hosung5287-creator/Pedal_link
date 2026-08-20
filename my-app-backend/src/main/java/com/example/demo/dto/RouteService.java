@@ -56,6 +56,9 @@ public class RouteService {
         route.setToLat(req.getToLat());
         route.setToLng(req.getToLng());
         route.setToLabel(req.getToLabel());
+        route.setDistanceKm(req.getDistanceKm());
+        route.setAscendM(req.getAscendM());
+        route.setTimeMin(req.getTimeMin());
         route.setBikePath(toLineString(req.getBikeRoute()));
         route.setShortestPath(toLineString(req.getShortestRoute()));
         return routeRepository.save(route).getId();
@@ -72,6 +75,7 @@ public class RouteService {
                 m.put("routeName", r.getRouteName() != null ? r.getRouteName() : "이름없음");
                 m.put("fromLabel", r.getFromLabel());
                 m.put("toLabel", r.getToLabel());
+                m.put("distanceKm", r.getDistanceKm());
                 m.put("createdAt", r.getCreatedAt().toString());
                 return m;
             })
@@ -88,14 +92,12 @@ public class RouteService {
         Route route = routeRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("경로를 찾을 수 없습니다"));
         
-        System.out.println("bikePath: " + route.getBikePath());       // 콘솔 확인용
-        System.out.println("shortestPath: " + route.getShortestPath()); // 콘솔 확인용
-
         return new RouteResponse(
             route.getId(),
             route.getRouteName(),
             route.getFromLat(), route.getFromLng(), route.getFromLabel(),
             route.getToLat(),   route.getToLng(),   route.getToLabel(),
+            route.getDistanceKm(),
             fromLineString(route.getBikePath()),
             fromLineString(route.getShortestPath()),
             route.getCreatedAt()

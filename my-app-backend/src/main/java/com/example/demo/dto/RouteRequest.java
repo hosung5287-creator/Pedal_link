@@ -13,6 +13,9 @@ public class RouteRequest {
     private Double toLat;
     private Double toLng;
     private String toLabel;
+    private Double distanceKm;
+    private Integer ascendM;
+    private Integer timeMin;
     private List<PointDto> bikeRoute;
     private List<PointDto> shortestRoute;
 

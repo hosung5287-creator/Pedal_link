@@ -12,6 +12,7 @@ import MapPage from './pages/MapPage';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import PartyPage from './pages/PartyPage';
+import BrowsePage from './pages/BrowsePage';
 
 // webpack이 Leaflet 마커 아이콘 경로를 잘못 처리하는 문제 수정
 delete L.Icon.Default.prototype._getIconUrl;
@@ -44,6 +45,7 @@ function App() {
   const moveSignup = (e) => { e.preventDefault(); moveTo('/signup'); };
   const moveLogin = (e) => { e.preventDefault(); moveTo('/login'); };
   const moveParty = (e) => { e.preventDefault(); moveTo('/party'); };
+  const moveBrowse = (e) => { e.preventDefault(); moveTo('/browse'); };
 
   const handleLogin = (userData) => {
     localStorage.setItem('user', JSON.stringify(userData));
@@ -63,6 +65,7 @@ function App() {
   if (currentPath === '/signup') return <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   if (currentPath === '/login') return <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
   if (currentPath === '/party') return <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} />;
+  if (currentPath === '/browse') return <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   return (
     <HomePage
       user={user}
@@ -71,6 +74,7 @@ function App() {
       onMoveSignup={moveSignup}
       onMoveLogin={moveLogin}
       onMoveParty={moveParty}
+      onMoveBrowse={moveBrowse}
       onLogout={handleLogout}
     />
   );

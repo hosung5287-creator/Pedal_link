@@ -1,3 +1,5 @@
+import '../styles/auth.css';
+
 import { useState } from 'react';
 import { text } from '../constants';
 import heroBg from '../backglound1.png';

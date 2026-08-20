@@ -1,0 +1,322 @@
+/* 로그인 · 회원가입 페이지 전용 스타일.
+   SignupPage / LoginPage / SocialLoginButtons 에서만 사용한다.
+   .navbar .brand .signupBackLink 등 공통 요소는 App.css 에 남아 있다. */
+
+/* 브레이크포인트는 App.css 상단의 공통 기준(1023 / 767 / 639)을 따른다. */
+
+
+/* ── 회원가입 페이지 ── */
+.signupPage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding-bottom: 64px;
+}
+
+.signupPage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(9, 27, 22, 0.82) 0%, rgba(9, 27, 22, 0.58) 52%, rgba(9, 27, 22, 0.3) 100%);
+  z-index: 1;
+}
+
+.signupPage .navbar {
+  flex-shrink: 0;
+}
+
+.signupLayout {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: center;
+  gap: clamp(32px, 6vw, 88px);
+  width: min(1180px, calc(100% - 40px));
+  margin: auto;
+  padding: 48px 0;
+}
+
+.signupIntro {
+  color: #ffffff;
+}
+
+.signupHeadline {
+  margin: 0 0 18px;
+  font-size: clamp(2.2rem, 4.6vw, 3.7rem);
+  line-height: 1.06;
+  white-space: pre-line;
+}
+
+.signupSub {
+  margin: 0 0 28px;
+  max-width: 420px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.signupPerks {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signupPerks li {
+  position: relative;
+  padding-left: 30px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.signupPerks li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px 11px no-repeat;
+}
+
+.signupCard {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 32px 80px rgba(4, 18, 14, 0.45);
+  padding: clamp(26px, 4vw, 40px);
+}
+
+.signupCardTitle {
+  margin: 0 0 6px;
+  font-size: 1.65rem;
+  letter-spacing: 0;
+}
+
+.signupCardSub {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.signupForm {
+  display: grid;
+  gap: 16px;
+}
+
+.signupField {
+  display: grid;
+  gap: 7px;
+}
+
+.signupField span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.signupField input {
+  min-height: 48px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.signupField input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.signupField input:focus {
+  border-color: var(--mint);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+  outline: none;
+}
+
+.signupError {
+  margin: 0;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 11px 14px;
+}
+
+.signupButton {
+  min-height: 52px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mint);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.signupButton:hover {
+  background: var(--mint-dark);
+}
+
+.signupButton:active {
+  transform: translateY(1px);
+}
+
+.signupDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.signupDivider::before,
+.signupDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.signupSocial {
+  display: grid;
+  gap: 10px;
+}
+
+.socialButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50px;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 700;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+
+.socialButton:active {
+  transform: translateY(1px);
+}
+
+.socialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.socialGoogle {
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #3c4043;
+}
+
+.socialGoogle:hover {
+  background: #f7f8f8;
+  border-color: #c6cace;
+}
+
+.socialNaver {
+  border: 0;
+  background: #03c75a;
+  color: #ffffff;
+}
+
+.socialNaver:hover {
+  background: #02b350;
+}
+
+/* 로그인 ↔ 회원가입 전환 링크 */
+.authSwitch {
+  margin: 18px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.authSwitch a {
+  color: var(--mint-dark);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.authSwitch a:hover {
+  text-decoration: underline;
+}
+
+.signupDone {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 18px 0;
+}
+
+.signupDoneIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  color: var(--mint-dark);
+}
+
+.signupDone h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.signupDone p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.signupDone .signupButton {
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .signupLayout {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding: 28px 0 12px;
+  }
+
+  .signupIntro {
+    text-align: left;
+  }
+}

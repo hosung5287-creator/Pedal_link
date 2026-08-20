@@ -1,0 +1,362 @@
+/* 파티(번개모임) 페이지 전용 스타일.
+   PartyPage 에서만 사용한다. */
+
+/* 브레이크포인트는 App.css 상단의 공통 기준(1023 / 767 / 639)을 따른다. */
+
+
+/* ===== 파티 페이지 ===== */
+.partyPage {
+  min-height: 100vh;
+  background: var(--wash);
+}
+
+/* 파티 페이지 상단 네비는 밝은 배경 위에 있으므로 글씨를 어둡게 */
+.partyPage .brand,
+.partyPage .signupBackLink {
+  color: var(--ink);
+}
+
+.partyPage .signupBackLink:hover {
+  color: var(--mint-dark);
+}
+
+.partyHero {
+  padding: 48px 24px 40px;
+  background-size: cover;
+  background-position: center;
+  color: #ffffff;
+  text-align: center;
+}
+
+.partyHero .eyebrow {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.partyHero h1 {
+  margin: 6px 0 10px;
+  font-size: 2.4rem;
+}
+
+.partyHeroSub {
+  margin: 0;
+  font-size: 1.02rem;
+  opacity: 0.92;
+}
+
+.partyLayout {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  display: grid;
+  gap: 40px;
+}
+
+.partySection > h2 {
+  margin: 0 0 16px;
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.partyEmpty {
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  background: var(--paper);
+  text-align: center;
+}
+
+/* 저장 경로 목록 */
+.routePickList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.routePick {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.routePickInfo h4 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.routePickInfo p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* 공통 버튼 */
+.partyPrimaryBtn {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.partyPrimaryBtn:hover:not(:disabled) {
+  background: var(--mint-dark);
+}
+
+.partyPrimaryBtn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.partyPrimaryBtn:disabled {
+  background: #b8c4c0;
+  cursor: not-allowed;
+}
+
+.partyGhostBtn {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 번개 만들기 폼 */
+.partyForm {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.partyForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.partyForm input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font: inherit;
+  color: var(--ink);
+}
+
+.partyForm input:focus {
+  outline: none;
+  border-color: var(--mint);
+}
+
+.partyFormRow {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  gap: 12px;
+}
+
+.partyFormActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* 번개 카드 */
+.partyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.partyCard {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.partyCard.isFull {
+  opacity: 0.72;
+}
+
+.partyCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.partyCardHead h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.partyRouteTag {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.partyCardRoute {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.partyCardMeta {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.partyCardMeta > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.partyCardMeta dt {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 700;
+  min-width: 40px;
+}
+
+.partyCardMeta dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.partyJoinBtn {
+  justify-self: stretch;
+  text-align: center;
+}
+
+/* 내 파티(호스트) 뱃지 */
+.partyHostTag {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* 승인 대기 목록 (호스트 뷰) */
+.partyPending {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.partyPending h4 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.partyPendingEmpty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.partyPending ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.partyPending li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.partyPendingActions {
+  display: flex;
+  gap: 6px;
+}
+
+.partyApproveBtn,
+.partyRejectBtn {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 0;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.partyApproveBtn {
+  background: var(--mint);
+  color: #ffffff;
+}
+
+.partyApproveBtn:hover:not(:disabled) {
+  background: var(--mint-dark);
+}
+
+.partyApproveBtn:disabled {
+  background: var(--muted);
+  cursor: not-allowed;
+}
+
+.partyRejectBtn {
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.partyRejectBtn:hover {
+  background: #fdeaea;
+  color: #c0392b;
+  border-color: #f5c6c6;
+}
+
+@media (max-width: 639px) {
+  .partyFormRow {
+    grid-template-columns: 1fr;
+  }
+  .partyHero h1 {
+    font-size: 2rem;
+  }
+}

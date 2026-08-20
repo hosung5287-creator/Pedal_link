@@ -114,6 +114,10 @@ export const text = {
   partyNoPending: '대기 중인 신청이 없어요.',
   partyParticipants: '참여',
   heroScrollCue: '아래로 스크롤',
+  featureEyebrow: '핵심 기능',
+  featureTitle: '혼자 정하던 라이딩을, 다르게',
+  featureLead: 'PedalLink는 근처 라이더와의 실시간 연결과 똑똑한 경로 계산으로, 라이딩을 준비하는 방식을 바꿉니다.',
+  featureAria: 'PedalLink 핵심 기능',
   instantEyebrow: '즉석 링크',
   instantTitle: '지금 근처에서 바로',
   instantSub: '주변에 있는 라이더와 지금 바로 연결해서 함께 달려요. 약속을 미리 잡지 않아도, 마음이 맞으면 그대로 출발합니다.',
@@ -153,6 +157,20 @@ export const tileLayers = {
     attribution: '&copy; OpenStreetMap contributors',
   },
 };
+
+// 홈 화면 "핵심 기능 소개" 섹션 데이터 (아이콘은 FeatureSection 에서 매핑)
+export const features = [
+  {
+    key: 'match',
+    title: '위치기반 실시간 매칭',
+    desc: '지금 근처에 있는 라이더를 실시간으로 찾아, 즉석에서 함께 달릴 파티로 연결해요.',
+  },
+  {
+    key: 'route',
+    title: '경로 최적화',
+    desc: '자전거도로를 우선으로, 출발지에서 목적지까지 안전하고 빠른 길을 자동으로 계산해요.',
+  },
+];
 
 // 홈 화면 "지금 근처에서 바로" 섹션용 예시 데이터 (디자인용 정적 데이터)
 export const instantLinks = [

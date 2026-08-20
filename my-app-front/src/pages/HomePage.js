@@ -1,6 +1,7 @@
 import '../styles/home.css';
 
 import HeroSection from '../components/home/HeroSection';
+import FeatureSection from '../components/home/FeatureSection';
 import InstantLinkSection from '../components/home/InstantLinkSection';
 import PlannedLinkSection from '../components/home/PlannedLinkSection';
 import RecentRoutes from '../components/home/RecentRoutes';
@@ -19,6 +20,7 @@ export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, on
         onLogout={onLogout}
       />
       <main className="homeMain">
+        <FeatureSection />
         <InstantLinkSection onMoveParty={onMoveParty} />
         <PlannedLinkSection onMoveParty={onMoveParty} />
         <RecentRoutes />

@@ -889,34 +889,36 @@ export default function MapPage({ user: userProp, onBackHome }) {
                 </div>
               )}
 
-              {/* 저장/목록 버튼 */}
-              <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
-                경로 저장
-              </button>
+              {/* 저장/목록/초기화 버튼 — 10px 간격으로 붙여둔다 */}
+              <div className="plannerActions">
+                <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
+                  경로 저장
+                </button>
 
-              {/* 경로 이름 입력 모달 */}
-              {saveModalOpen && (
-                <div style={{ marginTop: '10px', padding: '12px', backgroundColor: '#f0f4ff', borderRadius: '8px', border: '1px solid #b0c4f0' }}>
-                  <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '600' }}>경로 이름을 입력하세요</p>
-                  <input
-                    type="text"
-                    value={saveRouteName}
-                    onChange={(e) => setSaveRouteName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
-                    placeholder="예: 한강 자전거 코스"
-                    autoFocus
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', boxSizing: 'border-box' }}
-                  />
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                    <button type="button" className="btn btn--solid" style={{ flex: 1 }} onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
-                    <button type="button" className="btn" style={{ flex: 1 }} onClick={() => setSaveModalOpen(false)}>취소</button>
+                {/* 경로 이름 입력 모달 */}
+                {saveModalOpen && (
+                  <div style={{ padding: '12px', backgroundColor: '#f0f4ff', borderRadius: '8px', border: '1px solid #b0c4f0' }}>
+                    <p style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: '600' }}>경로 이름을 입력하세요</p>
+                    <input
+                      type="text"
+                      value={saveRouteName}
+                      onChange={(e) => setSaveRouteName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
+                      placeholder="예: 한강 자전거 코스"
+                      autoFocus
+                      style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button type="button" className="btn btn--solid" style={{ flex: 1 }} onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
+                      <button type="button" className="btn" style={{ flex: 1 }} onClick={() => setSaveModalOpen(false)}>취소</button>
+                    </div>
                   </div>
-                </div>
-              )}
-              <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
-                저장된 경로 목록
-              </button>
-              <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
+                )}
+                <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
+                  저장된 경로 목록
+                </button>
+                <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
+              </div>
 
               {/* 경로 목록 패널 */}
               {showRouteList && (

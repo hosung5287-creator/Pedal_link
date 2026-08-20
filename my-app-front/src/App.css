@@ -723,8 +723,16 @@ main {
 }
 
 .resetButton {
-  margin-top: auto;
   background: #24352e;
+}
+
+/* 경로 저장 / 저장된 경로 목록 / 마커지우기 를 10px 간격으로 묶는다.
+   .routePlanner 는 flex column + gap:16px 이므로 그룹으로 감싸야
+   부모 gap 의 영향을 받지 않는다. (이전에는 .resetButton 에 걸린
+   margin-top:auto 가 남은 여백을 전부 흡수해 버튼이 크게 벌어졌다) */
+.plannerActions {
+  display: grid;
+  gap: 10px;
 }
 
 .leafletMap {

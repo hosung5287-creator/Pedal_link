@@ -12,4 +12,5 @@ public class RideRecordRequest {
     private Long userId;
     private Double distance;   // km
     private Integer duration;  // 분
+    private Long partyId;      // 파티 라이딩이면 파티 id (선택)
 }

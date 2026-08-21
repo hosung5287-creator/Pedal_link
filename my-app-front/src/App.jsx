@@ -24,19 +24,27 @@ L.Icon.Default.mergeOptions({
 
 function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  // 쿼리스트링(?partyId=3)도 따로 들고 있어야 한다.
+  // currentPath 에 붙여버리면 아래 경로 비교(=== '/map')가 전부 어긋난다.
+  const [search, setSearch] = useState(window.location.search);
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
   });
 
   useEffect(() => {
-    const handlePopState = () => setCurrentPath(window.location.pathname);
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+      setSearch(window.location.search);
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const moveTo = (path) => {
     window.history.pushState(null, '', path);
-    setCurrentPath(path);
+    const [onlyPath, query] = path.split('?');
+    setCurrentPath(onlyPath);
+    setSearch(query ? `?${query}` : '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -46,6 +54,8 @@ function App() {
   const moveLogin = (e) => { e.preventDefault(); moveTo('/login'); };
   const moveParty = (e) => { e.preventDefault(); moveTo('/party'); };
   const moveBrowse = (e) => { e.preventDefault(); moveTo('/browse'); };
+  // 파티에서 "라이딩 시작" → 지도를 파티 모드로 연다
+  const movePartyRide = (partyId) => moveTo(`/map?partyId=${partyId}`);
 
   const handleLogin = (userData) => {
     localStorage.setItem('user', JSON.stringify(userData));
@@ -61,10 +71,13 @@ function App() {
   // 로그인 상태에서 로그인/회원가입 페이지 접근 시 홈으로
   if (user && (currentPath === '/login' || currentPath === '/signup')) moveTo('/');
 
-  if (currentPath === '/map') return <MapPage user={user} onBackHome={moveHome} />;
+  if (currentPath === '/map') {
+    const partyId = new URLSearchParams(search).get('partyId');
+    return <MapPage user={user} partyId={partyId} onBackHome={moveHome} />;
+  }
   if (currentPath === '/signup') return <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   if (currentPath === '/login') return <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
-  if (currentPath === '/party') return <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} />;
+  if (currentPath === '/party') return <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} />;
   if (currentPath === '/browse') return <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   return (
     <HomePage

@@ -30,6 +30,7 @@ public class PartyResponse {
     private String status;
     private List<MemberDto> participants;
     private List<MemberDto> pendingRequests;
+    private LocalDateTime rideStartedAt;
     private LocalDateTime createdAt;
 
     public static PartyResponse from(Party party) {
@@ -42,6 +43,7 @@ public class PartyResponse {
         r.hostId = party.getHost().getId();
         r.hostName = party.getHost().getName();
         r.status = party.getStatus();
+        r.rideStartedAt = party.getRideStartedAt();
         r.createdAt = party.getCreatedAt();
 
         r.participants = party.getMembers().stream()

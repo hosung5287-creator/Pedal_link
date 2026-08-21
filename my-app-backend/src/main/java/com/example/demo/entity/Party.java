@@ -36,6 +36,9 @@ public class Party {
     @OneToMany(mappedBy = "party", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PartyMember> members = new ArrayList<>();
 
+    // 호스트가 라이딩을 시작한 시각. 참가자 화면이 이 값을 보고 같이 출발한다.
+    private LocalDateTime rideStartedAt;
+
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -31,9 +31,14 @@ public class RouteController {
         return ResponseEntity.ok(Map.of("id", id, "message", "경로 저장 완료"));
     }
 
-    // 목록 조회 (userId 파라미터 있으면 해당 유저 것만)
+    // 목록 조회 — 본인 경로만 돌려준다.
+    // userId 를 선택 파라미터로 두면 생략했을 때 전체 경로가 나가서
+    // 비로그인 사용자에게 남의 저장 경로가 노출된다. 그래서 필수로 받는다.
     @GetMapping("/routes")
     public ResponseEntity<?> getRouteList(@RequestParam(required = false) Long userId) {
+        if (userId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "userId는 필수입니다"));
+        }
         return ResponseEntity.ok(routeService.getRouteList(userId));
     }
 

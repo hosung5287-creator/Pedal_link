@@ -68,6 +68,28 @@
   text-align: center;
 }
 
+/* 비로그인일 때 "내 저장 경로" 자리에 들어가는 안내 */
+.partyLoginPrompt {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 28px 24px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  text-align: center;
+}
+
+.partyLoginPrompt p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* 이 안내 안에서는 버튼을 가운데로 (기본값이 justify-self: start) */
+.partyLoginPrompt .partyPrimaryBtn {
+  justify-self: center;
+}
+
 /* 저장 경로 목록 */
 .routePickList {
   list-style: none;
@@ -359,4 +381,94 @@
   .partyHero h1 {
     font-size: 2rem;
   }
+}
+
+/* 모집 완료 후 호스트에게 보이는 라이딩 시작 버튼 */
+.partyRideBtn {
+  width: 100%;
+  min-height: 46px;
+  margin: 4px 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--good);
+  color: #ffffff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.12s, transform 0.1s;
+}
+
+.partyRideBtn:hover { filter: brightness(1.06); }
+.partyRideBtn:active { transform: translateY(1px); }
+
+/* 종료된 파티 — 목록에 남되 끝났다는 게 보이게 */
+.partyCard.isEnded {
+  opacity: 0.55;
+}
+
+/* 호스트 뱃지 + 삭제 버튼 묶음 */
+.partyHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.partyDeleteBtn {
+  display: flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.partyDeleteBtn:hover {
+  color: var(--crit);
+  background: #fdeaea;
+}
+
+/* 삭제 확인 — OS confirm 대신 카드 안에서 처리 */
+.partyDeleteConfirm {
+  padding: 14px;
+  border: 1px solid #f5c6c6;
+  border-radius: 10px;
+  background: #fdeaea;
+}
+
+.partyDeleteConfirm p {
+  margin: 0 0 12px;
+  color: #a63636;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.partyDeleteActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.partyDeleteYesBtn {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--crit);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.partyDeleteYesBtn:hover { filter: brightness(1.05); }
+
+.partyError {
+  margin: 0 0 12px;
+  color: var(--crit);
+  font-size: 0.9rem;
+  font-weight: 700;
 }

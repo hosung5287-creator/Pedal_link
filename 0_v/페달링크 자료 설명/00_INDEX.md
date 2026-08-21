@@ -1,6 +1,6 @@
 # PedalLink 기술 스택 공부 가이드
 
-> 최종 현행화: 2026-08-19 (기준 커밋 `66ec63b`)
+> 최종 현행화: 2026-08-21 (기준 커밋 `a985c38`)
 > 이 폴더의 문서는 **실제 저장소 코드 기준**으로 작성돼 있다. 코드를 고치면 관련 문서도 같이 고칠 것.
 
 ## 파일 목록
@@ -27,6 +27,7 @@
 | [13_라이딩_기록.md](13_라이딩_기록.md) | 라이딩 시작/종료, Haversine 거리 누적, 기록 저장 API |
 | [14_경로_분석.md](14_경로_분석.md) | BRouter 응답 파싱 → 거리·상승고도·노면/도로종류 분포 |
 | [15_둘러보기_피드.md](15_둘러보기_피드.md) | 피드 카드, 좌표→SVG 썸네일, 좋아요, 게시물 작성, N+1 회피 |
+| [16_파티_라이딩_구현.md](16_파티_라이딩_구현.md) | 파티 함께 달리기 — 멤버 위치 필터, 팔로우/heading-up, 기록 저장, 터널 공개 |
 
 ## 추천 공부 순서
 
@@ -63,6 +64,9 @@ Spring Security (07)
 | 실시간 위치공유 + 지오펜싱 | MapPage | LocationController (메모리) | ✅ |
 | 위치 공유 on/off 저장 | MapPage 체크박스 | AuthController PUT | ✅ |
 | 파티(링크) 모집/신청/승인 | PartyPage | PartyController + PartyService | ✅ |
+| 파티 함께 달리기 | MapPage 파티모드 | `/api/locations?partyId=` | ✅ |
+| 팔로우 모드 / heading-up | MapPage | — (프론트) | ✅ |
+| 파티 종료 · 삭제 | PartyPage | `/end`, `DELETE /api/parties/{id}` | ✅ (호스트만) |
 | 둘러보기 피드 | BrowsePage | FeedController + FeedService | ✅ |
 | 피드 좋아요 | BrowsePage | `route_likes` | ✅ |
 | 게시물 올리기(문구·태그) | ComposePostModal | `routes.description / tags` | ✅ |

@@ -760,6 +760,9 @@
 
 .plannerRideAction {
   margin-bottom: 12px;
+  /* 시작 / 종료 버튼을 위아래로 10px 간격 */
+  display: grid;
+  gap: 10px;
 }
 
 .plannerRideBtn {
@@ -939,4 +942,54 @@
 .routeListDate {
   font-size: 11px;
   color: #999;
+}
+
+/* 파티 라이딩 모드 배너 (지도 상단) */
+.partyRideBanner {
+  margin: 4px 0 0;
+  color: var(--good);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* "내 위치로" 버튼 — 오른쪽 아래.
+   왼쪽 경로 패널(360px)과 오른쪽 위 줌 컨트롤 어느 쪽과도 겹치지 않고,
+   모바일에서 엄지가 닿는 자리다. */
+.recenterBtn {
+  position: absolute;
+  right: 16px;
+  bottom: 24px;
+  z-index: 1000;          /* Leaflet 컨트롤(1000)과 같은 층 */
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.recenterBtn:hover { color: var(--mint-dark); }
+.recenterBtn:active { transform: translateY(1px); }
+
+/* 팔로우가 켜져 있으면 활성 상태로 보여준다 */
+.recenterBtn.isFollowing {
+  color: #ffffff;
+  background: var(--mint);
+  border-color: var(--mint);
+}
+
+@media (max-width: 639px) {
+  .recenterBtn { right: 12px; bottom: 88px; }
+}
+
+/* 지금 누를 수 없는 라이딩 버튼은 눌리지 않는다는 게 보이게 */
+.plannerRideBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

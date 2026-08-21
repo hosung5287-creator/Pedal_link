@@ -3,10 +3,11 @@ import '../styles/map.css';
 import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
-import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon, makeOtherUserIcon } from '../utils/leaflet';
+import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon, makeOtherUserIcon, makeHeadingIcon, bearingBetween } from '../utils/leaflet';
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { updateLocationSharing } from '../api/auth';
+import { getParty, endParty, startPartyRide } from '../api/parties';
 import { api } from '../api/client';
 
 const GEOFENCE_RADIUS_M = 220;
@@ -66,7 +67,7 @@ function AnalysisBar({ title, items, labels }) {
   );
 }
 
-export default function MapPage({ user: userProp, onBackHome }) {
+export default function MapPage({ user: userProp, partyId, onBackHome }) {
   const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
   const [mapLayer, setMapLayer] = useState('mapnik');
   const [startQuery, setStartQuery] = useState('');
@@ -96,6 +97,10 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const [checkedIds, setCheckedIds] = useState([]);
   const [panelOpen, setPanelOpen] = useState(true);
   const [routeStats, setRouteStats] = useState(null);
+  // 파티 라이딩 모드 — /map?partyId=N 으로 들어왔을 때만 채워진다
+  const [party, setParty] = useState(null);
+  // 팔로우 모드 — 지도 중심이 내 위치를 계속 따라간다 (라이딩 중에만 켠다)
+  const [following, setFollowing] = useState(false);
   const [locationShareEnabled, setLocationShareEnabled] = useState(() => {
     try {
       const saved = localStorage.getItem('locationShareEnabled');
@@ -128,6 +133,9 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const geoWatchIdRef = useRef(null);
   const geofenceCircleRef = useRef(null);
   const lastPosRef = useRef(null);
+  // watchPosition 콜백은 최초 1회만 만들어지므로 state 를 직접 읽으면 낡은 값을 본다 → ref 로 본다
+  const followingRef = useRef(false);
+  const headingRef = useRef(0);
   const otherMarkersRef = useRef(new Map());
   const othersInsideRef = useRef(new Map());
 
@@ -137,6 +145,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
   const rideStartPosRef = useRef(null);
   const rideStartTimeRef = useRef(null);
 
+  useEffect(() => { followingRef.current = following; }, [following]);
   useEffect(() => { startPointRef.current = startPoint; }, [startPoint]);
   useEffect(() => { endPointRef.current = endPoint; }, [endPoint]);
   useEffect(() => { cyclewayDataRef.current = cyclewayData; }, [cyclewayData]);
@@ -147,6 +156,74 @@ export default function MapPage({ user: userProp, onBackHome }) {
       .then(data => setCyclewayData(data))
       .catch(() => {});
   }, []);
+
+  // 참가자 자동 출발 —
+  // 호스트가 시작하면 party.rideStartedAt 이 채워진다. 참가자 화면은 그걸 폴링으로
+  // 감지해 자기 타이머를 시작한다(거리는 각자 기기가 자기 GPS 로 측정).
+  // 서버가 남의 거리를 알 수 없으므로 "같이 출발"만 신호로 맞추는 방식이다.
+  useEffect(() => {
+    if (!partyId || !party) return;
+    const isHost = user?.id === party.hostId;
+    if (isHost || isRiding || party.rideStartedAt) return;   // 호스트/이미 주행중/이미 시작됨 제외
+
+    const timer = setInterval(async () => {
+      try {
+        const p = await getParty(partyId);
+        if (p.rideStartedAt) {
+          setParty(p);
+          handleRideStart();
+          showToast('호스트가 라이딩을 시작했습니다.');
+        }
+      } catch { /* 다음 주기에 재시도 */ }
+    }, 5000);
+
+    return () => clearInterval(timer);
+    // handleRideStart 는 party 를 참조해 매번 새로 만들어지므로 의존성에서 뺀다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partyId, party?.hostId, party?.rideStartedAt, isRiding, user?.id]);
+
+  // ── 파티 라이딩 모드 ─────────────────────────────
+  // /map?partyId=N 으로 들어오면 (1) 위치공유를 자동으로 켜고
+  // (2) 파티에 걸린 코스를 지도에 그린다.
+  useEffect(() => {
+    if (!partyId) return;
+    let alive = true;
+
+    // 서로 보이지 않으면 파티 라이딩이 성립하지 않으므로 자동으로 켠다.
+    // (사용자가 원하면 패널의 체크박스로 끌 수 있다)
+    setLocationShareEnabled(true);
+    localStorage.setItem('locationShareEnabled', 'true');
+    if (user?.id) updateLocationSharing(user.id, true).catch(() => {});
+
+    (async () => {
+      try {
+        const p = await getParty(partyId);
+        if (!alive) return;
+        setParty(p);
+
+        if (p.routeId) {
+          const route = await getRouteById(p.routeId);
+          if (!alive || !mapRef.current) return;
+          if (route.bikeRoute?.length && route.shortestRoute?.length) {
+            const bike = route.bikeRoute.map(pt => [pt.lat, pt.lng]);
+            const shortest = route.shortestRoute.map(pt => [pt.lat, pt.lng]);
+            bikeRouteRef.current = bike;
+            shortestRouteRef.current = shortest;
+            setStartPoint({ lat: route.fromLat, lng: route.fromLng, label: route.fromLabel });
+            setEndPoint({ lat: route.toLat, lng: route.toLng, label: route.toLabel });
+            drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
+          }
+        }
+        setStatus(`${p.title} — 파티 멤버 ${p.participants.length}명과 라이딩 중`);
+      } catch {
+        if (alive) showToast('파티 정보를 불러오지 못했습니다.', 'error');
+      }
+    })();
+
+    return () => { alive = false; };
+    // user 객체는 매 렌더 새로 만들어지므로 id 만 본다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [partyId, user?.id]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -197,6 +274,10 @@ export default function MapPage({ user: userProp, onBackHome }) {
     // 확대/축소 버튼을 오른쪽 위로 (왼쪽 검색 패널에 안 가리게)
     L.control.zoom({ position: 'topright' }).addTo(map);
 
+    // 사용자가 지도를 끌면 팔로우를 끈다.
+    // 안 그러면 다른 곳을 보려고 옮겨도 다음 GPS 갱신 때 내 위치로 튕겨 돌아온다.
+    map.on('dragstart', () => setFollowing(false));
+
     tileLayerRef.current = makeTileLayer('cyclemap').addTo(map);
     markerLayerRef.current = L.layerGroup().addTo(map);
     routeLayerRef.current = L.layerGroup().addTo(map);
@@ -238,7 +319,22 @@ export default function MapPage({ user: userProp, onBackHome }) {
         // 지도가 이미 제거됐거나(언마운트) 재생성됐으면 무시 — 옛 지도에 마커 추가 방지
         if (cancelled || !mapRef.current) return;
         const { latitude, longitude } = pos.coords;
+        const prev = lastPosRef.current;
         lastPosRef.current = { lat: latitude, lng: longitude };
+
+        // ── 진행 방향(heading) 결정 ──
+        // 1순위: 기기가 준 heading. 단 정지 중이면 null 이 오는 경우가 많다.
+        // 2순위: 직전 좌표와의 방위각. 단 GPS 흔들림으로 제자리에서도 값이 튀므로
+        //        3m 이상 움직였을 때만 갱신한다. 둘 다 없으면 마지막 방향을 유지.
+        if (typeof pos.coords.heading === 'number' && !Number.isNaN(pos.coords.heading)) {
+          headingRef.current = pos.coords.heading;
+        } else if (prev) {
+          const moved = calculateDistance(prev.lat, prev.lng, latitude, longitude);
+          if (moved > 3) {
+            headingRef.current = (bearingBetween(prev, { lat: latitude, lng: longitude }) + 360) % 360;
+          }
+        }
+
         if (!currentLocMarkerRef.current) {
           currentLocMarkerRef.current = L.marker([latitude, longitude], {
             icon: makeCurrentLocationIcon(),
@@ -258,6 +354,17 @@ export default function MapPage({ user: userProp, onBackHome }) {
         } else {
           currentLocMarkerRef.current.setLatLng([latitude, longitude]);
           geofenceCircleRef.current?.setLatLng([latitude, longitude]);
+
+          // 라이딩 중에는 화살표가 진행 방향을 가리키게 아이콘을 갈아끼운다
+          if (followingRef.current) {
+            currentLocMarkerRef.current.setIcon(makeHeadingIcon(headingRef.current));
+          }
+        }
+
+        // 팔로우 모드: 지도 중심을 내 위치로. setView 가 아니라 panTo 를 쓰는 이유는
+        // setView 가 매번 줌을 고정해 사용자가 확대/축소한 것을 되돌려버리기 때문이다.
+        if (followingRef.current) {
+          map.panTo([latitude, longitude], { animate: true, duration: 0.5 });
         }
       },
       (err) => {
@@ -304,8 +411,28 @@ export default function MapPage({ user: userProp, onBackHome }) {
   };
 
   // 라이딩 시작
+  // "내 위치로" — 지도를 내 위치로 옮기고 팔로우를 다시 켠다
+  const recenter = useCallback(() => {
+    const pos = lastPosRef.current;
+    if (!pos) {
+      showToast('아직 현재 위치를 받지 못했습니다.', 'error');
+      return;
+    }
+    mapRef.current?.panTo([pos.lat, pos.lng], { animate: true });
+    setFollowing(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleRideStart = useCallback(() => {
     setIsRiding(true);
+    setFollowing(true);   // 라이딩 중에는 지도가 내 위치를 따라간다
+
+    // 호스트가 시작하면 서버에 알려 참가자 화면도 같이 출발하게 한다
+    if (party && user?.id === party.hostId && !party.rideStartedAt) {
+      startPartyRide(party.id, user.id)
+        .then(setParty)
+        .catch(() => {});
+    }
     setRideTime(0);
     setRideDistance(0);
     rideStartTimeRef.current = Date.now();
@@ -340,6 +467,9 @@ export default function MapPage({ user: userProp, onBackHome }) {
   // 라이딩 종료
   const handleRideStop = useCallback(async () => {
     setIsRiding(false);
+    setFollowing(false);
+    // 방향 화살표를 원래의 현재위치 아이콘으로 되돌린다
+    currentLocMarkerRef.current?.setIcon(makeCurrentLocationIcon());
 
     // GPS 감시 중지
     if (rideWatchIdRef.current) {
@@ -360,7 +490,8 @@ export default function MapPage({ user: userProp, onBackHome }) {
         await api.post('/api/ride-records', {
           userId: user.id,
           distance: rideDistance / 1000, // km로 변환
-          duration
+          duration,
+          partyId: party ? party.id : null,   // 파티 라이딩이면 함께 묶어 저장
         });
         showToast(`주행 기록 저장됨! ${(rideDistance / 1000).toFixed(2)}km · ${duration}분`);
       } catch (error) {
@@ -369,10 +500,31 @@ export default function MapPage({ user: userProp, onBackHome }) {
       }
     }
 
+    // 위치 공유 해제 — 라이딩이 끝나면 내 위치를 계속 뿌릴 이유가 없다
+    setLocationShareEnabled(false);
+    localStorage.setItem('locationShareEnabled', 'false');
+    if (user?.id) updateLocationSharing(user.id, false).catch(() => {});
+
+    // 파티 라이딩이었고 내가 호스트면 파티도 종료한다.
+    // 참가자는 본인 라이딩만 끝나고 파티 상태는 건드리지 않는다 (호스트 권한).
+    if (party && user?.id === party.hostId) {
+      try {
+        const ended = await endParty(party.id, user.id);
+        setParty(ended);
+        showToast(text.rideEndedParty);
+      } catch {
+        showToast('파티 종료에 실패했습니다.', 'error');
+      }
+    } else if (party) {
+      showToast(text.rideEndedSolo);
+    }
+
     // 리셋
     rideStartPosRef.current = null;
     rideStartTimeRef.current = null;
-  }, [user?.id, rideTime, rideDistance]);
+    // party 는 라이딩 종료 시점의 값만 필요해 의존성에서 뺀다 (매번 콜백 재생성 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, rideTime, rideDistance, party]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -390,7 +542,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
 
       try {
         await reportLocation({ userId: myId, name: myName, lat: myPos.lat, lng: myPos.lng });
-        const others = (await getOtherLocations(myId)) || [];
+        const others = (await getOtherLocations(myId, partyId)) || [];
         // 네트워크 대기 중 지도가 제거됐으면 중단 — 옛 지도에 마커 추가 방지
         if (cancelled || !mapRef.current) return;
 
@@ -446,7 +598,7 @@ export default function MapPage({ user: userProp, onBackHome }) {
     };
     // user 객체는 매 렌더마다 새로 생성되므로 안정적인 user?.id 에만 의존 (의도된 것)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, locationShareEnabled]);
+  }, [user?.id, locationShareEnabled, partyId]);
 
   // 위치 공유 토글에 따라 원(동그라미) 보이기/숨기기
   useEffect(() => {
@@ -626,12 +778,21 @@ export default function MapPage({ user: userProp, onBackHome }) {
     }
   };
 
-  // 목록 불러오기
+  // 목록 불러오기 — 본인 경로만. 비로그인이면 호출하지 않는다.
+  // (userId 없이 부르면 백엔드가 400 을 주고, 예전에는 남의 경로가 전부 나왔다)
   const loadRouteList = async () => {
-    const data = await getRoutes(user?.id ?? null);
-    setRouteList(data);
-    setCheckedIds([]);
-    setShowRouteList(true);
+    if (!user?.id) {
+      showToast(text.routeListLoginNeeded, 'error');
+      return;
+    }
+    try {
+      const data = await getRoutes(user.id);
+      setRouteList(data);
+      setCheckedIds([]);
+      setShowRouteList(true);
+    } catch (e) {
+      showToast('목록을 불러오지 못했습니다: ' + e.message, 'error');
+    }
   };
 
   const toggleCheck = (id) => {
@@ -728,7 +889,12 @@ export default function MapPage({ user: userProp, onBackHome }) {
       <header className="mapOnlyHeader">
         <a className="brand mapBrand" href="/" onClick={onBackHome}>PedalLink</a>
         <div>
-          <h1 id="map-title">{text.mapTitle}</h1>
+          <h1 id="map-title">{party ? party.title : text.mapTitle}</h1>
+          {party && (
+            <p className="partyRideBanner">
+              {text.partyRideBanner} · {party.participants.map(m => m.name).join(', ')}
+            </p>
+          )}
         </div>
         <div className="mapActions">
           <label className="layerSelect">
@@ -805,12 +971,23 @@ export default function MapPage({ user: userProp, onBackHome }) {
 
               {/* 라이딩 섹션 */}
               <div className="plannerRideBox">
+                {/* 시작/종료를 각각 두고, 지금 할 수 없는 쪽은 비활성으로 둔다 */}
                 <div className="plannerRideAction">
                   <button
-                    onClick={isRiding ? handleRideStop : handleRideStart}
-                    className={`plannerRideBtn${isRiding ? ' isRiding' : ''}`}
+                    type="button"
+                    onClick={handleRideStart}
+                    disabled={isRiding}
+                    className="plannerRideBtn"
                   >
-                    {isRiding ? '라이딩 종료' : '라이딩 시작'}
+                    {text.rideStart}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRideStop}
+                    disabled={!isRiding}
+                    className="plannerRideBtn isRiding"
+                  >
+                    {text.rideStop}
                   </button>
                 </div>
                 {isRiding && (
@@ -963,6 +1140,22 @@ export default function MapPage({ user: userProp, onBackHome }) {
         </button>
 
         <div className="leafletMap" ref={mapNodeRef} />
+
+        {/* 내 위치로 — 오른쪽 아래. 왼쪽 경로 패널, 오른쪽 위 줌 컨트롤과 겹치지 않는 자리 */}
+        <button
+          type="button"
+          className={`recenterBtn${following ? ' isFollowing' : ''}`}
+          onClick={recenter}
+          title={following ? '내 위치 따라가는 중' : '내 위치로'}
+          aria-label="내 위치로"
+          aria-pressed={following}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="7" />
+            <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none" />
+            <path d="M12 1v3M12 20v3M1 12h3M20 12h3" strokeLinecap="round" />
+          </svg>
+        </button>
       </section>
     </div>
   );

@@ -114,6 +114,51 @@ public class PartyService {
         return toResponse(partyRepository.findById(partyId).get());
     }
 
+    /**
+     * 파티 삭제 — 호스트만.
+     * Party.members 가 cascade=ALL + orphanRemoval 이라 참가 기록(party_members)도 함께 지워진다.
+     * 이미 저장된 주행 기록(ride_records.party_id)은 실제로 있었던 일이므로 남긴다.
+     */
+    @Transactional
+    public void delete(Long partyId, Long userId) {
+        Party party = findParty(partyId);
+        if (!party.getHost().getId().equals(userId)) {
+            throw new SecurityException("호스트만 삭제할 수 있습니다");
+        }
+        partyRepository.delete(party);
+    }
+
+    /**
+     * 호스트가 라이딩을 시작했다고 표시한다.
+     * 참가자 지도가 이 값을 감지해 같이 출발한다(각자 기기가 자기 거리를 측정).
+     */
+    @Transactional
+    public PartyResponse startRide(Long partyId, Long userId) {
+        Party party = findParty(partyId);
+        if (!party.getHost().getId().equals(userId)) {
+            throw new SecurityException("호스트만 라이딩을 시작할 수 있습니다");
+        }
+        party.setRideStartedAt(java.time.LocalDateTime.now());
+        partyRepository.save(party);
+        return toResponse(party);
+    }
+
+    /**
+     * 라이딩 종료 → 파티를 끝낸 것으로 표시한다.
+     * 호스트만 할 수 있다. 종료된 파티는 목록에 남지만 신청을 받지 않는다.
+     */
+    @Transactional
+    public PartyResponse end(Long partyId, Long userId) {
+        Party party = findParty(partyId);
+
+        if (!party.getHost().getId().equals(userId)) {
+            throw new SecurityException("호스트만 파티를 종료할 수 있습니다");
+        }
+        party.setStatus("ended");
+        partyRepository.save(party);
+        return toResponse(party);
+    }
+
     @Transactional
     public PartyResponse reject(Long partyId, Long userId) {
         Party party = findParty(partyId);

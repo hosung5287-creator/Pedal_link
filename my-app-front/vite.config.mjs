@@ -10,6 +10,12 @@ export default defineConfig({
     // 다른 포트로 넘어가지 않도록 strictPort 로 실패시킨다.
     port: 3000,
     strictPort: true,
+
+    // cloudflared 터널로 외부에 공개할 때 필요하다.
+    // Vite 는 모르는 Host 헤더로 들어온 요청을 막는데(DNS 리바인딩 방어),
+    // 터널 주소(https://xxx.trycloudflare.com)가 여기 없으면 "Blocked request" 가 뜬다.
+    // CRA 의 DANGEROUSLY_DISABLE_HOST_CHECK 에 해당하지만, 도메인을 한정해서 더 안전하다.
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
       // 이전 CRA 의 package.json "proxy": "https://dapi.kakao.com" 를 대체한다.
       // MapPage 의 장소 검색이 자기 origin 으로 /v2/local/... 을 부른다.

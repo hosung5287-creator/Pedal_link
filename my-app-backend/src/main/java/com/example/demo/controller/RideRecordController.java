@@ -28,6 +28,7 @@ public class RideRecordController {
         record.setUserId(req.getUserId());
         record.setDistanceKm(req.getDistance());
         record.setDurationMin(req.getDuration() != null ? req.getDuration() : 0);
+        record.setPartyId(req.getPartyId());
 
         RideRecord saved = rideRecordRepository.save(record);
         return ResponseEntity.ok(Map.of("id", saved.getId(), "message", "주행 기록 저장 완료"));

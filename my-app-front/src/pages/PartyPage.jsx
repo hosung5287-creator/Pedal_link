@@ -5,7 +5,7 @@ import { text } from '../constants';
 import heroBg from '../backglound1.png';
 import {
   getParties, getMyRoutesForParty, createParty,
-  applyToParty, approveRequest, rejectRequest,
+  applyToParty, approveRequest, rejectRequest, deleteParty,
 } from '../api/parties';
 
 // 모임 시간 표시용 포맷
@@ -110,7 +110,10 @@ function ApplyAction({ myState, full, isLoggedIn, onApply, onLoginNeeded }) {
 }
 
 // 파티 카드
-function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLoginNeeded }) {
+function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLoginNeeded, onStartRide, onDelete }) {
+  // 삭제는 되돌릴 수 없으므로 한 번 더 확인받는다.
+  // 이 앱은 OS 기본 confirm 을 쓰지 않기로 했으므로 카드 안에서 처리한다.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   // 'me' 는 데모 시드 파티의 호스트 표식 → 현재 로그인 유저를 호스트로 취급
   const isHost = party.hostId === me.id || party.hostId === 'me';
   const full = party.participants.length >= party.maxMembers;
@@ -120,13 +123,34 @@ function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLogi
       ? 'pending'
       : 'none';
 
+  // 모집이 끝났고 내가 참여 확정된 사람이면 라이딩에 들어갈 수 있다.
+  // 호스트도 개설 시 participants 에 joined 로 들어가므로 같은 조건으로 묶인다.
+  const ended = party.status === 'ended';
+  const canRide = !ended && full && (isHost || myState === 'joined');
+
   return (
-    <article className={`partyCard${full ? ' isFull' : ''}`}>
+    <article className={`partyCard${full ? ' isFull' : ''}${ended ? ' isEnded' : ''}`}>
       <div className="partyCardHead">
         <h3>{party.title}</h3>
-        {isHost
-          ? <span className="partyHostTag">{text.partyHostBadge}</span>
-          : <span className="partyRouteTag">{party.routeName}</span>}
+        {isHost ? (
+          <span className="partyHeadRight">
+            <span className="partyHostTag">{text.partyHostBadge}</span>
+            <button
+              type="button"
+              className="partyDeleteBtn"
+              onClick={() => setConfirmingDelete(true)}
+              aria-label={text.partyDelete}
+              title={text.partyDelete}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                   strokeWidth="2" strokeLinecap="round">
+                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+              </svg>
+            </button>
+          </span>
+        ) : (
+          <span className="partyRouteTag">{party.routeName}</span>
+        )}
       </div>
       <p className="partyCardRoute">
         {party.fromLabel} → {party.toLabel}
@@ -137,6 +161,27 @@ function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLogi
         <div><dt>👥</dt><dd>{text.partyParticipants} {party.participants.length}/{party.maxMembers}{text.partyMembers}</dd></div>
         <div><dt>{text.partyHost}</dt><dd>{party.hostName}</dd></div>
       </dl>
+
+      {confirmingDelete && (
+        <div className="partyDeleteConfirm">
+          <p>{text.partyDeleteConfirm}</p>
+          <div className="partyDeleteActions">
+            <button type="button" className="partyGhostBtn" onClick={() => setConfirmingDelete(false)}>
+              {text.partyDeleteNo}
+            </button>
+            <button type="button" className="partyDeleteYesBtn" onClick={() => onDelete(party.id)}>
+              {text.partyDeleteYes}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 모집이 끝나면 멤버 누구나 지도를 파티 모드로 연다 (호스트·참가자 동일) */}
+      {canRide && (
+        <button type="button" className="partyRideBtn" onClick={() => onStartRide(party.id)}>
+          {isHost ? text.partyStartRide : text.partyJoinRide}
+        </button>
+      )}
 
       {isHost ? (
         <div className="partyPending">
@@ -161,7 +206,9 @@ function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLogi
             </ul>
           )}
         </div>
-      ) : (
+      ) : ended ? (
+        <button type="button" className="partyPrimaryBtn partyJoinBtn" disabled>{text.partyEnded}</button>
+      ) : canRide ? null : (
         <ApplyAction
           myState={myState}
           full={full}
@@ -174,13 +221,14 @@ function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLogi
   );
 }
 
-export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
+export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide }) {
   const me = { id: user?.id ?? 'me', name: user?.name ?? '나' };
   const isLoggedIn = !!user;
 
   const [routes, setRoutes] = useState([]);
   const [parties, setParties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -203,6 +251,17 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
     const party = await createParty({ route, title, startAt, maxMembers, host: me });
     setParties((prev) => [party, ...prev]);
   };
+  const handleDelete = async (id) => {
+    setError('');
+    try {
+      await deleteParty(id, me.id);
+      setParties((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      // 목록은 그대로 두고 실패만 알린다
+      setError(e.status === 403 ? '호스트만 삭제할 수 있습니다.' : text.partyDeleteFailed);
+    }
+  };
+
   const handleApply = async (id) => replaceParty(await applyToParty(id, me));
   const handleApprove = async (partyId, userId) => replaceParty(await approveRequest(partyId, userId));
   const handleReject = async (partyId, userId) => replaceParty(await rejectRequest(partyId, userId));
@@ -223,7 +282,15 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
       <main className="partyLayout">
         <section className="partySection">
           <h2>{text.partyMyRoutes}</h2>
-          {loading ? (
+          {/* 내 저장 경로는 로그인해야 볼 수 있다 (비로그인이면 목록을 아예 불러오지 않음) */}
+          {!isLoggedIn ? (
+            <div className="partyLoginPrompt">
+              <p>{text.partyRoutesLoginNeeded}</p>
+              <button type="button" className="partyPrimaryBtn" onClick={onMoveLogin}>
+                {text.login}
+              </button>
+            </div>
+          ) : loading ? (
             <p className="partyEmpty">불러오는 중…</p>
           ) : routes.length === 0 ? (
             <p className="partyEmpty">{text.partyNoRoutes}</p>
@@ -238,6 +305,7 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
 
         <section className="partySection">
           <h2>{text.partyOpenList}</h2>
+          {error && <p className="partyError">{error}</p>}
           {loading ? (
             <p className="partyEmpty">불러오는 중…</p>
           ) : parties.length === 0 ? (
@@ -254,6 +322,8 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin }) {
                   onApprove={handleApprove}
                   onReject={handleReject}
                   onLoginNeeded={onMoveLogin}
+                  onStartRide={onStartRide}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>

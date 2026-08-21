@@ -22,26 +22,87 @@ public class PartyController {
         return partyService.getParties();
     }
 
+    // 파티 1건 — 지도에서 라이딩할 때 코스/멤버를 다시 읽기 위해 필요
+    @GetMapping("/{id}")
+    public ResponseEntity<PartyResponse> getParty(@PathVariable Long id) {
+        return partyService.getParties().stream()
+                .filter(p -> p.getId().equals(id))
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public ResponseEntity<PartyResponse> createParty(@RequestBody PartyRequest req) {
         return ResponseEntity.ok(partyService.createParty(req));
     }
 
     @PostMapping("/{id}/apply")
-    public ResponseEntity<PartyResponse> apply(@PathVariable Long id,
-                                               @RequestBody Map<String, Long> body) {
-        return ResponseEntity.ok(partyService.apply(id, body.get("userId")));
+    public ResponseEntity<?> apply(@PathVariable Long id,
+                                   @RequestBody Map<String, Long> body) {
+        return handle(() -> partyService.apply(id, body.get("userId")));
+    }
+
+    // 파티 삭제 (호스트 전용)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> delete(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            partyService.delete(id, userId);
+            return ResponseEntity.ok(Map.of("message", "삭제되었습니다"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 라이딩 시작 알림 (호스트 전용) — 참가자가 이 시각을 보고 자동 출발
+    @PostMapping("/{id}/start-ride")
+    public ResponseEntity<?> startRide(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        Long userId = body.get("userId");
+        if (userId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "로그인이 필요합니다"));
+        }
+        try {
+            return ResponseEntity.ok(partyService.startRide(id, userId));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 라이딩 종료 → 파티 종료 (호스트 전용)
+    @PostMapping("/{id}/end")
+    public ResponseEntity<?> end(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        Long userId = body.get("userId");
+        if (userId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "로그인이 필요합니다"));
+        }
+        try {
+            return ResponseEntity.ok(partyService.end(id, userId));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PostMapping("/{id}/requests/{userId}/approve")
-    public ResponseEntity<PartyResponse> approve(@PathVariable Long id,
-                                                 @PathVariable Long userId) {
-        return ResponseEntity.ok(partyService.approve(id, userId));
+    public ResponseEntity<?> approve(@PathVariable Long id, @PathVariable Long userId) {
+        return handle(() -> partyService.approve(id, userId));
     }
 
     @PostMapping("/{id}/requests/{userId}/reject")
-    public ResponseEntity<PartyResponse> reject(@PathVariable Long id,
-                                                @PathVariable Long userId) {
-        return ResponseEntity.ok(partyService.reject(id, userId));
+    public ResponseEntity<?> reject(@PathVariable Long id, @PathVariable Long userId) {
+        return handle(() -> partyService.reject(id, userId));
+    }
+
+    /**
+     * "이미 신청했습니다", "정원이 초과되었습니다" 같은 것은 사용자 실수이지 서버 오류가 아니다.
+     * 그대로 두면 Spring 이 500 + 메시지 없는 응답을 보내 프론트가 이유를 보여줄 수 없다.
+     */
+    private ResponseEntity<?> handle(java.util.function.Supplier<PartyResponse> action) {
+        try {
+            return ResponseEntity.ok(action.get());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 }

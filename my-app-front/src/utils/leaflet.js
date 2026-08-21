@@ -200,3 +200,34 @@ export async function requestBrouterRoute(from, to, profile) {
     stats: parseBrouterStats(feature?.properties || {}),
   };
 }
+
+// 진행 방향을 가리키는 화살표 마커 (heading-up).
+// Leaflet 코어는 지도 회전을 지원하지 않으므로, 지도는 북쪽 고정(north-up)으로 두고
+// 마커만 방위각만큼 돌린다. 스트라바 등 대부분의 자전거 앱이 쓰는 방식이다.
+export function makeHeadingIcon(headingDeg) {
+  return L.divIcon({
+    html: `<div style="width:34px;height:34px;transform:rotate(${headingDeg}deg);transform-origin:50% 50%;">
+      <svg viewBox="0 0 34 34" width="34" height="34">
+        <circle cx="17" cy="17" r="15" fill="#2563eb" fill-opacity="0.18"/>
+        <!-- 위(0도)가 북쪽. 부모 div 를 돌려서 진행 방향을 향하게 한다 -->
+        <path d="M17 4 L25 26 L17 21 L9 26 Z" fill="#2563eb" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+    </div>`,
+    className: '',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -18],
+  });
+}
+
+// 두 좌표 사이의 방위각(북쪽 기준 시계방향 0~360도).
+// geolocation 의 coords.heading 은 정지 상태에서 null 이 오는 경우가 많아,
+// 직전 위치와 현재 위치로 직접 계산하는 편이 라이딩 중에는 더 안정적이다.
+export function bearingBetween(from, to) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const lat1 = toRad(from.lat), lat2 = toRad(to.lat);
+  const dLng = toRad(to.lng - from.lng);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (Math.atan2(y, x) * 180) / Math.PI;   // -180~180 → 아래에서 0~360 으로 정규화
+}

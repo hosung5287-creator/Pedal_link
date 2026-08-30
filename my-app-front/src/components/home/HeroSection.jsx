@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { text } from '../../constants';
+import BrandLogo from '../BrandLogo';
+import UserMenu from '../UserMenu';
 
 // public/hero.mp4 에 파일을 넣으면 자동으로 적용된다.
 // 파일이 없으면 onError 로 <video> 를 제거하고 기존 그라데이션(.heroMotion)이 그대로 폴백된다.
@@ -13,6 +15,8 @@ export default function HeroSection({
   onMoveLogin,
   onMoveParty,
   onMoveBrowse,
+  onMoveProfile,
+  onMoveSettings,
   onLogout,
 }) {
   const [videoFailed, setVideoFailed] = useState(false);
@@ -42,19 +46,16 @@ export default function HeroSection({
       <div className="heroShade" aria-hidden="true" />
 
       <nav className="navbar" aria-label={text.nav}>
-        <a className="brand" href="/" onClick={onMoveHome}>PedalLink</a>
+        <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
         <div className="navLinks">
           <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
-          <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
-          <a href="/">{text.nearby}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>
+          <a href="/">{text.nearby}</a>
+          <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
         <div className="navActions">
           {user ? (
-            <>
-              <span className="signupLink">{user.name}님</span>
-              <button className="signupLink" type="button" onClick={onLogout}>로그아웃</button>
-            </>
+            <UserMenu user={user} onLogout={onLogout} onProfile={onMoveProfile} onSettings={onMoveSettings} />
           ) : (
             <>
               <a className="signupLink" href="/login" onClick={onMoveLogin}>{text.login}</a>

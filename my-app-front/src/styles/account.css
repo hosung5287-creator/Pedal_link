@@ -1,0 +1,148 @@
+/* 프로필 / 설정 페이지 공통 (뼈대).
+   상단 네비는 다른 탭과 동일 규격, 아래는 1180 컨테이너. */
+
+.accountPage {
+  min-height: 100vh;
+  background: var(--wash);
+}
+
+.accountNav {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px max(20px, calc((100% - 1180px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.accountPage .brand,
+.accountPage .signupBackLink {
+  color: var(--ink);
+}
+
+.accountPage .signupBackLink:hover {
+  color: var(--mint-dark);
+}
+
+.accountNav .navLinks a {
+  color: var(--muted);
+  transition: color 0.15s;
+}
+
+.accountNav .navLinks a:hover {
+  color: var(--ink);
+}
+
+.accountMain {
+  width: min(760px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 48px 0 80px;
+  display: grid;
+  gap: 24px;
+}
+
+/* 상단 프로필 헤더 */
+.accountHead {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.accountAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.accountHead h1 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  color: var(--ink);
+}
+
+.accountHead p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* 카드 */
+.accountCard {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.accountCard h2 {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+/* 준비 중 목록 */
+.accountList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.accountList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.accountList li:last-child {
+  border-bottom: 0;
+}
+
+.accountSoon {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* 로그아웃 버튼 (설정 하단) */
+.accountLogout {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid #f5c6c6;
+  border-radius: 10px;
+  background: #fdeaea;
+  color: var(--crit);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+
+.accountLogout:hover {
+  filter: brightness(0.98);
+}
+
+@media (max-width: 639px) {
+  .accountMain { padding: 32px 0 56px; }
+  .accountHead h1 { font-size: 1.4rem; }
+}

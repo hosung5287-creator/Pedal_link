@@ -20,28 +20,49 @@
   color: var(--mint-dark);
 }
 
+/* 상단 네비: 흰 배경 + 하단 경계선 → 아래 wash 영역과 색 구분 (둘러보기와 통일) */
+.partyNav {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px max(20px, calc((100% - 1180px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.partyNav .navLinks a {
+  color: var(--muted);
+  transition: color 0.15s;
+}
+
+.partyNav .navLinks a:hover {
+  color: var(--ink);
+}
+
 .partyHero {
-  padding: 48px 24px 40px;
-  background-size: cover;
-  background-position: center;
-  color: #ffffff;
-  text-align: center;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 40px 0 36px;
+  text-align: left;
 }
 
 .partyHero .eyebrow {
-  color: #ffffff;
-  opacity: 0.9;
+  margin: 0 0 8px;
+  color: var(--mint-dark);
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 .partyHero h1 {
-  margin: 6px 0 10px;
+  margin: 0 0 12px;
   font-size: 2.4rem;
+  color: var(--ink);
 }
 
 .partyHeroSub {
   margin: 0;
   font-size: 1.02rem;
-  opacity: 0.92;
+  color: var(--muted);
 }
 
 .partyLayout {

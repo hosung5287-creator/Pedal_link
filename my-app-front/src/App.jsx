@@ -9,6 +9,8 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import PartyPage from './pages/PartyPage';
@@ -54,6 +56,8 @@ function App() {
   const moveLogin = (e) => { e.preventDefault(); moveTo('/login'); };
   const moveParty = (e) => { e.preventDefault(); moveTo('/party'); };
   const moveBrowse = (e) => { e.preventDefault(); moveTo('/browse'); };
+  const moveProfile = (e) => { e.preventDefault(); moveTo('/profile'); };
+  const moveSettings = (e) => { e.preventDefault(); moveTo('/settings'); };
   // 파티에서 "라이딩 시작" → 지도를 파티 모드로 연다
   const movePartyRide = (partyId) => moveTo(`/map?partyId=${partyId}`);
 
@@ -70,15 +74,19 @@ function App() {
 
   // 로그인 상태에서 로그인/회원가입 페이지 접근 시 홈으로
   if (user && (currentPath === '/login' || currentPath === '/signup')) moveTo('/');
+  // 비로그인 상태에서 계정 페이지 접근 시 홈으로
+  if (!user && (currentPath === '/profile' || currentPath === '/settings')) moveTo('/');
 
   if (currentPath === '/map') {
     const partyId = new URLSearchParams(search).get('partyId');
-    return <MapPage user={user} partyId={partyId} onBackHome={moveHome} />;
+    return <MapPage user={user} partyId={partyId} onBackHome={moveHome} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
   }
   if (currentPath === '/signup') return <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   if (currentPath === '/login') return <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
-  if (currentPath === '/party') return <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} />;
-  if (currentPath === '/browse') return <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} />;
+  if (currentPath === '/party') return <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
+  if (currentPath === '/browse') return <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+  if (currentPath === '/profile') return <ProfilePage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
+  if (currentPath === '/settings') return <SettingsPage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
   return (
     <HomePage
       user={user}
@@ -88,6 +96,8 @@ function App() {
       onMoveLogin={moveLogin}
       onMoveParty={moveParty}
       onMoveBrowse={moveBrowse}
+      onMoveProfile={moveProfile}
+      onMoveSettings={moveSettings}
       onLogout={handleLogout}
     />
   );

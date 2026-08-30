@@ -1,8 +1,9 @@
 import '../styles/browse.css';
 
+import BrandLogo from '../components/BrandLogo';
+
 import { useEffect, useState } from 'react';
 import { text } from '../constants';
-import heroBg from '../backglound1.png';
 import { getFeed, toggleLike } from '../api/feed';
 import RouteThumbnail from '../components/RouteThumbnail';
 import ComposePostModal from '../components/ComposePostModal';
@@ -142,7 +143,7 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded }) {
   );
 }
 
-export default function BrowsePage({ user, onMoveHome, onMoveLogin }) {
+export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, onMoveParty, onMoveBrowse }) {
   const isLoggedIn = !!user;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -185,23 +186,23 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin }) {
   return (
     <div className="browsePage">
       <nav className="navbar browseNav" aria-label={text.nav}>
-        <a className="brand" href="/" onClick={onMoveHome}>PedalLink</a>
-        <div className="browseNavActions">
-          <button type="button" className="composeBtn" onClick={openCompose}>
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
-                 strokeWidth="2.2" strokeLinecap="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            {text.browseCompose}
-          </button>
-          <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>
+        <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
+        <div className="navLinks">
+          <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
+          <a href="/party" onClick={onMoveParty}>{text.party}</a>
+          <a href="/">{text.nearby}</a>
+          <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
+        <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>
       </nav>
 
-      <header className="browseHero" style={{ backgroundImage: `url(${heroBg})` }}>
-        <p className="eyebrow">{text.browseEyebrow}</p>
-        <h1>{text.browse}</h1>
-        <p className="browseHeroSub">{text.browseSub}</p>
+      <header className="browseHero">
+        <div className="browseHeroText">
+          <p className="eyebrow">{text.browseEyebrow}</p>
+          <h1>{text.browseTitle}</h1>
+          <p className="browseHeroSub">{text.browseSub}</p>
+        </div>
+        <button type="button" className="composeBtn" onClick={openCompose}>{text.browseCompose}</button>
       </header>
 
       <main className="feedList">

@@ -32,21 +32,6 @@
   letter-spacing: 0;
 }
 
-.mapCloseButton {
-  display: inline-flex;
-  align-items: center;
-  min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--ink);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 800;
-  padding: 0 16px;
-  text-decoration: none;
-}
-
 .osmMap {
   display: block;
   width: 100%;
@@ -65,37 +50,71 @@
   background: var(--wash);
 }
 
-.mapOnlyHeader {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 22px;
-  padding: 18px 24px;
+/* 상단 네비 — 다른 탭(둘러보기·파티)과 동일 규격.
+   맵은 전체화면(fixed grid)이라 mapTopbar 가 grid 의 auto 행이 된다. */
+.mapTopbar {
   border-bottom: 1px solid var(--line);
-  background: var(--paper);
+  background: var(--surface);
 }
 
-.mapBrand {
-  color: var(--ink);
-}
-
-.mapOnlyHeader .eyebrow {
-  margin-bottom: 4px;
-}
-
-.mapOnlyHeader h1 {
+.mapNav {
+  width: 100%;
   max-width: none;
   margin: 0;
-  font-size: clamp(1.35rem, 2.4vw, 2rem);
-  line-height: 1.1;
+  padding: 24px max(20px, calc((100% - 1180px) / 2));
+}
+
+.mapNav .brand,
+.mapNav .signupBackLink {
   color: var(--ink);
 }
 
-.mapActions {
+.mapNav .signupBackLink:hover {
+  color: var(--mint-dark);
+}
+
+.mapNav .navLinks a {
+  color: var(--muted);
+  transition: color 0.15s;
+}
+
+.mapNav .navLinks a:hover {
+  color: var(--ink);
+}
+
+/* 파티 라이딩 배너 — 예전 헤더의 큰 제목 자리를 대체한다 */
+.mapPartyBanner {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px max(20px, calc((100% - 1180px) / 2));
+  border-top: 1px solid var(--line);
+  background: var(--wash);
+  font-size: 0.9rem;
+}
+
+.mapPartyBanner strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.mapPartyBanner span {
+  color: var(--muted);
+}
+
+/* 경로 패널 안 지도 설정 (레이어·지역) — 예전 헤더에서 옮겨옴 */
+.plannerMapControls {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.plannerMapControls .layerSelect select,
+.plannerMapControls .regionSelect select {
+  width: 100%;
+  min-width: 0;
 }
 
 .layerSelect {
@@ -255,6 +274,37 @@
   border-radius: 12px;
   font: inherit;
   font-weight: 800;
+}
+
+.plannerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 경로 저장 / 마커지우기 는 한 줄에서 절반씩 나눠 갖는다 */
+.plannerActionsRow {
+  display: flex;
+  gap: 10px;
+}
+
+.plannerActionsRow .resetButton {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+/* 저장된 경로 목록은 아래에서 전체 폭 */
+.plannerActionsWide {
+  width: 100%;
+  min-height: 46px;
+}
+
+/* 저장 모달은 버튼 사이에 끼지 않고 항상 한 줄을 차지한다 */
+.plannerActions .routeSaveModal {
+  margin-top: 0;
 }
 
 .plannerSearchRow input {
@@ -528,11 +578,6 @@
   line-height: 1.45;
 }
 
-.resetButton {
-  margin-top: auto;
-  background: #24352e;
-}
-
 .leafletMap {
   /* 그리드 셀을 100% 채움, min-height:0 은 grid 오버플로 방지 */
   height: 100%;
@@ -550,36 +595,6 @@
   .osmMap {
     height: 430px;
     min-height: 430px;
-  }
-
-  .mapOnlyHeader {
-    grid-template-columns: 1fr auto;
-  }
-
-  .mapOnlyHeader > div {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .mapActions {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    justify-content: stretch;
-    width: 100%;
-  }
-
-  .layerSelect,
-  .regionSelect {
-    flex: 1;
-  }
-
-  .layerSelect select,
-  .regionSelect select {
-    width: 100%;
-  }
-
-  .mapOnlyFrame {
-    height: 100%;
   }
 
   .mapWorkspace {

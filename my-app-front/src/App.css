@@ -59,11 +59,14 @@ body { background: var(--bg); }
 @keyframes heroDrift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 @keyframes heroSlide { 0% { transform: translateX(-40px); } 100% { transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .heroMotion, .heroMotion::after { animation: none; } }
-.hero .navbar, .hero .heroContent { position: relative; z-index: 2; }
+.hero .heroContent { position: relative; z-index: 2; }
+/* 네비는 히어로 콘텐츠보다 위 — 사용자 메뉴 드롭다운이 히어로 위로 펼쳐져 클릭되게 */
+.hero .navbar { position: relative; z-index: 20; }
 
 .navbar {
   position: relative;
-  z-index: 2;
+  /* 히어로 콘텐츠(z-index:2)보다 위 — 사용자 메뉴 드롭다운이 히어로 위로 펼쳐져 클릭되도록 */
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -73,15 +76,37 @@ body { background: var(--bg); }
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   color: #ffffff;
   font-size: 1.45rem;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
+}
+
+/* 자전거 로고 마크 (BrandLogo, 인라인 SVG). 글자 높이에 맞춰 붙는다.
+   SVG 가 fill:currentColor 라 color 값이 곧 로고 색 → 배경별로 자동 전환. */
+.brandLogo {
+  display: block;
+  width: auto;
+  height: 30px;
+  color: var(--mint);
+}
+
+/* 다크 히어로 위에서는 로고도 흰색으로 (흰 워드마크와 통일) */
+.hero .brandLogo {
+  color: #ffffff;
 }
 
 .navLinks {
   display: flex;
   gap: 30px;
+  /* 오른쪽 액션 너비와 무관하게 항상 화면 정중앙 → 전 탭 네비 위치 통일 */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .navLinks a {
@@ -336,6 +361,121 @@ main {
 .signupLink:hover {
   background: rgba(255, 255, 255, 0.14);
   border-color: #ffffff;
+}
+
+/* ── 로그인 사용자 메뉴 (아바타 → 드롭다운) ── */
+.userMenu {
+  position: relative;
+}
+
+.userMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px 0 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.96rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.userMenuTrigger:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #ffffff;
+}
+
+.userAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.9rem;
+}
+
+.userMenuDropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  min-width: 210px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 20px 50px rgba(12, 27, 39, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.userMenuHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 4px;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.userMenuDropdown button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.94rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.userMenuDropdown button:not(:disabled):hover {
+  background: var(--wash);
+}
+
+.userMenuDropdown button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.userMenuSoon {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.userMenuDivider {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--line);
+}
+
+.userMenuDropdown button.userMenuLogout {
+  color: var(--crit);
+}
+
+.userMenuDropdown button.userMenuLogout:hover {
+  background: #fdeaea;
 }
 
 .signupBackLink {

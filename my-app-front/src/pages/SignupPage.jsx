@@ -1,5 +1,7 @@
 import '../styles/auth.css';
 
+import BrandLogo from '../components/BrandLogo';
+
 import { useState } from 'react';
 import { text } from '../constants';
 import heroBg from '../backglound1.png';
@@ -37,7 +39,7 @@ export default function SignupPage({ onMoveHome, onMoveLogin }) {
   return (
     <div className="signupPage" style={{ backgroundImage: `url(${heroBg})` }}>
       <nav className="navbar" aria-label={text.nav}>
-        <a className="brand" href="/" onClick={onMoveHome}>PedalLink</a>
+        <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
         <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.backHome}</a>
       </nav>
 

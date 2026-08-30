@@ -1,4 +1,6 @@
 /* html·body·#root를 100% 높이로 → 지도 페이지 레이아웃 기준점 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 html,
 body {
   height: 100%;
@@ -6,12 +8,18 @@ body {
   padding: 0;
 }
 
+/* 스크롤바 자리를 항상 예약 → 스크롤바가 있는 탭(홈·파티·둘러보기)과
+   없는 탭(지도, position:fixed) 사이를 오가도 가운데 정렬 네비가 좌우로 튀지 않는다. */
+html {
+  scrollbar-gutter: stable;
+}
+
 #root {
   height: 100%;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;

@@ -68,6 +68,10 @@ export const text = {
   signupNaver: '네이버로 로그인하기',
   socialPreparing: '소셜 로그인은 준비 중입니다. 이메일로 로그인해주세요.',
   login: '로그인',
+  logout: '로그아웃',
+  menuProfile: '프로필',
+  menuSettings: '설정',
+  menuComingSoon: '준비 중',
   loginEyebrow: 'PedalLink 로그인',
   loginHeadline: '다시 만나서\n반가워요',
   loginSub: '로그인하고 저장한 코스와 파티를 이어서 즐겨보세요.',
@@ -153,6 +157,7 @@ export const text = {
   closingParty: '파티 보기',
   browseEyebrow: '라이더 피드',
   browseSub: '다른 라이더들이 저장한 코스를 구경해보세요.',
+  browseTitle: '라이더들의 코스를 둘러보세요',
   browseLoading: '불러오는 중…',
   browseNoFeed: '아직 공유된 코스가 없어요. 지도에서 경로를 저장하면 여기에 올라옵니다.',
   browseLoadFailed: '피드를 불러오지 못했습니다.',
@@ -327,3 +332,82 @@ export const routes = [
     image: 'https://images.unsplash.com/photo-1494475673543-6a6a27143fc8?auto=format&fit=crop&w=900&q=80',
   },
 ];
+
+// ── 홈 개선 섹션 (pen 초안 포팅) ──────────────────
+// 히어로 아래 섹션들의 문구·구성. 이미지는 따로 제작해 .homeImgSlot 자리에 넣는다.
+
+// S2 · 코스 만들기 (쇼케이스)
+export const homeCourse = {
+  id: 'instant',            // 히어로 하단 화살표(#instant)가 이 섹션으로 스크롤
+  variant: 'wash',
+  eyebrow: '코스 만들기',
+  title: '지도 위에서 바로 코스를 그리세요',
+  sub: '출발지와 도착지를 찍으면 거리·고도·예상 시간이 자동으로 계산됩니다.',
+  imageLabel: '이미지 자리 — 지도/경로 편집 화면',
+  features: [
+    { title: '실시간 계산', desc: '점을 찍는 순간 거리·상승·시간이 표시됩니다.' },
+    { title: '경로 저장', desc: '마음에 든 코스는 저장해 다시 꺼내 쓰세요.' },
+    { title: '함께 공유', desc: '완성한 코스를 파티에 올려 함께 달려요.' },
+  ],
+};
+
+// S3 · 실시간 매칭 (좌우 분할)
+export const homeMatch = {
+  eyebrow: '실시간 매칭',
+  title: '근처 라이더와 지금 바로 연결',
+  sub: '위치를 공유하면 반경 안의 라이더가 지도에 실시간으로 표시됩니다.',
+  imageLabel: '이미지 자리 — 실시간 매칭 지도',
+  points: ['반경 안 라이더 자동 감지', '접근·이탈 알림', '파티 멤버와 위치 공유'],
+};
+
+// S4 · 함께 달리기 (쇼케이스)
+export const homeParty = {
+  variant: 'wash',
+  eyebrow: '함께 달리기',
+  title: '혼자보다 함께, 파티 라이딩',
+  sub: '코스를 정하고 라이더를 초대하세요. 출발부터 도착까지 함께 달립니다.',
+  imageLabel: '이미지 자리 — 파티/함께 달리기 화면',
+  features: [
+    { title: '파티 개설', desc: '코스를 걸고 모집 인원을 정해 파티를 열어요.' },
+    { title: '승인·참여', desc: '호스트가 참가 신청을 확인하고 함께 달릴 멤버를 확정해요.' },
+    { title: '같이 출발', desc: '호스트가 시작하면 모든 멤버 화면이 동시에 출발합니다.' },
+  ],
+};
+
+// S5 · 둘러보기 (좌우 분할 · 반전)
+export const homeBrowse = {
+  eyebrow: '둘러보기',
+  title: '라이더들의 코스를 둘러보세요',
+  sub: '다른 라이더가 완주한 코스를 피드에서 구경하고 저장하세요.',
+  imageLabel: '이미지 자리 — 코스 피드',
+  points: ['썸네일·거리·고도 한눈에', '좋아요로 인기 코스 확인', '마음에 든 코스 저장'],
+};
+
+// S6 · CTA
+export const homeCta = {
+  title: '지금 함께 달릴 라이더를 찾아보세요',
+  sub: '가입하고 첫 코스를 만들어 파티를 열어보세요.',
+  primary: '시작하기',
+  secondary: '코스 둘러보기',
+};
+
+// S7 · 푸터
+export const homeFooter = {
+  tagline: '자전거 동호회와 즉석 파티를\n한곳에서.',
+  columns: [
+    { head: '둘러보기', items: ['피드', '인기 코스'] },
+    { head: '파티', items: ['파티 찾기', '파티 열기'] },
+    { head: '코스', items: ['코스 만들기', '내 저장 경로'] },
+  ],
+  copyright: '© 2026 PedalLink',
+};
+
+// ── 계정 페이지 (프로필/설정 뼈대) ──────────────────
+export const account = {
+  memberFallback: 'PedalLink 회원',
+  profileActivityTitle: '내 활동',
+  profileActivity: ['내 코스', '주행 기록', '참여한 파티'],
+  settingsAccountTitle: '계정',
+  settingsRows: ['이메일 변경', '비밀번호 변경', '위치 공유', '알림 설정'],
+  soon: '준비 중',
+};

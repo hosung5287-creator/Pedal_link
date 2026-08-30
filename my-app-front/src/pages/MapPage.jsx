@@ -1,5 +1,7 @@
 import '../styles/map.css';
 
+import BrandLogo from '../components/BrandLogo';
+
 import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
@@ -67,7 +69,7 @@ function AnalysisBar({ title, items, labels }) {
   );
 }
 
-export default function MapPage({ user: userProp, partyId, onBackHome }) {
+export default function MapPage({ user: userProp, partyId, onBackHome, onMoveParty, onMoveBrowse }) {
   const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
   const [mapLayer, setMapLayer] = useState('mapnik');
   const [startQuery, setStartQuery] = useState('');
@@ -886,33 +888,23 @@ export default function MapPage({ user: userProp, partyId, onBackHome }) {
         </div>
       )}
 
-      <header className="mapOnlyHeader">
-        <a className="brand mapBrand" href="/" onClick={onBackHome}>PedalLink</a>
-        <div>
-          <h1 id="map-title">{party ? party.title : text.mapTitle}</h1>
-          {party && (
-            <p className="partyRideBanner">
-              {text.partyRideBanner} · {party.participants.map(m => m.name).join(', ')}
-            </p>
-          )}
-        </div>
-        <div className="mapActions">
-          <label className="layerSelect">
-            <span>{text.layerLabel}</span>
-            <select value={mapLayer} onChange={(e) => setMapLayer(e.target.value)}>
-              <option value="mapnik">{text.defaultLayer}</option>
-              <option value="cyclemap">{text.bicycleLayer}</option>
-            </select>
-          </label>
-          <label className="regionSelect">
-            <span>{text.regionLabel}</span>
-            <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
-              <option value="전체">{text.regionAll}</option>
-              {GU_LIST.map(gu => <option key={gu} value={gu}>{gu}</option>)}
-            </select>
-          </label>
-          <a className="mapCloseButton" href="/" onClick={onBackHome}>{text.close}</a>
-        </div>
+      <header className="mapTopbar">
+        <nav className="navbar mapNav" aria-label={text.nav}>
+          <a className="brand" href="/" onClick={onBackHome}><BrandLogo className="brandLogo" />PedalLink</a>
+          <div className="navLinks">
+            <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
+            <a href="/party" onClick={onMoveParty}>{text.party}</a>
+            <a href="/">{text.nearby}</a>
+            <a href="/map">{text.makeCourse}</a>
+          </div>
+          <a className="signupBackLink" href="/" onClick={onBackHome}>{text.partyBackHome}</a>
+        </nav>
+        {party && (
+          <div className="mapPartyBanner">
+            <strong>{party.title}</strong>
+            <span>{text.partyRideBanner} · {party.participants.map(m => m.name).join(', ')}</span>
+          </div>
+        )}
       </header>
 
       <section className={`mapWorkspace${panelOpen ? '' : ' panelClosed'}`}>
@@ -957,6 +949,24 @@ export default function MapPage({ user: userProp, partyId, onBackHome }) {
             </>
           ) : (
             <>
+              {/* 지도 설정 — 예전 상단 헤더에 있던 레이어/지역 선택을 패널로 옮김 */}
+              <div className="plannerMapControls">
+                <label className="layerSelect">
+                  <span>{text.layerLabel}</span>
+                  <select value={mapLayer} onChange={(e) => setMapLayer(e.target.value)}>
+                    <option value="mapnik">{text.defaultLayer}</option>
+                    <option value="cyclemap">{text.bicycleLayer}</option>
+                  </select>
+                </label>
+                <label className="regionSelect">
+                  <span>{text.regionLabel}</span>
+                  <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)}>
+                    <option value="전체">{text.regionAll}</option>
+                    {GU_LIST.map(gu => <option key={gu} value={gu}>{gu}</option>)}
+                  </select>
+                </label>
+              </div>
+
               <div className="plannerToggleRow">
                 <input
                   type="checkbox"
@@ -1051,34 +1061,36 @@ export default function MapPage({ user: userProp, partyId, onBackHome }) {
                 </div>
               )}
 
-              {/* 저장/목록/초기화 버튼 — 10px 간격으로 붙여둔다 */}
+              {/* 저장/마커지우기는 한 줄, 목록은 아래 전체 폭 — 10px 간격 */}
               <div className="plannerActions">
-                <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
-                  경로 저장
-                </button>
-
-              {/* 경로 이름 입력 모달 */}
-              {saveModalOpen && (
-                <div className="routeSaveModal">
-                  <p>경로 이름을 입력하세요</p>
-                  <input
-                    type="text"
-                    value={saveRouteName}
-                    onChange={(e) => setSaveRouteName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
-                    placeholder="예: 한강 자전거 코스"
-                    autoFocus
-                  />
-                  <div className="routeSaveActions">
-                    <button type="button" className="btn btn--solid" onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
-                    <button type="button" className="btn" onClick={() => setSaveModalOpen(false)}>취소</button>
-                  </div>
+                <div className="plannerActionsRow">
+                  <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
+                    경로 저장
+                  </button>
+                  <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
                 </div>
+
+                {/* 경로 이름 입력 모달 */}
+                {saveModalOpen && (
+                  <div className="routeSaveModal">
+                    <p>경로 이름을 입력하세요</p>
+                    <input
+                      type="text"
+                      value={saveRouteName}
+                      onChange={(e) => setSaveRouteName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
+                      placeholder="예: 한강 자전거 코스"
+                      autoFocus
+                    />
+                    <div className="routeSaveActions">
+                      <button type="button" className="btn btn--solid" onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
+                      <button type="button" className="btn" onClick={() => setSaveModalOpen(false)}>취소</button>
+                    </div>
+                  </div>
                 )}
-                <button className="resetButton btn btn--solid" type="button" onClick={loadRouteList}>
+                <button className="resetButton btn btn--solid plannerActionsWide" type="button" onClick={loadRouteList}>
                   저장된 경로 목록
                 </button>
-                <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
               </div>
 
               {/* 경로 목록 패널 */}

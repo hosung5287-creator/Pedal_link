@@ -240,6 +240,13 @@
   will-change: transform;
 }
 
+/* 세로 flex 자식들이 찌그러져 스크롤이 안 생기는 것 방지.
+   자연 높이를 유지시켜 내용이 넘치면 패널(overflow-y:auto)이 스크롤되게 한다.
+   (검색 오버레이 모드는 결과 목록이 flex 로 늘어나야 하므로 제외) */
+.routePlanner:not(.searchActive) > * {
+  flex-shrink: 0;
+}
+
 /* 접힘 → 패널을 왼쪽 밖으로 밀어냄 */
 .mapWorkspace.panelClosed .routePlanner {
   transform: translateX(-100%);
@@ -970,11 +977,19 @@
 /* "내 위치로" 버튼 — 오른쪽 아래.
    왼쪽 경로 패널(360px)과 오른쪽 위 줌 컨트롤 어느 쪽과도 겹치지 않고,
    모바일에서 엄지가 닿는 자리다. */
-.recenterBtn {
+/* 오른쪽 아래 플로팅 컨트롤 스택 — 전역 파티 도크 FAB(58px, bottom 24) 위로 쌓인다 */
+.mapFabStack {
   position: absolute;
-  right: 16px;
-  bottom: 24px;
+  right: 24px;
+  bottom: 94px;           /* 파티 도크 FAB + 간격 위 */
   z-index: 1000;          /* Leaflet 컨트롤(1000)과 같은 층 */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.mapFab {
   width: 46px;
   height: 46px;
   display: flex;
@@ -989,22 +1004,88 @@
   transition: color 0.15s, border-color 0.15s, transform 0.1s;
 }
 
-.recenterBtn:hover { color: var(--mint-dark); }
-.recenterBtn:active { transform: translateY(1px); }
+.mapFab:hover { color: var(--mint-dark); }
+.mapFab:active { transform: translateY(1px); }
 
-/* 팔로우가 켜져 있으면 활성 상태로 보여준다 */
-.recenterBtn.isFollowing {
+/* 켜짐(팔로우 중 / 위치 공유 중) 활성 표시 */
+.mapFab.isOn {
   color: #ffffff;
   background: var(--mint);
   border-color: var(--mint);
 }
 
 @media (max-width: 639px) {
-  .recenterBtn { right: 12px; bottom: 88px; }
+  .mapFabStack { right: 16px; bottom: 84px; }
 }
 
 /* 지금 누를 수 없는 라이딩 버튼은 눌리지 않는다는 게 보이게 */
 .plannerRideBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ── 파티원 근접 UI (B 마커 말풍선 + A 근접 토스트) ── */
+
+/* 공통 아바타 */
+.proxAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+
+/* B: 마커 커스텀 말풍선 (leaflet 기본 tooltip 덮어쓰기) */
+.leaflet-tooltip.proxTooltip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(12, 27, 39, 0.18);
+  color: var(--ink);
+  white-space: nowrap;
+  font: inherit;
+}
+.leaflet-tooltip.proxTooltip .proxAvatar { width: 30px; height: 30px; font-size: 0.8rem; }
+.proxTooltip .proxText { display: flex; flex-direction: column; line-height: 1.15; }
+.proxTooltip .proxText strong { font-size: 0.85rem; font-weight: 800; }
+.proxTooltip .proxDist { font-size: 0.72rem; font-weight: 700; color: var(--mint-dark); }
+/* 말풍선 꼬리 색을 흰색으로 맞춤 */
+.leaflet-tooltip-top.proxTooltip::before { border-top-color: #ffffff; }
+
+/* A: 근접 알림 토스트 (지도 상단 가운데) */
+.mapProxToast {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 32px);
+  padding: 12px 18px 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  box-shadow: 0 14px 36px rgba(12, 27, 39, 0.22);
+  animation: proxToastIn 0.24s ease-out;
+}
+.mapProxText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mapProxText strong { color: var(--ink); font-size: 0.95rem; font-weight: 800; }
+.mapProxText span { color: var(--muted); font-size: 0.82rem; font-weight: 600; }
+.mapProxToast.isLeaving .proxAvatar { background: #9fb3c0; }
+
+@keyframes proxToastIn {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }

@@ -160,6 +160,20 @@
   font-size: 0.9rem;
 }
 
+/* 실제 지도 미니뷰(캡처 느낌) — Leaflet 컨테이너가 채울 고정 높이 필요 */
+.feedThumbMap {
+  height: 240px;
+  background: var(--surface-2);
+}
+
+/* 미니뷰는 정지 캡처처럼 — 커서/포커스 없이 */
+.feedThumbMap .leaflet-container {
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  background: var(--surface-2);
+}
+
 /* 썸네일 안의 색 — 지도(MapPage)의 경로 색과 맞춘다 */
 .thumbLine { stroke: var(--mint); }
 .thumbWaypoint { fill: #b6cbd6; }

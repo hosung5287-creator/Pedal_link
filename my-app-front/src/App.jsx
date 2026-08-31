@@ -11,6 +11,7 @@ import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import PartyDock from './components/PartyDock';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import PartyPage from './pages/PartyPage';
@@ -77,29 +78,45 @@ function App() {
   // 비로그인 상태에서 계정 페이지 접근 시 홈으로
   if (!user && (currentPath === '/profile' || currentPath === '/settings')) moveTo('/');
 
+  let page;
   if (currentPath === '/map') {
     const partyId = new URLSearchParams(search).get('partyId');
-    return <MapPage user={user} partyId={partyId} onBackHome={moveHome} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+    page = <MapPage user={user} partyId={partyId} onBackHome={moveHome} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+  } else if (currentPath === '/signup') {
+    page = <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
+  } else if (currentPath === '/login') {
+    page = <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
+  } else if (currentPath === '/party') {
+    page = <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
+  } else if (currentPath === '/browse') {
+    page = <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+  } else if (currentPath === '/profile') {
+    page = <ProfilePage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
+  } else if (currentPath === '/settings') {
+    page = <SettingsPage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
+  } else {
+    page = (
+      <HomePage
+        user={user}
+        onOpenMap={openMap}
+        onMoveHome={moveHome}
+        onMoveSignup={moveSignup}
+        onMoveLogin={moveLogin}
+        onMoveParty={moveParty}
+        onMoveBrowse={moveBrowse}
+        onMoveProfile={moveProfile}
+        onMoveSettings={moveSettings}
+        onLogout={handleLogout}
+      />
+    );
   }
-  if (currentPath === '/signup') return <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
-  if (currentPath === '/login') return <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
-  if (currentPath === '/party') return <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
-  if (currentPath === '/browse') return <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
-  if (currentPath === '/profile') return <ProfilePage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
-  if (currentPath === '/settings') return <SettingsPage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
+
   return (
-    <HomePage
-      user={user}
-      onOpenMap={openMap}
-      onMoveHome={moveHome}
-      onMoveSignup={moveSignup}
-      onMoveLogin={moveLogin}
-      onMoveParty={moveParty}
-      onMoveBrowse={moveBrowse}
-      onMoveProfile={moveProfile}
-      onMoveSettings={moveSettings}
-      onLogout={handleLogout}
-    />
+    <>
+      {page}
+      {/* 파티 소속/모집중일 때 뜨는 플로팅 도크 (지도 포함 전 화면 우측 하단) */}
+      {user && <PartyDock user={user} onMoveParty={moveParty} />}
+    </>
   );
 }
 

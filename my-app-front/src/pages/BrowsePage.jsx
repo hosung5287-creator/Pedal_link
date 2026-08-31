@@ -5,7 +5,7 @@ import BrandLogo from '../components/BrandLogo';
 import { useEffect, useState } from 'react';
 import { text } from '../constants';
 import { getFeed, toggleLike } from '../api/feed';
-import RouteThumbnail from '../components/RouteThumbnail';
+import RouteMapThumbnail from '../components/RouteMapThumbnail';
 import ComposePostModal from '../components/ComposePostModal';
 
 // 분 → "1시간 20분" / "45분"
@@ -63,7 +63,7 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded }) {
         </div>
       </header>
 
-      <RouteThumbnail path={item.path} />
+      <RouteMapThumbnail path={item.path} />
 
       <dl className="feedStats">
         <div>

@@ -84,27 +84,50 @@ export function drawMarkers(startPoint, endPoint, layer) {
   }
 }
 
-export function drawRoutes(bikeRoute, shortestRoute, layer, map) {
+// 도로 종류를 일반인용 3분류로 묶는다. 색은 분석 막대·경로선·범례가 공유.
+export const ROAD_CATEGORY = {
+  quiet: { label: '자전거·한적한 길', color: '#22c55e' },
+  normal: { label: '일반 도로', color: '#0ea5e9' },
+  busy: { label: '큰길·차도', color: '#ef4444' },
+};
+
+export function categorizeHighway(h) {
+  if (['cycleway', 'path', 'footway', 'pedestrian', 'track', 'residential', 'living_street', 'service', 'steps', 'bridleway'].includes(h)) return 'quiet';
+  if (['primary', 'primary_link', 'trunk', 'trunk_link', 'motorway', 'motorway_link'].includes(h)) return 'busy';
+  return 'normal'; // secondary/tertiary/unclassified/unknown 등
+}
+
+// segments 가 있으면 자전거 경로를 도로 종류별 색으로 칠한다.
+export function drawRoutes(bikeRoute, shortestRoute, layer, map, segments) {
   if (!layer || !map) return;
   if (!bikeRoute?.length || !shortestRoute?.length) return;
   layer.clearLayers();
 
-  const shortestLine = L.polyline(shortestRoute, {
-    color: '#60a5fa',
-    dashArray: '8 8',
-    opacity: 0.95,
-    weight: 6,
+  // 최단경로는 옅은 회색 점선(참고용)으로 뒤에 깐다
+  L.polyline(shortestRoute, {
+    color: '#94a3b8',
+    dashArray: '6 8',
+    opacity: 0.7,
+    weight: 4,
   }).bindPopup(text.shortestRoute).addTo(layer);
 
-  const bikeLine = L.polyline(bikeRoute, {
-    color: '#2563eb',
-    opacity: 0.95,
-    weight: 6,
-  }).bindPopup(text.bikeRoute).addTo(layer);
+  if (segments?.length) {
+    // 흰색 케이싱 → 색 구간이 지도 위에서 또렷하게
+    L.polyline(bikeRoute, { color: '#ffffff', opacity: 0.9, weight: 9, lineCap: 'round', lineJoin: 'round' }).addTo(layer);
+    segments.forEach((s) => {
+      L.polyline(s.path, {
+        color: ROAD_CATEGORY[s.category].color,
+        opacity: 0.95,
+        weight: 6,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(layer);
+    });
+  } else {
+    L.polyline(bikeRoute, { color: '#2563eb', opacity: 0.95, weight: 6 }).bindPopup(text.bikeRoute).addTo(layer);
+  }
 
-  map.fitBounds(L.featureGroup([shortestLine, bikeLine]).getBounds(), {
-    padding: [40, 40],
-  });
+  map.fitBounds(L.polyline(bikeRoute).getBounds(), { padding: [40, 40] });
 }
 
 export function routeHasCycleways(routePoints, features) {
@@ -170,13 +193,74 @@ function parseBrouterStats(props) {
       .sort((a, b) => b.meters - a.meters);
   };
 
+  // 일반인용: 도로 종류를 3분류로 묶은 "길 구성"
+  const mix = { quiet: 0, normal: 0, busy: 0 };
+  Object.entries(highwayM).forEach(([h, m]) => { mix[categorizeHighway(h)] += m; });
+  const mixTotal = mix.quiet + mix.normal + mix.busy || 1;
+  const roadMix = ['quiet', 'normal', 'busy']
+    .map((key) => ({ key, label: ROAD_CATEGORY[key].label, color: ROAD_CATEGORY[key].color, meters: mix[key], pct: Math.round((mix[key] / mixTotal) * 100) }))
+    .filter((x) => x.meters > 0);
+
   return {
     distanceKm: Math.round(distanceM / 100) / 10,
     ascendM,
     timeMin: Math.round(timeSec / 60),
+    roadMix,
     surfaces: toSorted(surfaceM),
     highways: toSorted(highwayM),
   };
+}
+
+// BRouter messages(구간별 도로) → 도로종류별 색 구간으로 쪼갠다.
+// 각 message 는 시작점(Longitude/Latitude)과 WayTags(highway) 를 가진다.
+function parseBrouterSegments(props, coords) {
+  const messages = props.messages || [];
+  const header = messages[0] || [];
+  const lonIdx = header.indexOf('Longitude');
+  const latIdx = header.indexOf('Latitude');
+  const wIdx = header.indexOf('WayTags');
+  if (lonIdx < 0 || latIdx < 0 || wIdx < 0 || messages.length < 2 || coords.length < 2) return null;
+
+  // 좌표 스케일 자동 감지 (microdegrees ×1e6 또는 ×1e7)
+  const scale = Math.abs(Number(messages[1][latIdx]) / 1e6 - coords[0][0]) < 0.5 ? 1e6 : 1e7;
+
+  const bounds = [];
+  for (let i = 1; i < messages.length; i++) {
+    const lat = Number(messages[i][latIdx]) / scale;
+    const lng = Number(messages[i][lonIdx]) / scale;
+    let highway = 'unknown';
+    (messages[i][wIdx] || '').split(/\s+/).forEach((tk) => {
+      const [k, v] = tk.split('=');
+      if (k === 'highway') highway = v;
+    });
+    bounds.push({ lat, lng, category: categorizeHighway(highway) });
+  }
+
+  // 각 구간 시작점을 경로 좌표 인덱스에 매핑 (경로 따라 단조 전진)
+  let ci = 0;
+  const idxs = bounds.map((b) => {
+    while (ci < coords.length - 1) {
+      const dHere = Math.abs(coords[ci][0] - b.lat) + Math.abs(coords[ci][1] - b.lng);
+      const dNext = Math.abs(coords[ci + 1][0] - b.lat) + Math.abs(coords[ci + 1][1] - b.lng);
+      if (dNext < dHere) ci += 1; else break;
+    }
+    return ci;
+  });
+
+  const segs = [];
+  for (let i = 0; i < bounds.length; i++) {
+    const start = idxs[i];
+    const end = i + 1 < bounds.length ? idxs[i + 1] : coords.length - 1;
+    if (end <= start) continue;
+    const path = coords.slice(start, end + 1);
+    const last = segs[segs.length - 1];
+    if (last && last.category === bounds[i].category) {
+      last.path = last.path.concat(path.slice(1));   // 같은 종류면 이어붙임
+    } else {
+      segs.push({ category: bounds[i].category, path });
+    }
+  }
+  return segs.length ? segs : null;
 }
 
 export async function requestBrouterRoute(from, to, profile) {
@@ -195,9 +279,12 @@ export async function requestBrouterRoute(from, to, profile) {
 
   if (!coordinates?.length) throw new Error('Route geometry missing');
 
+  const coords = coordinates.map(([lng, lat]) => [lat, lng]);
+  const props = feature?.properties || {};
   return {
-    coords: coordinates.map(([lng, lat]) => [lat, lng]),
-    stats: parseBrouterStats(feature?.properties || {}),
+    coords,
+    stats: parseBrouterStats(props),
+    segments: parseBrouterSegments(props, coords),
   };
 }
 

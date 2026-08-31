@@ -9,6 +9,7 @@ import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCy
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { updateLocationSharing } from '../api/auth';
+import { useLocationShare } from '../hooks/useLocationShare';
 import { getParty, endParty, startPartyRide } from '../api/parties';
 import { api } from '../api/client';
 
@@ -26,47 +27,20 @@ function getLiveId(user) {
   return Number(id);
 }
 
-// 경로 분석 표시용 — 노면/도로종류 한글 라벨 + 색상 팔레트
-const SURFACE_LABELS = {
-  asphalt: '아스팔트', paving_stones: '보도블록', concrete: '콘크리트', sett: '돌포장',
-  compacted: '다짐길', fine_gravel: '고운자갈', gravel: '자갈', unpaved: '비포장',
-  ground: '흙길', dirt: '흙길', sand: '모래', grass: '잔디', wood: '목재', unknown: '미표기',
-};
-const HIGHWAY_LABELS = {
-  cycleway: '자전거도로', path: '소로', footway: '보행로', pedestrian: '보행자도로',
-  residential: '주택가길', living_street: '생활도로', service: '이면도로', track: '농로',
-  unclassified: '기타도로', tertiary: '3차로', secondary: '2차로', primary: '간선도로',
-  trunk: '자동차도로', steps: '계단', unknown: '미표기',
-};
-const ANALYSIS_PALETTE = ['#0ea5e9', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#14b8a6', '#64748b', '#eab308'];
-
-// 노면/도로종류 분포 — 가로 막대 + 범례
-function AnalysisBar({ title, items, labels }) {
-  const top = items.slice(0, 6);
-  return (
-    <div className="analysisGroup">
-      <h4 className="analysisTitle">{title}</h4>
-      <div className="analysisTrack">
-        {top.map((it, i) => (
-          <span
-            key={it.key}
-            className="analysisSeg"
-            style={{ width: `${it.pct}%`, background: ANALYSIS_PALETTE[i % ANALYSIS_PALETTE.length] }}
-            title={`${labels[it.key] || it.key} ${it.pct}%`}
-          />
-        ))}
-      </div>
-      <ul className="analysisLegend">
-        {top.map((it, i) => (
-          <li key={it.key}>
-            <span className="legendDot" style={{ background: ANALYSIS_PALETTE[i % ANALYSIS_PALETTE.length] }} />
-            <span className="legendName">{labels[it.key] || it.key}</span>
-            <span className="legendPct">{it.pct}%</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+// 근접 말풍선(B) — 파티원 마커에 붙는 커스텀 라벨.
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtProxDist(d) {
+  if (d == null) return '';
+  return d < 1000 ? `${Math.round(d)}m 근처` : `${(d / 1000).toFixed(1)}km`;
+}
+function proxBubbleHtml(name, dist) {
+  const letter = (name || '?').trim().charAt(0);
+  return `<span class="proxAvatar">${escapeHtml(letter)}</span>`
+    + `<span class="proxText"><strong>${escapeHtml(name)}</strong>`
+    + `<span class="proxDist">${fmtProxDist(dist)}</span></span>`;
 }
 
 export default function MapPage({ user: userProp, partyId, onBackHome, onMoveParty, onMoveBrowse }) {
@@ -96,6 +70,17 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
     setToast({ msg, type });
     toastTimer.current = setTimeout(() => setToast(null), 3000);
   };
+
+  // 근접 알림 토스트(A) — 파티원이 반경에 들어오거나 벗어날 때 상단에 잠깐 뜬다.
+  const [proxAlert, setProxAlert] = useState(null); // { name, dist, entering }
+  const proxTimer = useRef(null);
+  const showProxAlert = (info) => {
+    clearTimeout(proxTimer.current);
+    setProxAlert(info);
+    proxTimer.current = setTimeout(() => setProxAlert(null), 4500);
+  };
+  useEffect(() => () => { clearTimeout(proxTimer.current); clearTimeout(toastTimer.current); }, []);
+
   const [checkedIds, setCheckedIds] = useState([]);
   const [panelOpen, setPanelOpen] = useState(true);
   const [routeStats, setRouteStats] = useState(null);
@@ -103,14 +88,8 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const [party, setParty] = useState(null);
   // 팔로우 모드 — 지도 중심이 내 위치를 계속 따라간다 (라이딩 중에만 켠다)
   const [following, setFollowing] = useState(false);
-  const [locationShareEnabled, setLocationShareEnabled] = useState(() => {
-    try {
-      const saved = localStorage.getItem('locationShareEnabled');
-      return saved !== null ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
+  // 위치 공유는 파티 도크와 공유하는 상태 (localStorage + 이벤트 동기화)
+  const [locationShareEnabled, setLocationShare] = useLocationShare(user?.id);
 
   // 라이딩 관련 상태
   const [isRiding, setIsRiding] = useState(false);
@@ -193,9 +172,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
 
     // 서로 보이지 않으면 파티 라이딩이 성립하지 않으므로 자동으로 켠다.
     // (사용자가 원하면 패널의 체크박스로 끌 수 있다)
-    setLocationShareEnabled(true);
-    localStorage.setItem('locationShareEnabled', 'true');
-    if (user?.id) updateLocationSharing(user.id, true).catch(() => {});
+    setLocationShare(true);
 
     (async () => {
       try {
@@ -388,19 +365,6 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
     };
   }, []);
 
-  const handleLocationShareChange = useCallback(async (checked) => {
-    setLocationShareEnabled(checked);
-    localStorage.setItem('locationShareEnabled', JSON.stringify(checked));
-
-    if (user?.id) {
-      try {
-        await updateLocationSharing(user.id, checked);
-      } catch (error) {
-        console.warn('오프라인: localStorage에만 저장됨', error);
-      }
-    }
-  }, [user?.id]);
-
   // 거리 계산 함수 (Haversine)
   const calculateDistance = (lat1, lng1, lat2, lng2) => {
     const R = 6371000; // 지구 반지름 (미터)
@@ -503,9 +467,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
     }
 
     // 위치 공유 해제 — 라이딩이 끝나면 내 위치를 계속 뿌릴 이유가 없다
-    setLocationShareEnabled(false);
-    localStorage.setItem('locationShareEnabled', 'false');
-    if (user?.id) updateLocationSharing(user.id, false).catch(() => {});
+    setLocationShare(false);
 
     // 파티 라이딩이었고 내가 호스트면 파티도 종료한다.
     // 참가자는 본인 라이딩만 끝나고 파티 상태는 건드리지 않는다 (호스트 권한).
@@ -555,7 +517,8 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
           let marker = markers.get(o.userId);
           if (!marker) {
             marker = L.marker([o.lat, o.lng], { icon: makeOtherUserIcon(), zIndexOffset: 900 })
-              .bindTooltip(o.name, { permanent: true, direction: 'top', offset: [0, -10] })
+              // B: 이름 대신 아바타+이름+거리 커스텀 말풍선. 거리는 아래에서 매 갱신마다 채운다.
+              .bindTooltip('', { permanent: true, direction: 'top', offset: [0, -14], className: 'proxTooltip', opacity: 1 })
               .addTo(map);
             markers.set(o.userId, marker);
           } else {
@@ -563,14 +526,16 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
           }
 
           const dist = map.distance([myPos.lat, myPos.lng], [o.lat, o.lng]);
+          marker.setTooltipContent(proxBubbleHtml(o.name, dist));   // B: 말풍선 거리 갱신
+
           const wasInside = insideMap.get(o.userId) || false;
           const isInside = wasInside ? dist <= GEOFENCE_EXIT_M : dist <= GEOFENCE_RADIUS_M;
+          // 왼쪽 패널 상태줄에는 더 이상 접근/이탈 문구를 쓰지 않는다.
+          // 근접 알림은 도크(근처 탭)와 지도 토스트(A)가 담당한다.
           if (isInside && !wasInside) {
-            setStatus(`⚠️ ${o.name}님이 ${GEOFENCE_RADIUS_M}m 안에 접근! (거리 ${Math.round(dist)}m)`);
-            marker.bindPopup(`${o.name} — ${Math.round(dist)}m 거리`).openPopup();
+            showProxAlert({ name: o.name, dist, entering: true });
           } else if (!isInside && wasInside) {
-            setStatus(`🚨 ${o.name}님이 범위를 벗어났습니다 (거리 ${Math.round(dist)}m)`);
-            marker.bindPopup(`${o.name} — 범위 이탈 (${Math.round(dist)}m)`).openPopup();
+            showProxAlert({ name: o.name, dist, entering: false });
           }
           insideMap.set(o.userId, isInside);
         }
@@ -851,7 +816,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       setRouteStats(bike.stats);
       bikeRouteRef.current = bikeRoute;
       shortestRouteRef.current = shortestRoute;
-      drawRoutes(bikeRoute, shortestRoute, routeLayerRef.current, mapRef.current);
+      drawRoutes(bikeRoute, shortestRoute, routeLayerRef.current, mapRef.current, bike.segments);
       const data = cyclewayDataRef.current;
       const region = selectedRegionRef.current;
       const features = data
@@ -967,17 +932,6 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
                 </label>
               </div>
 
-              <div className="plannerToggleRow">
-                <input
-                  type="checkbox"
-                  id="locationToggle"
-                  checked={locationShareEnabled}
-                  onChange={(e) => handleLocationShareChange(e.target.checked)}
-                />
-                <label htmlFor="locationToggle">
-                  위치 공유
-                </label>
-              </div>
 
               {/* 라이딩 섹션 */}
               <div className="plannerRideBox">
@@ -1056,8 +1010,25 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
                       <span className="statLabel">분</span>
                     </div>
                   </div>
-                  <AnalysisBar title="노면" items={routeStats.surfaces} labels={SURFACE_LABELS} />
-                  <AnalysisBar title="도로 종류" items={routeStats.highways} labels={HIGHWAY_LABELS} />
+                  {routeStats.roadMix?.length > 0 && (
+                    <div className="analysisGroup">
+                      <h4 className="analysisTitle">길 구성</h4>
+                      <div className="analysisTrack">
+                        {routeStats.roadMix.map((r) => (
+                          <span key={r.key} className="analysisSeg" style={{ width: `${r.pct}%`, background: r.color }} title={`${r.label} ${r.pct}%`} />
+                        ))}
+                      </div>
+                      <ul className="analysisLegend">
+                        {routeStats.roadMix.map((r) => (
+                          <li key={r.key}>
+                            <span className="legendDot" style={{ background: r.color }} />
+                            <span className="legendName">{r.label}</span>
+                            <span className="legendPct">{r.pct}%</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1153,21 +1124,34 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
 
         <div className="leafletMap" ref={mapNodeRef} />
 
-        {/* 내 위치로 — 오른쪽 아래. 왼쪽 경로 패널, 오른쪽 위 줌 컨트롤과 겹치지 않는 자리 */}
-        <button
-          type="button"
-          className={`recenterBtn${following ? ' isFollowing' : ''}`}
-          onClick={recenter}
-          title={following ? '내 위치 따라가는 중' : '내 위치로'}
-          aria-label="내 위치로"
-          aria-pressed={following}
-        >
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="7" />
-            <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none" />
-            <path d="M12 1v3M12 20v3M1 12h3M20 12h3" strokeLinecap="round" />
-          </svg>
-        </button>
+        {/* A: 근접/이탈 순간 상단에 뜨는 알림 토스트 */}
+        {proxAlert && (
+          <div className={`mapProxToast${proxAlert.entering ? '' : ' isLeaving'}`} role="status">
+            <span className="proxAvatar">{(proxAlert.name || '?').trim().charAt(0)}</span>
+            <div className="mapProxText">
+              <strong>{proxAlert.name}님이 {proxAlert.entering ? '근처에 왔어요' : '범위를 벗어났어요'}</strong>
+              <span>{fmtProxDist(proxAlert.dist)} · {proxAlert.entering ? '다가오는 중' : '멀어지는 중'}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 오른쪽 아래 플로팅 컨트롤 스택 (아래부터: 파티 도크(전역) · 내 위치로) — 위치 공유는 도크로 이동 */}
+        <div className="mapFabStack">
+          <button
+            type="button"
+            className={`mapFab${following ? ' isOn' : ''}`}
+            onClick={recenter}
+            title={following ? '내 위치 따라가는 중' : '내 위치로'}
+            aria-label="내 위치로"
+            aria-pressed={following}
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="7" />
+              <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none" />
+              <path d="M12 1v3M12 20v3M1 12h3M20 12h3" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </section>
     </div>
   );

@@ -1,0 +1,403 @@
+/* 파티 플로팅 도크 — 우측 하단 고정. 채팅봇 위젯처럼 위로 펼쳐진다. */
+
+.partyDock {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* 동그란 플로팅 버튼 (FAB) */
+.partyDockFab {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(14, 165, 233, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.partyDockFab:hover { transform: translateY(-2px); }
+.partyDockFab:active { transform: translateY(0); }
+.partyDockFab.isOpen { background: var(--ink); box-shadow: 0 8px 24px rgba(12, 27, 39, 0.35); }
+
+/* 파티 미소속 — 회색 비활성 느낌 */
+.partyDockFab.isInactive {
+  background: #b6c2cc;
+  box-shadow: 0 8px 22px rgba(12, 27, 39, 0.18);
+}
+.partyDockFab.isInactive.isOpen { background: var(--ink); }
+
+/* 멤버 수 배지 */
+.partyDockBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--crit);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* 펼쳐지는 패널 */
+.partyDockPanel {
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  max-height: min(520px, calc(100vh - 120px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(12, 27, 39, 0.28);
+  overflow: hidden;
+  animation: pdPop 0.16s ease-out;
+}
+
+@keyframes pdPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.pdHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--grad);
+  color: #ffffff;
+}
+
+.pdHead strong { display: block; font-size: 1.02rem; font-weight: 800; }
+.pdHead span { font-size: 0.82rem; opacity: 0.9; }
+
+.pdClose {
+  border: 0;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.pdClose:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* 탭 */
+.pdTabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+.pdTabs button {
+  flex: 1;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.pdTabs button.isActive {
+  color: var(--mint-dark);
+  border-bottom-color: var(--mint);
+}
+
+/* 멤버 목록 */
+.pdMembers {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pdEmpty { padding: 24px 12px; color: var(--muted); font-size: 0.9rem; text-align: center; }
+
+.pdMember {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.pdMember:hover { background: var(--wash); }
+
+.pdAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.pdMemberInfo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.pdMemberName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.pdMemberDist { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+
+.pdTag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+.pdTagHost { background: var(--accent-soft); color: var(--mint-dark); }
+
+/* 채팅 준비 중 */
+.pdChatSoon {
+  padding: 40px 24px;
+  text-align: center;
+}
+.pdChatSoon strong { display: block; color: var(--ink); font-size: 1.05rem; margin-bottom: 8px; }
+.pdChatSoon p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+
+/* 파티 미소속 빈 상태 */
+.pdEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 24px;
+  text-align: center;
+}
+.pdEmptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.pdEmptyState strong { color: var(--ink); font-size: 1.02rem; }
+.pdEmptyState p { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+.pdFindBtn {
+  margin-top: 6px;
+  min-height: 42px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pdFindBtn:hover { background: var(--mint-dark); }
+
+/* 멤버 프로필 팝업 */
+.pdProfileBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(12, 27, 39, 0.4);
+}
+
+.pdProfileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: center;
+}
+.pdProfileCard strong { color: var(--ink); font-size: 1.1rem; }
+.pdProfileCard p { margin: 4px 0 0; color: var(--muted); font-size: 0.85rem; }
+
+.pdAvatarLg { width: 56px; height: 56px; font-size: 1.4rem; }
+
+.pdProfileClose {
+  margin-top: 8px;
+  min-height: 40px;
+  padding: 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pdProfileClose:hover { background: var(--wash); }
+
+@media (max-width: 639px) {
+  .partyDock { right: 16px; bottom: 16px; }
+}
+
+/* 위치 공유 토글 스위치 */
+.pdShareRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.pdShareRow:hover { background: var(--wash); }
+.pdShareText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pdShareText strong { color: var(--ink); font-size: 0.9rem; font-weight: 800; }
+.pdShareText span { color: var(--muted); font-size: 0.76rem; }
+.pdSwitch {
+  flex-shrink: 0;
+  width: 42px;
+  height: 24px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #cdd8e0;
+  transition: background 0.18s;
+}
+.pdSwitchKnob {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+.pdShareRow.isOn .pdSwitch { background: var(--mint); }
+.pdShareRow.isOn .pdSwitchKnob { transform: translateX(18px); }
+
+/* 접근 중 강조 */
+.pdTagNear { background: #dcfce7; color: #047857; }
+.pdMember.isNear { background: #f0fbf4; }
+.pdMemberDist.isNear { color: var(--good); font-weight: 800; }
+
+/* 탭 내용이 패널 안에서 스크롤되도록 */
+.pdMembers,
+.pdChatSoon { flex: 1 1 auto; min-height: 0; }
+.pdMembers { overflow-y: auto; }
+
+/* 근처 탭 */
+.pdNear {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.pdNear .pdMembers { flex: 0 0 auto; overflow: visible; }
+.pdNearHint {
+  margin: 0;
+  padding: 28px 20px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* 근처 탭 하단 "파티 찾기" CTA */
+.pdNearCta { margin: 4px 12px 12px; }
+
+/* 파티 탭 — 즉석 개설 폼 */
+.pdPartyPane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+.pdPaneTitle { color: var(--ink); font-size: 0.98rem; font-weight: 800; }
+.pdCreateField { display: flex; flex-direction: column; gap: 6px; }
+.pdCreateField > span { font-size: 0.8rem; font-weight: 800; color: var(--muted); }
+.pdCreateField select {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.pdCreateErr { margin: 0; color: var(--crit); font-size: 0.85rem; font-weight: 700; }
+.pdCreateBtn {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pdCreateBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.pdCreateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+.pdGhostBtn {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pdGhostBtn:hover { background: var(--wash); }
+
+/* 파티 탭 — 파티 없을 때 안내 */
+.pdPartyEmpty {
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 36px 24px;
+}

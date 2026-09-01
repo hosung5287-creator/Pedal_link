@@ -12,7 +12,7 @@ import { updateLocationSharing } from '../api/auth';
 import { getParty, endParty, startPartyRide } from '../api/parties';
 import { api } from '../api/client';
 
-const GEOFENCE_RADIUS_M = 220;
+const GEOFENCE_RADIUS_M = 50;
 const GEOFENCE_EXIT_M = 250;
 
 // 사용자 ID 가져오기 — 로그인한 경우 DB ID, 비로그인 시 세션 스토리지에 임의 생성

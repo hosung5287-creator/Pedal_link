@@ -67,3 +67,13 @@ export async function endParty(partyId, userId) {
 export async function rejectRequest(partyId, userId) {
     return api.post(`/api/parties/${partyId}/requests/${userId}/reject`, {});
 }
+
+// 참가자 스스로 파티 나가기 (호스트는 불가 — 파티 삭제를 써야 함)
+export async function leaveParty(partyId, userId) {
+    return api.post(`/api/parties/${partyId}/leave`, { userId });
+}
+
+// 대기방에서 내 준비 상태 표시 (준비 완료 / 준비 중)
+export async function setPartyReady(partyId, userId, ready) {
+    return api.post(`/api/parties/${partyId}/ready`, { userId, ready });
+}

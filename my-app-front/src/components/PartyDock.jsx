@@ -1,12 +1,13 @@
 import '../styles/partydock.css';
 
 import { useEffect, useRef, useState } from 'react';
-import { partyDock as t } from '../constants';
-import { getParties } from '../api/parties';
+import { partyDock as t, text } from '../constants';
+import { getParties, applyToParty } from '../api/parties';
 import { getOtherLocations } from '../api/locations';
 import { useLocationShare } from '../hooks/useLocationShare';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
+import PartyRoom from './PartyRoom';
 
 const NEAR_M = 220;   // 이 거리 안이면 "접근 중"
 
@@ -39,8 +40,13 @@ function PeopleIcon({ size = 24 }) {
 // 탭: 근처(주변 라이더 찾기 + 위치공유) / 파티(즉석 개설·멤버) / 채팅(보류).
 export default function PartyDock({ user, onMoveParty }) {
   const [party, setParty] = useState(null);
+  const [allParties, setAllParties] = useState([]);
   const [open, setOpen] = useState(false);
+  const [roomOpen, setRoomOpen] = useState(false);
   const [tab, setTab] = useState('near');
+  const [partySubTab, setPartySubTab] = useState('mine'); // 'mine' | 'list'
+  const [applyingId, setApplyingId] = useState(null);
+  const [applyError, setApplyError] = useState('');
   const [locs, setLocs] = useState({});
   const [selected, setSelected] = useState(null);
   const myPos = useRef(null);
@@ -49,7 +55,27 @@ export default function PartyDock({ user, onMoveParty }) {
   const inParty = !!party;
   const curTab = tab;
 
-  const { messages: chatMessages, connected: chatConnected, sendMessage } = useChat(party?.id, user);
+  // 내가 속한(호스트 or 참여 확정) 파티 전부 — 채팅방 목록으로 씀
+  const myRooms = allParties.filter((p) =>
+    p.status !== 'ended'
+    && (p.hostId === user?.id || (p.participants || []).some((m) => m.userId === user?.id)));
+  const myRoomIds = myRooms.map((r) => r.id).join(',');
+
+  const [chatRoomId, setChatRoomId] = useState(null);
+
+  // 채팅방이 하나뿐이면 바로 열고, 여러 개면 고른 방이 없어질 때만 목록으로 돌린다
+  useEffect(() => {
+    if (myRooms.length === 1) {
+      setChatRoomId(myRooms[0].id);
+    } else if (chatRoomId != null && !myRoomIds.split(',').includes(String(chatRoomId))) {
+      setChatRoomId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRoomIds]);
+
+  const currentRoom = myRooms.find((r) => r.id === chatRoomId) || null;
+
+  const { messages: chatMessages, connected: chatConnected, sendMessage } = useChat(chatRoomId, user);
   const [chatInput, setChatInput] = useState('');
   const chatBottomRef = useRef(null);
 
@@ -78,6 +104,7 @@ export default function PartyDock({ user, onMoveParty }) {
       try {
         const list = await getParties();
         if (!alive) return;
+        setAllParties(list || []);
         const mine = (list || []).find((p) =>
           p.status !== 'ended'
           && (p.hostId === user.id || (p.participants || []).some((m) => m.userId === user.id)));
@@ -120,6 +147,29 @@ export default function PartyDock({ user, onMoveParty }) {
 
   const members = party?.participants || [];
   const memberIds = new Set(members.map((m) => m.userId));
+  const effectivePartySubTab = inParty ? partySubTab : 'list';
+
+  const browsableParties = allParties.filter((p) => p.status !== 'ended');
+
+  const myStateOf = (p) => {
+    if (p.hostId === user?.id) return 'host';
+    if ((p.participants || []).some((m) => m.userId === user?.id)) return 'joined';
+    if ((p.pendingRequests || []).some((m) => m.userId === user?.id)) return 'pending';
+    return 'none';
+  };
+
+  const handleApply = async (partyId) => {
+    setApplyingId(partyId);
+    setApplyError('');
+    try {
+      const updated = await applyToParty(partyId, { id: user.id });
+      setAllParties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch {
+      setApplyError(t.applyFailed);
+    } finally {
+      setApplyingId(null);
+    }
+  };
   const distTo = (loc) => (loc && myPos.current ? distanceM(myPos.current, loc) : null);
 
   const nearby = Object.values(locs)
@@ -136,7 +186,16 @@ export default function PartyDock({ user, onMoveParty }) {
               <strong>{inParty ? party.title : t.findTitle}</strong>
               <span>{inParty ? `${members.length}${t.memberCountUnit}` : `${t.nearbyPrefix} ${nearby.length}${t.memberCountUnit}`}</span>
             </div>
-            <button type="button" className="pdClose" onClick={() => setOpen(false)} aria-label="닫기">✕</button>
+            <div className="pdHeadActions">
+              {inParty && (
+                <button type="button" className="pdExpand" onClick={() => setRoomOpen(true)} aria-label="채팅방 전체보기" title="채팅방 전체보기">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 3H3v6M15 21h6v-6M21 3l-7 7M3 21l7-7" />
+                  </svg>
+                </button>
+              )}
+              <button type="button" className="pdClose" onClick={() => setOpen(false)} aria-label="닫기">✕</button>
+            </div>
           </header>
 
           <div className="pdTabs">
@@ -188,39 +247,121 @@ export default function PartyDock({ user, onMoveParty }) {
             </div>
           )}
 
-          {/* 파티 — 소속 시 멤버, 아니면 즉석 개설 */}
+          {/* 파티 — "내 파티"(멤버 목록)와 "파티 목록"(둘러보고 신청)을 나눔 */}
           {curTab === 'party' && (
-            inParty ? (
-              <ul className="pdMembers">
-                {members.length === 0 && <li className="pdEmpty">{t.emptyMembers}</li>}
-                {members.map((m) => (
-                  <li key={m.userId}>
-                    <button type="button" className="pdMember" onClick={() => setSelected(m)}>
-                      <span className="pdAvatar" aria-hidden="true">{letterOf(m.name)}</span>
-                      <span className="pdMemberInfo">
-                        <span className="pdMemberName">
-                          {m.name}
-                          {m.userId === party.hostId && <span className="pdTag pdTagHost">{t.hostBadge}</span>}
-                          {m.userId === user.id && <span className="pdTag">{t.meBadge}</span>}
+            <div className="pdPartyPane">
+              {inParty && (
+                <div className="pdPartySubTabs">
+                  <button type="button" className={effectivePartySubTab === 'mine' ? 'isActive' : ''} onClick={() => setPartySubTab('mine')}>
+                    {t.mySubTab}
+                  </button>
+                  <button type="button" className={effectivePartySubTab === 'list' ? 'isActive' : ''} onClick={() => setPartySubTab('list')}>
+                    {t.listSubTab}
+                  </button>
+                </div>
+              )}
+
+              {effectivePartySubTab === 'mine' && inParty && (
+                <ul className="pdMembers">
+                  {members.length === 0 && <li className="pdEmpty">{t.emptyMembers}</li>}
+                  {members.map((m) => (
+                    <li key={m.userId}>
+                      <button type="button" className="pdMember" onClick={() => setSelected(m)}>
+                        <span className="pdAvatar" aria-hidden="true">{letterOf(m.name)}</span>
+                        <span className="pdMemberInfo">
+                          <span className="pdMemberName">
+                            {m.name}
+                            {m.userId === party.hostId && <span className="pdTag pdTagHost">{t.hostBadge}</span>}
+                            {m.userId === user.id && <span className="pdTag">{t.meBadge}</span>}
+                          </span>
+                          <span className={`pdReadyTag${m.ready ? ' isReady' : ''}`}>
+                            {m.ready ? `✓ ${t.readyDone}` : t.readyWaiting}
+                          </span>
                         </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {effectivePartySubTab === 'list' && (
+                <>
+                  {applyError && <p className="pdApplyError">{applyError}</p>}
+                  {browsableParties.length === 0 ? (
+                    <div className="pdPartyEmpty">
+                      <span className="pdEmptyIcon" aria-hidden="true"><PeopleIcon size={28} /></span>
+                      <p className="pdNearHint">{t.noPartyTitle}</p>
+                    </div>
+                  ) : (
+                    <ul className="pdPartyList">
+                      {browsableParties.map((p) => {
+                        const state = myStateOf(p);
+                        const full = p.status === 'full' && state === 'none';
+                        return (
+                          <li key={p.id} className="pdPartyCard">
+                            <div className="pdPartyCardInfo">
+                              <strong>{p.title}</strong>
+                              <span>{p.fromLabel} → {p.toLabel}</span>
+                              <span className="pdPartyCardMeta">
+                                {p.participants.length}/{p.maxMembers}{t.memberCountUnit} · {p.hostName}
+                              </span>
+                            </div>
+                            {state === 'host' || state === 'joined' ? (
+                              <span className="pdPartyStateTag isJoined">✓ {text.partyJoined}</span>
+                            ) : state === 'pending' ? (
+                              <span className="pdPartyStateTag">{text.partyPending}</span>
+                            ) : full ? (
+                              <span className="pdPartyStateTag">{text.partyFull}</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="pdApplyBtn"
+                                disabled={applyingId === p.id}
+                                onClick={() => handleApply(p.id)}
+                              >
+                                {text.partyApply}
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </>
+              )}
+
+              {/* 서브탭과 무관하게 항상 보이게 */}
+              <button type="button" className="pdCreateBtn pdCreateBtnList" onClick={(e) => { setOpen(false); onMoveParty?.(e); }}>
+                {t.createBtn}
+              </button>
+            </div>
+          )}
+
+          {/* 채팅 — 내가 속한 파티가 여러 개면 목록에서 골라 들어간다 */}
+          {curTab === 'chat' && (
+            myRooms.length === 0 ? (
+              <p className="pdNearHint">{t.chatNeedParty}</p>
+            ) : !currentRoom ? (
+              <ul className="pdChatRoomList">
+                {myRooms.map((r) => (
+                  <li key={r.id}>
+                    <button type="button" className="pdChatRoomItem" onClick={() => setChatRoomId(r.id)}>
+                      <span className="pdAvatar" aria-hidden="true">{letterOf(r.title)}</span>
+                      <span className="pdMemberInfo">
+                        <span className="pdMemberName">{r.title}</span>
+                        <span className="pdMemberDist">{r.participants.length}{t.memberCountUnit} · {r.hostName}</span>
                       </span>
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="pdPartyPane pdPartyEmpty">
-                <span className="pdEmptyIcon" aria-hidden="true"><PeopleIcon size={28} /></span>
-                <p className="pdNearHint">{t.noPartyTitle}</p>
-                <button type="button" className="pdCreateBtn" onClick={(e) => { setOpen(false); onMoveParty?.(e); }}>{t.createBtn}</button>
-              </div>
-            )
-          )}
-
-          {/* 채팅 — 파티원과 실시간 대화 */}
-          {curTab === 'chat' && (
-            inParty ? (
               <div className="pdChat">
+                {myRooms.length > 1 && (
+                  <button type="button" className="pdChatBack" onClick={() => setChatRoomId(null)}>
+                    ← {currentRoom.title}
+                  </button>
+                )}
                 <div className="pdChatMessages">
                   {chatMessages.length === 0 && <p className="pdNearHint">{t.chatEmpty}</p>}
                   {chatMessages.map((msg, i) => {
@@ -251,8 +392,6 @@ export default function PartyDock({ user, onMoveParty }) {
                   </button>
                 </div>
               </div>
-            ) : (
-              <p className="pdNearHint">{t.chatNeedParty}</p>
             )
           )}
 
@@ -287,6 +426,15 @@ export default function PartyDock({ user, onMoveParty }) {
           </>
         )}
       </button>
+
+      {roomOpen && myRooms.length > 0 && (
+        <PartyRoom
+          rooms={myRooms}
+          user={user}
+          onClose={() => setRoomOpen(false)}
+          onRoomsChange={(updated) => setAllParties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))}
+        />
+      )}
     </div>
   );
 }

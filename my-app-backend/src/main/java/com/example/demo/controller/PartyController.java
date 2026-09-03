@@ -84,6 +84,20 @@ public class PartyController {
         }
     }
 
+    // 참가자 스스로 준비 상태 표시 (대기방 화면)
+    @PostMapping("/{id}/ready")
+    public ResponseEntity<?> setReady(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Long userId = ((Number) body.get("userId")).longValue();
+        boolean ready = Boolean.TRUE.equals(body.get("ready"));
+        return handle(() -> partyService.setReady(id, userId, ready));
+    }
+
+    // 참가자 스스로 파티 나가기 (호스트 제외)
+    @PostMapping("/{id}/leave")
+    public ResponseEntity<?> leave(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        return handle(() -> partyService.leave(id, body.get("userId")));
+    }
+
     @PostMapping("/{id}/requests/{userId}/approve")
     public ResponseEntity<?> approve(@PathVariable Long id, @PathVariable Long userId) {
         return handle(() -> partyService.approve(id, userId));

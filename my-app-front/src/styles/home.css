@@ -101,382 +101,321 @@
   50% { transform: translate(-50%, 8px); }
 }
 
-/* ── 스크롤 섹션 공통 ──────────────────────────── */
+/* ── 히어로 아래 개선 섹션 (pen 초안 포팅) ─────────
+   전체폭 밴드(배경색 교차) + 안쪽 1180 컨테이너 구조. */
 
 .app .homeMain {
   margin-top: 0;
-  padding-bottom: 110px;
+  padding-bottom: 0;
 }
 
-.homeSection {
-  width: min(1180px, calc(100% - 40px));
-  margin: 0 auto;
-  padding: 100px 0 0;
-}
-
-.homeSectionHeader {
-  max-width: 720px;
-  margin: 0 0 38px;
-}
-
-.homeEyebrow {
-  margin: 0 0 10px;
-  color: var(--mint-dark);
-  font-size: 0.78rem;
-  font-weight: 900;
-}
-
-.homeSectionHeader h2 {
-  margin: 0 0 14px;
-  font-size: clamp(1.8rem, 4vw, 2.7rem);
-  line-height: 1.12;
-}
-
-.homeLead {
-  margin: 0;
-  color: var(--muted);
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.62;
-}
-
-.homeGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
-}
-
-.homeSectionCta {
-  margin-top: 30px;
-}
-
-/* ── 핵심 기능 소개 (전체폭 배너) ───────────────── */
-
-.featureList {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.featureRow {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  gap: 52px;
-  padding: 56px 60px;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
-}
-
-/* 짝수 배너는 좌우 반전 (리듬감) */
-.featureRow:nth-child(even) {
-  flex-direction: row-reverse;
-}
-
-/* 호버 시 상단 그라데이션 액센트 라인 */
-.featureRow::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: var(--grad);
-  opacity: 0;
-  transition: opacity 0.2s ease-out;
-}
-
-.featureRow:hover {
-  transform: translateY(-4px);
-  border-color: transparent;
-  box-shadow: 0 1px 2px rgba(12, 27, 39, 0.05), 0 26px 54px rgba(12, 27, 39, 0.14);
-}
-
-.featureRow:hover::before {
-  opacity: 1;
-}
-
-/* 큰 인덱스 번호 (편집형 디테일) */
-.featureIndex {
-  position: absolute;
-  top: 26px;
-  right: 32px;
-  font-size: 3.4rem;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: -0.03em;
-  color: var(--accent-soft);
-}
-
-.featureRow:nth-child(even) .featureIndex {
-  right: auto;
-  left: 32px;
-}
-
-.featureRowMedia {
-  flex: 0 0 auto;
-}
-
-.featureIcon {
+/* 공통 — 뱃지(eyebrow pill) */
+.homePill {
   display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+/* 공통 — 이미지 자리(따로 제작한 이미지를 넣기 전 자리표시) */
+.homeImgSlot {
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 104px;
-  height: 104px;
-  border-radius: 26px;
-  background: var(--grad);
-  color: #ffffff;
-  box-shadow: 0 14px 30px rgba(14, 165, 233, 0.28);
-  transition: transform 0.2s ease-out;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: 1px dashed var(--line);
+  border-radius: 20px;
+  background: var(--surface-2);
 }
 
-.featureRow:hover .featureIcon {
-  transform: scale(1.05) rotate(-2deg);
-}
-
-.featureIcon svg {
-  width: 48px;
-  height: 48px;
-}
-
-.featureRowBody {
-  flex: 1;
-  min-width: 0;
-}
-
-.featureRowBody h3 {
-  margin: 0 0 14px;
-  font-size: clamp(1.6rem, 3.2vw, 2.25rem);
-  line-height: 1.16;
-}
-
-.featureRowBody p {
-  max-width: 54ch;
-  margin: 0;
-  color: var(--muted);
-  font-size: clamp(1rem, 1.5vw, 1.14rem);
-  font-weight: 600;
-  line-height: 1.62;
-}
-
-@media (max-width: 767px) {
-  .featureRow,
-  .featureRow:nth-child(even) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 26px;
-    padding: 34px 26px;
-  }
-
-  .featureIndex,
-  .featureRow:nth-child(even) .featureIndex {
-    top: 20px;
-    right: 22px;
-    left: auto;
-    font-size: 2.4rem;
-  }
-
-  .featureIcon {
-    width: 76px;
-    height: 76px;
-    border-radius: 20px;
-  }
-
-  .featureIcon svg {
-    width: 36px;
-    height: 36px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .featureRow,
-  .featureRow .featureIcon {
-    transition: none;
-  }
-}
-
-/* ── 링크(파티) 카드 ───────────────────────────── */
-
-.linkCard {
-  display: flex;
-  flex-direction: column;
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
-}
-
-.linkCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 1px 2px rgba(12, 27, 39, 0.05), 0 18px 40px rgba(12, 27, 39, 0.12);
-}
-
-.linkCardTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.linkBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: var(--mint-dark);
-  font-size: 0.76rem;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-/* 즉석 링크는 "지금 살아있는" 느낌으로 구분 */
-.linkBadgeLive {
-  background: #dcfce7;
-  color: #047857;
-}
-
-.linkBadgeLive::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--good);
-}
-
-.linkWhen {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-align: right;
-}
-
-.linkCard h3 {
-  margin: 0 0 10px;
-  font-size: 1.14rem;
-  line-height: 1.28;
-}
-
-.linkRoute {
-  margin: 0 0 6px;
-  color: var(--mint-dark);
-  font-size: 0.92rem;
-  font-weight: 800;
-}
-
-.linkMeta {
-  margin: 0 0 22px;
+.homeImgSlot > span {
   color: var(--muted);
   font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.linkFoot {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: auto;
-}
-
-.linkMembers {
-  color: var(--ink);
-  font-size: 0.88rem;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.linkGauge {
-  flex: 1;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  overflow: hidden;
-}
-
-.linkGauge > span {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--grad);
-}
-
-/* ── 최근 완주된 코스 (기존 캐러셀 간격만 조정) ── */
-
-.app .recentRoutes {
-  padding: 100px 0 0;
-}
-
-.app .recentRoutes .sectionHeader {
-  margin: 0 auto 22px;
-}
-
-/* ── 마무리 CTA ────────────────────────────────── */
-
-.closingCta {
-  width: min(1180px, calc(100% - 40px));
-  margin: 100px auto 0;
-  padding: 68px 40px;
-  border-radius: 24px;
-  background: var(--grad);
-  color: #ffffff;
-  text-align: center;
-}
-
-.closingCta h2 {
-  margin: 0 0 12px;
-  font-size: clamp(1.7rem, 4vw, 2.5rem);
-  line-height: 1.14;
-}
-
-.closingCta p {
-  margin: 0 0 28px;
-  font-size: 1rem;
   font-weight: 600;
-  opacity: 0.92;
 }
 
-.closingActions {
+/* ── S2·S4 쇼케이스 ───────────────────────────── */
+.homeShowcase {
+  padding: 96px 0;
+  background: var(--surface);
+}
+
+.homeShowcase.isWash {
+  background: var(--wash);
+}
+
+.homeShowcase.isWash .homeImgSlot {
+  background: var(--surface);
+}
+
+.homeShowcaseInner {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
   display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 44px;
 }
 
-.closingPrimary,
-.closingGhost {
-  min-height: 48px;
-  padding: 0 24px;
-  border-radius: 12px;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 800;
-  transition: background 0.15s, color 0.15s;
+.homeShowcaseHead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 780px;
 }
 
-.closingPrimary {
-  border: 0;
-  background: #ffffff;
-  color: var(--mint-dark);
+.homeShowcaseHead h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 2.75rem);
+  line-height: 1.14;
+  color: var(--ink);
 }
 
-.closingPrimary:hover {
+.homeShowcaseSub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.homeFeatRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.homeFeat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.homeFeatIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
   background: var(--accent-soft);
 }
 
-.closingGhost {
-  border: 1.5px solid rgba(255, 255, 255, 0.7);
-  background: transparent;
-  color: #ffffff;
+.homeFeat h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: var(--ink);
 }
 
-.closingGhost:hover {
-  background: rgba(255, 255, 255, 0.16);
+.homeFeat p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+/* ── S3·S5 좌우 분할 ─────────────────────────── */
+.homeSplit {
+  padding: 96px 0;
+  background: var(--surface);
+}
+
+.homeSplitInner {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 56px;
+}
+
+.homeSplit.isReverse .homeSplitInner {
+  flex-direction: row-reverse;
+}
+
+.homeSplitText {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.homeSplitText h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.homeSplitSub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.homeSplitList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.homeSplitList li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 0.98rem;
+}
+
+.homeSplitDot {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+}
+
+.homeSplit .homeImgSlot {
+  flex: 0 0 46%;
+  width: auto;
+  aspect-ratio: 4 / 3.4;
+}
+
+/* ── S6 CTA (다크 밴드) ───────────────────────── */
+.homeCta {
+  padding: 92px 0;
+  background: var(--ink);
+  text-align: center;
+}
+
+.homeCtaInner {
+  width: min(760px, calc(100% - 40px));
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.homeCta h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  line-height: 1.16;
+  color: var(--surface);
+}
+
+.homeCta p {
+  margin: 0;
+  color: #c7d6e0;
+  font-size: 1.05rem;
+}
+
+.homeCtaActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.homeCtaGhost {
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  color: var(--surface);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.homeCtaGhost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── S7 푸터 ──────────────────────────────────── */
+.siteFooter {
+  padding: 56px 0 40px;
+  background: var(--wash);
+  border-top: 1px solid var(--line);
+}
+
+.siteFooterInner {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.siteFooterBrand {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 320px;
+}
+
+.siteFooterBrandName {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--mint);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.siteFooterBrand p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.siteFooterCols {
+  display: flex;
+  gap: 64px;
+  flex-wrap: wrap;
+}
+
+.siteFooterCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.siteFooterCol h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.siteFooterCol a {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.siteFooterCol a:hover {
+  color: var(--ink);
+}
+
+.siteFooterCopy {
+  width: min(1180px, calc(100% - 40px));
+  margin: 28px auto 0;
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 /* ── 스크롤 등장 모션 ──────────────────────────── */
@@ -495,12 +434,6 @@
 
 /* ── 반응형 ────────────────────────────────────── */
 
-@media (max-width: 1023px) {
-  .homeGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 767px) {
   .app .hero.heroFull {
     min-height: 100vh;
@@ -513,33 +446,46 @@
     padding: 24px 0 96px;
   }
 
-  .homeSection,
-  .closingCta {
-    width: min(100% - 28px, 1180px);
-    padding-top: 76px;
+  /* 섹션 상하 여백 축소 */
+  .homeShowcase,
+  .homeSplit,
+  .homeCta {
+    padding: 64px 0;
   }
 
-  .app .recentRoutes {
-    padding-top: 76px;
+  /* 분할 섹션은 세로로 쌓고, 이미지가 항상 위로 */
+  .homeSplitInner,
+  .homeSplit.isReverse .homeSplitInner {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 28px;
   }
 
-  .closingCta {
-    margin-top: 76px;
-    padding: 48px 24px;
+  .homeSplit .homeImgSlot {
+    flex: none;
+    width: 100%;
+  }
+
+  /* 기능 3칸 → 1칸 */
+  .homeFeatRow {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .siteFooterInner {
+    flex-direction: column;
+    gap: 32px;
   }
 }
 
 @media (max-width: 639px) {
-  .homeGrid {
-    grid-template-columns: 1fr;
-  }
-
   .heroCenter .searchBar {
     height: 54px;
     padding: 0 6px 0 16px;
   }
 
-  .closingActions > button {
+  .homeCtaActions > .btn,
+  .homeCtaActions > .homeCtaGhost {
     flex: 1 1 100%;
   }
 }
@@ -552,10 +498,6 @@
   .reveal .revealItem {
     opacity: 1;
     transform: none;
-    transition: none;
-  }
-
-  .linkCard {
     transition: none;
   }
 }

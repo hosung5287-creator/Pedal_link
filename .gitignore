@@ -25,5 +25,11 @@ build/
 .DS_Store
 Thumbs.db
 
+# 크롬/크래시패드 등이 남기는 로그 (앱과 무관)
+debug.log
+
 # 작업표
 docs
+
+# 개인 참고 문서 (프로젝트 구조 지도)
+PROJECT_MAP.md

@@ -1,8 +1,9 @@
 import '../styles/party.css';
 
+import BrandLogo from '../components/BrandLogo';
+
 import { useEffect, useState } from 'react';
 import { text } from '../constants';
-import heroBg from '../backglound1.png';
 import {
   getParties, getMyRoutesForParty, createParty,
   applyToParty, approveRequest, rejectRequest, deleteParty,
@@ -221,7 +222,7 @@ function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLogi
   );
 }
 
-export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide }) {
+export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, onOpenMap, onMoveBrowse, onMoveParty }) {
   const me = { id: user?.id ?? 'me', name: user?.name ?? '나' };
   const isLoggedIn = !!user;
 
@@ -268,12 +269,18 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide }
 
   return (
     <div className="partyPage">
-      <nav className="navbar" aria-label={text.nav}>
-        <a className="brand" href="/" onClick={onMoveHome}>PedalLink</a>
+      <nav className="navbar partyNav" aria-label={text.nav}>
+        <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
+        <div className="navLinks">
+          <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
+          <a href="/party" onClick={onMoveParty}>{text.party}</a>
+          <a href="/">{text.nearby}</a>
+          <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
+        </div>
         <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>
       </nav>
 
-      <header className="partyHero" style={{ backgroundImage: `url(${heroBg})` }}>
+      <header className="partyHero">
         <p className="eyebrow">{text.partyEyebrow}</p>
         <h1>{text.partyTitle}</h1>
         <p className="partyHeroSub">{text.partySub}</p>

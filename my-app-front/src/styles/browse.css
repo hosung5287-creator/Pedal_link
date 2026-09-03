@@ -9,6 +9,26 @@
   color: var(--ink);
 }
 
+/* 상단 네비: 흰 배경 + 하단 경계선 → 아래 wash 영역과 색 구분 */
+.browseNav {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px max(20px, calc((100% - 1180px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+/* 흰 네비 위라 링크는 어둡게 (기본 .navLinks a 는 흰색이라 덮어씀) */
+.browseNav .navLinks a {
+  color: var(--muted);
+  transition: color 0.15s;
+}
+
+.browseNav .navLinks a:hover {
+  color: var(--ink);
+}
+
 /* 상단 네비는 밝은 배경 위에 있으므로 글씨를 어둡게 (파티 페이지와 동일) */
 .browsePage .brand,
 .browsePage .signupBackLink {
@@ -20,27 +40,37 @@
 }
 
 .browseHero {
-  padding: 48px 24px 40px;
-  background-size: cover;
-  background-position: center;
-  color: #ffffff;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 40px 0 36px;
+  text-align: left;
+}
+
+.browseHeroText {
+  min-width: 0;
 }
 
 .browseHero .eyebrow {
-  color: #ffffff;
-  opacity: 0.9;
+  margin: 0 0 8px;
+  color: var(--mint-dark);
+  font-size: 0.85rem;
+  font-weight: 800;
 }
 
 .browseHero h1 {
-  margin: 6px 0 10px;
+  margin: 0 0 12px;
   font-size: 2.4rem;
+  color: var(--ink);
 }
 
 .browseHeroSub {
   margin: 0;
   font-size: 1.02rem;
-  opacity: 0.92;
+  color: var(--muted);
 }
 
 .feedList {
@@ -128,6 +158,20 @@
   min-height: 160px;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+/* 실제 지도 미니뷰(캡처 느낌) — Leaflet 컨테이너가 채울 고정 높이 필요 */
+.feedThumbMap {
+  height: 240px;
+  background: var(--surface-2);
+}
+
+/* 미니뷰는 정지 캡처처럼 — 커서/포커스 없이 */
+.feedThumbMap .leaflet-container {
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  background: var(--surface-2);
 }
 
 /* 썸네일 안의 색 — 지도(MapPage)의 경로 색과 맞춘다 */

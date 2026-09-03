@@ -8,6 +8,7 @@ import { useLocationShare } from '../hooks/useLocationShare';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
 import PartyRoom from './PartyRoom';
+import RidingRoom from './RidingRoom';
 
 const NEAR_M = 220;   // 이 거리 안이면 "접근 중"
 
@@ -43,6 +44,8 @@ export default function PartyDock({ user, onMoveParty }) {
   const [allParties, setAllParties] = useState([]);
   const [open, setOpen] = useState(false);
   const [roomOpen, setRoomOpen] = useState(false);
+  const [roomInitialId, setRoomInitialId] = useState(null); // 파티 룸을 열 때 바로 보여줄 방
+  const [ridingId, setRidingId] = useState(null); // 라이딩 룸이 떠 있는 파티 id
   const [tab, setTab] = useState('near');
   const [partySubTab, setPartySubTab] = useState('mine'); // 'mine' | 'list'
   const [applyingId, setApplyingId] = useState(null);
@@ -431,10 +434,40 @@ export default function PartyDock({ user, onMoveParty }) {
         <PartyRoom
           rooms={myRooms}
           user={user}
-          onClose={() => setRoomOpen(false)}
+          initialRoomId={roomInitialId}
+          onClose={() => { setRoomOpen(false); setRoomInitialId(null); }}
           onRoomsChange={(updated) => setAllParties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))}
+          onStartRide={(partyId) => {
+            setRoomOpen(false);
+            setOpen(false);
+            setRidingId(partyId);
+          }}
         />
       )}
+
+      {ridingId != null && (() => {
+        const ridingParty = myRooms.find((r) => r.id === ridingId);
+        if (!ridingParty) return null;
+        return (
+          <RidingRoom
+            party={ridingParty}
+            user={user}
+            onPartyChange={(updated) => setAllParties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))}
+            onClose={() => {
+              setRidingId(null);
+              setRoomInitialId(ridingParty.id);
+              setOpen(true);
+              setRoomOpen(true);
+            }}
+            onEnded={() => {
+              setRidingId(null);
+              setRoomInitialId(ridingParty.id);
+              setOpen(true);
+              setRoomOpen(true);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

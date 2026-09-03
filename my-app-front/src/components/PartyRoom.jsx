@@ -11,9 +11,11 @@ const letterOf = (name) => (name || '?').trim().charAt(0);
 // 홈페이지 등 어느 화면 위에도 띄울 수 있는 파티 룸 오버레이.
 // rooms 가 여러 개면 먼저 목록을 보여주고, 하나를 고르면(또는 애초에 하나뿐이면)
 // 채팅방 / 참가자 목록 / 방장 제어판(호스트만) 3단 화면으로 들어간다.
-export default function PartyRoom({ rooms, user, onClose, onRoomsChange }) {
+export default function PartyRoom({ rooms, user, onClose, onRoomsChange, onStartRide, initialRoomId }) {
   const [localRooms, setLocalRooms] = useState(rooms);
-  const [selectedId, setSelectedId] = useState(rooms.length === 1 ? rooms[0].id : null);
+  const [selectedId, setSelectedId] = useState(
+    initialRoomId ?? (rooms.length === 1 ? rooms[0].id : null),
+  );
 
   useEffect(() => {
     setLocalRooms(rooms);
@@ -42,6 +44,7 @@ export default function PartyRoom({ rooms, user, onClose, onRoomsChange }) {
           onBack={() => setSelectedId(null)}
           onClose={onClose}
           onUpdate={updateRoom}
+          onStartRide={onStartRide}
         />
       ) : (
         <div className="prRoom prRoomListShell" role="dialog" aria-label={t.waitingRoom} onClick={(e) => e.stopPropagation()}>
@@ -73,7 +76,7 @@ export default function PartyRoom({ rooms, user, onClose, onRoomsChange }) {
 }
 
 // 실제 채팅+멤버+제어판 3단 화면 (방 하나를 골랐을 때)
-function PartyRoomView({ party, user, showBack, onBack, onClose, onUpdate }) {
+function PartyRoomView({ party, user, showBack, onBack, onClose, onUpdate, onStartRide }) {
   const [showRequests, setShowRequests] = useState(false);
   const [confirming, setConfirming] = useState(null); // 'leave' | 'delete' | null
   const [busy, setBusy] = useState(false);
@@ -108,6 +111,24 @@ function PartyRoomView({ party, user, showBack, onBack, onClose, onUpdate }) {
     if (!input.trim()) return;
     sendMessage(input);
     setInput('');
+  };
+
+  // 이미 시작된 라이딩이면 서버 호출 없이 바로 지도 화면으로 이동만 한다
+  const handleStartRide = async () => {
+    if (party.rideStartedAt) {
+      onStartRide?.(party.id);
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      onUpdate(await startPartyRide(party.id, user.id));
+      onStartRide?.(party.id);
+    } catch {
+      setError(t.actionFailed);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -209,10 +230,10 @@ function PartyRoomView({ party, user, showBack, onBack, onClose, onUpdate }) {
               <button
                 type="button"
                 className="prPrimaryBtn"
-                disabled={busy || !!party.rideStartedAt}
-                onClick={() => runAction(() => startPartyRide(party.id, user.id))}
+                disabled={busy}
+                onClick={handleStartRide}
               >
-                {party.rideStartedAt ? '라이딩 진행 중' : t.startRide}
+                {party.rideStartedAt ? t.goToRide : t.startRide}
               </button>
 
               <button type="button" className="prGhostBtn" disabled title={t.settingsSoonHint}>
@@ -278,6 +299,11 @@ function PartyRoomView({ party, user, showBack, onBack, onClose, onUpdate }) {
             </div>
           ) : (
             <div className="prActions">
+              {party.rideStartedAt && (
+                <button type="button" className="prPrimaryBtn" onClick={() => onStartRide?.(party.id)}>
+                  {t.goToRide}
+                </button>
+              )}
               {confirming === 'leave' ? (
                 <div className="prConfirmBox">
                   <p>{t.leaveConfirm}</p>

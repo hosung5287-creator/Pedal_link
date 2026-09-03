@@ -70,6 +70,20 @@ public class PartyController {
         }
     }
 
+    // 라이딩만 종료 (파티는 유지, 호스트 전용)
+    @PostMapping("/{id}/stop-ride")
+    public ResponseEntity<?> stopRide(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        Long userId = body.get("userId");
+        if (userId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "로그인이 필요합니다"));
+        }
+        try {
+            return ResponseEntity.ok(partyService.stopRide(id, userId));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
+        }
+    }
+
     // 라이딩 종료 → 파티 종료 (호스트 전용)
     @PostMapping("/{id}/end")
     public ResponseEntity<?> end(@PathVariable Long id, @RequestBody Map<String, Long> body) {

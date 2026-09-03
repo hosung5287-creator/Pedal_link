@@ -465,6 +465,7 @@ export const partyRoom = {
   memberListTitle: '참가자 목록',
   controlTitle: '방장 제어판',
   startRide: '라이딩 시작!',
+  goToRide: '라이딩 화면으로 이동',
   settingsSoon: '파티 설정',
   settingsSoonHint: '준비 중이에요.',
   editRouteSoon: '경로 수정',

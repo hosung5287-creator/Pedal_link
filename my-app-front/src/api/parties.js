@@ -59,6 +59,11 @@ export async function startPartyRide(partyId, userId) {
     return api.post(`/api/parties/${partyId}/start-ride`, { userId });
 }
 
+// 라이딩만 종료 (파티는 유지, 호스트만)
+export async function stopPartyRide(partyId, userId) {
+    return api.post(`/api/parties/${partyId}/stop-ride`, { userId });
+}
+
 // 라이딩 종료 → 파티 종료 (호스트만)
 export async function endParty(partyId, userId) {
     return api.post(`/api/parties/${partyId}/end`, { userId });

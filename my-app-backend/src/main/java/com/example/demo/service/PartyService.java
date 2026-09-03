@@ -144,6 +144,21 @@ public class PartyService {
     }
 
     /**
+     * 라이딩만 종료한다 — 파티(대기방)는 그대로 열어둔 채 rideStartedAt 만 지운다.
+     * 호스트만 할 수 있다. 파티 자체를 끝내려면 end()/delete() 를 쓴다.
+     */
+    @Transactional
+    public PartyResponse stopRide(Long partyId, Long userId) {
+        Party party = findParty(partyId);
+        if (!party.getHost().getId().equals(userId)) {
+            throw new SecurityException("호스트만 라이딩을 종료할 수 있습니다");
+        }
+        party.setRideStartedAt(null);
+        partyRepository.save(party);
+        return toResponse(party);
+    }
+
+    /**
      * 라이딩 종료 → 파티를 끝낸 것으로 표시한다.
      * 호스트만 할 수 있다. 종료된 파티는 목록에 남지만 신청을 받지 않는다.
      */

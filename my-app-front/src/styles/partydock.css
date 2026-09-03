@@ -187,13 +187,74 @@
 }
 .pdTagHost { background: var(--accent-soft); color: var(--mint-dark); }
 
-/* 채팅 준비 중 */
-.pdChatSoon {
-  padding: 40px 24px;
-  text-align: center;
+/* 채팅 탭 — 미니 채팅창 */
+.pdChat {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-.pdChatSoon strong { display: block; color: var(--ink); font-size: 1.05rem; margin-bottom: 8px; }
-.pdChatSoon p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+
+.pdChatMessages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdChatBubbleRow { display: flex; justify-content: flex-start; }
+.pdChatBubbleRow.isMine { justify-content: flex-end; }
+
+.pdChatBubble {
+  max-width: 78%;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.pdChatBubbleRow.isMine .pdChatBubble {
+  background: var(--mint);
+  border-color: var(--mint);
+  color: #ffffff;
+}
+
+.pdChatSender { font-size: 0.72rem; font-weight: 800; color: var(--mint-dark); margin-bottom: 2px; }
+.pdChatContent { margin: 0; font-size: 0.9rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+.pdChatTime { margin-top: 2px; font-size: 0.68rem; opacity: 0.7; text-align: right; }
+
+.pdChatInputRow {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.pdChatInput {
+  flex: 1;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--ink);
+  min-width: 0;
+}
+.pdChatInput:focus { outline: none; border-color: var(--mint); }
+
+.pdChatSendBtn {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 14px;
+  background: var(--mint);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pdChatSendBtn:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
 
 /* 파티 미소속 빈 상태 */
 .pdEmptyState {
@@ -323,7 +384,7 @@
 
 /* 탭 내용이 패널 안에서 스크롤되도록 */
 .pdMembers,
-.pdChatSoon { flex: 1 1 auto; min-height: 0; }
+.pdChat { flex: 1 1 auto; min-height: 0; }
 .pdMembers { overflow-y: auto; }
 
 /* 근처 탭 */

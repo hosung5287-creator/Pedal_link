@@ -16,6 +16,7 @@ import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import PartyPage from './pages/PartyPage';
 import BrowsePage from './pages/BrowsePage';
+import ChatPage from './pages/ChatPage';
 
 // webpack이 Leaflet 마커 아이콘 경로를 잘못 처리하는 문제 수정
 delete L.Icon.Default.prototype._getIconUrl;
@@ -90,6 +91,9 @@ function App() {
     page = <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
   } else if (currentPath === '/browse') {
     page = <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+  } else if (currentPath === '/chat') {
+    const partyId = new URLSearchParams(search).get('partyId');
+    page = <ChatPage user={user} partyId={partyId} onMoveHome={moveHome} onMoveParty={moveParty} onOpenMap={openMap} onMoveBrowse={moveBrowse} />;
   } else if (currentPath === '/profile') {
     page = <ProfilePage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
   } else if (currentPath === '/settings') {

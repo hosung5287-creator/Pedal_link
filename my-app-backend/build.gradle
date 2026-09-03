@@ -38,8 +38,11 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
      implementation 'org.hibernate.orm:hibernate-spatial'
 
-	 //시큐리티 의존성 비밀번호 해싱 
+	 //시큐리티 의존성 비밀번호 해싱
 	 implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	 // WebSocket (채팅)
+	 implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     
 }

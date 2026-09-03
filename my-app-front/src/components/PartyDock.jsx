@@ -5,6 +5,8 @@ import { partyDock as t } from '../constants';
 import { getParties } from '../api/parties';
 import { getOtherLocations } from '../api/locations';
 import { useLocationShare } from '../hooks/useLocationShare';
+import { useChat } from '../hooks/useChat';
+import { displayTime } from '../utils/chat';
 
 const NEAR_M = 220;   // 이 거리 안이면 "접근 중"
 
@@ -46,6 +48,27 @@ export default function PartyDock({ user, onMoveParty }) {
 
   const inParty = !!party;
   const curTab = tab;
+
+  const { messages: chatMessages, connected: chatConnected, sendMessage } = useChat(party?.id, user);
+  const [chatInput, setChatInput] = useState('');
+  const chatBottomRef = useRef(null);
+
+  useEffect(() => {
+    if (curTab === 'chat') chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, curTab]);
+
+  const sendChat = () => {
+    if (!chatInput.trim()) return;
+    sendMessage(chatInput);
+    setChatInput('');
+  };
+
+  const handleChatKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChat();
+    }
+  };
 
   // 내 파티 찾기
   useEffect(() => {
@@ -194,12 +217,39 @@ export default function PartyDock({ user, onMoveParty }) {
             )
           )}
 
-          {/* 채팅 — 보류 */}
+          {/* 채팅 — 파티원과 실시간 대화 */}
           {curTab === 'chat' && (
             inParty ? (
-              <div className="pdChatSoon">
-                <strong>{t.chatSoon}</strong>
-                <p>{t.chatSoonSub}</p>
+              <div className="pdChat">
+                <div className="pdChatMessages">
+                  {chatMessages.length === 0 && <p className="pdNearHint">{t.chatEmpty}</p>}
+                  {chatMessages.map((msg, i) => {
+                    const mine = msg.senderId === user.id;
+                    return (
+                      <div key={msg.id ?? i} className={`pdChatBubbleRow${mine ? ' isMine' : ''}`}>
+                        <div className="pdChatBubble">
+                          {!mine && <div className="pdChatSender">{msg.senderName}</div>}
+                          <p className="pdChatContent">{msg.content}</p>
+                          <div className="pdChatTime">{displayTime(msg)}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={chatBottomRef} />
+                </div>
+                <div className="pdChatInputRow">
+                  <input
+                    type="text"
+                    className="pdChatInput"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={handleChatKeyDown}
+                    placeholder={t.chatPlaceholder}
+                  />
+                  <button type="button" className="pdChatSendBtn" onClick={sendChat} disabled={!chatConnected || !chatInput.trim()}>
+                    {t.chatSend}
+                  </button>
+                </div>
               </div>
             ) : (
               <p className="pdNearHint">{t.chatNeedParty}</p>

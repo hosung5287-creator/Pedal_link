@@ -27,5 +27,9 @@ public class PartyMember {
     @Column(nullable = false, length = 20)
     private String status = "pending";
 
+    // 참가자가 라이딩 대기방에서 스스로 표시하는 준비 상태
+    @Column(nullable = false)
+    private boolean ready = false;
+
     private LocalDateTime joinedAt = LocalDateTime.now();
 }

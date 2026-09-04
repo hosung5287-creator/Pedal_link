@@ -95,6 +95,9 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const [isRiding, setIsRiding] = useState(false);
   const [rideTime, setRideTime] = useState(0);
   const [rideDistance, setRideDistance] = useState(0);
+  // 함께 타는 사람 HUD — 파티 라이딩 중일 때만 채워진다
+  const [otherRiders, setOtherRiders] = useState([]);
+  const [mySpeedKmh, setMySpeedKmh] = useState(0);
 
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -119,6 +122,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const headingRef = useRef(0);
   const otherMarkersRef = useRef(new Map());
   const othersInsideRef = useRef(new Map());
+  const otherSpeedRef = useRef(new Map()); // userId -> { lat, lng, time, speedKmh } — HUD 속도 계산용
 
   // 라이딩 관련 ref
   const rideTimerRef = useRef(null);
@@ -301,6 +305,16 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
         const prev = lastPosRef.current;
         lastPosRef.current = { lat: latitude, lng: longitude };
 
+        // 함께 타는 사람 HUD용 내 속도 — 직전 위치와의 이동거리/시간으로 추정
+        if (prev?.time) {
+          const dt = (pos.timestamp - prev.time) / 1000;
+          if (dt >= 1) {
+            const moved = calculateDistance(prev.lat, prev.lng, latitude, longitude);
+            setMySpeedKmh((moved / dt) * 3.6);
+          }
+        }
+        lastPosRef.current.time = pos.timestamp;
+
         // ── 진행 방향(heading) 결정 ──
         // 1순위: 기기가 준 heading. 단 정지 중이면 null 이 오는 경우가 많다.
         // 2순위: 직전 좌표와의 방위각. 단 GPS 흔들림으로 제자리에서도 값이 튀므로
@@ -392,6 +406,8 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const handleRideStart = useCallback(() => {
     setIsRiding(true);
     setFollowing(true);   // 라이딩 중에는 지도가 내 위치를 따라간다
+    // 파티 라이딩이면 경로 설정 패널을 접어서 지도+HUD 위주 화면으로 바꾼다
+    if (party) setPanelOpen(false);
 
     // 호스트가 시작하면 서버에 알려 참가자 화면도 같이 출발하게 한다
     if (party && user?.id === party.hostId && !party.rideStartedAt) {
@@ -428,7 +444,10 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
     rideTimerRef.current = setInterval(() => {
       setRideTime(prev => prev + 1);
     }, 1000);
-  }, []);
+    // party/user 는 라이딩 시작 시점의 최신 값을 봐야 해서 의존성에 넣는다
+    // (예전엔 []였는데, 그러면 party 가 항상 첫 렌더의 null 로 고정돼
+    //  호스트가 지도에서 직접 시작해도 서버에 알림이 안 갔다)
+  }, [party, user?.id]);
 
   // 라이딩 종료
   const handleRideStop = useCallback(async () => {
@@ -528,6 +547,19 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
           const dist = map.distance([myPos.lat, myPos.lng], [o.lat, o.lng]);
           marker.setTooltipContent(proxBubbleHtml(o.name, dist));   // B: 말풍선 거리 갱신
 
+          // 함께 타는 사람 HUD용 속도 — 직전 폴링 위치와의 이동거리/시간으로 추정
+          const now = Date.now();
+          const prevSpeed = otherSpeedRef.current.get(o.userId);
+          let speedKmh = prevSpeed?.speedKmh ?? 0;
+          if (prevSpeed) {
+            const dt = (now - prevSpeed.time) / 1000;
+            if (dt >= 1) {
+              const moved = map.distance([prevSpeed.lat, prevSpeed.lng], [o.lat, o.lng]);
+              speedKmh = (moved / dt) * 3.6;
+            }
+          }
+          otherSpeedRef.current.set(o.userId, { lat: o.lat, lng: o.lng, time: now, speedKmh });
+
           const wasInside = insideMap.get(o.userId) || false;
           const isInside = wasInside ? dist <= GEOFENCE_EXIT_M : dist <= GEOFENCE_RADIUS_M;
           // 왼쪽 패널 상태줄에는 더 이상 접근/이탈 문구를 쓰지 않는다.
@@ -549,8 +581,15 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
             marker.remove();
             markers.delete(id);
             insideMap.delete(id);
+            otherSpeedRef.current.delete(id);
           }
         }
+
+        setOtherRiders(others.map((o) => ({
+          userId: o.userId,
+          name: o.name,
+          speedKmh: otherSpeedRef.current.get(o.userId)?.speedKmh ?? 0,
+        })));
       } catch {
         // 오류는 다음 폴링에서 재시도
       }
@@ -562,6 +601,8 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       markers.forEach(m => m.remove());
       markers.clear();
       insideMap.clear();
+      otherSpeedRef.current.clear();
+      setOtherRiders([]);
     };
     // user 객체는 매 렌더마다 새로 생성되므로 안정적인 user?.id 에만 의존 (의도된 것)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1123,6 +1164,24 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
         </button>
 
         <div className="leafletMap" ref={mapNodeRef} />
+
+        {/* 함께 타는 사람 HUD — 파티 라이딩 중(isRiding)에만 지도 위에 얇게 뜬다 */}
+        {isRiding && party && (
+          <div className="ridersHud" aria-label="함께 타는 사람">
+            <div className="ridersHudRow isMe">
+              <span className="ridersHudAvatar" aria-hidden="true">{(user?.name || '?').trim().charAt(0)}</span>
+              <span className="ridersHudName">{user?.name || '나'} <em>나</em></span>
+              <span className="ridersHudSpeed">{mySpeedKmh.toFixed(1)} km/h</span>
+            </div>
+            {otherRiders.map((r) => (
+              <div key={r.userId} className="ridersHudRow">
+                <span className="ridersHudAvatar" aria-hidden="true">{(r.name || '?').trim().charAt(0)}</span>
+                <span className="ridersHudName">{r.name}</span>
+                <span className="ridersHudSpeed">{r.speedKmh.toFixed(1)} km/h</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* A: 근접/이탈 순간 상단에 뜨는 알림 토스트 */}
         {proxAlert && (

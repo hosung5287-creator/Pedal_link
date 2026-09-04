@@ -14,6 +14,7 @@ public class PartyResponse {
     public static class MemberDto {
         private Long userId;
         private String name;
+        private boolean ready;
     }
 
     private Long id;
@@ -63,6 +64,7 @@ public class PartyResponse {
         MemberDto d = new MemberDto();
         d.userId = m.getUser().getId();
         d.name = m.getUser().getName();
+        d.ready = m.isReady();
         return d;
     }
 }

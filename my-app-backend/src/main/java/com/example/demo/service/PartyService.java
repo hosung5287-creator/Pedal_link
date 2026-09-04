@@ -144,6 +144,21 @@ public class PartyService {
     }
 
     /**
+     * 라이딩만 종료한다 — 파티(대기방)는 그대로 열어둔 채 rideStartedAt 만 지운다.
+     * 호스트만 할 수 있다. 파티 자체를 끝내려면 end()/delete() 를 쓴다.
+     */
+    @Transactional
+    public PartyResponse stopRide(Long partyId, Long userId) {
+        Party party = findParty(partyId);
+        if (!party.getHost().getId().equals(userId)) {
+            throw new SecurityException("호스트만 라이딩을 종료할 수 있습니다");
+        }
+        party.setRideStartedAt(null);
+        partyRepository.save(party);
+        return toResponse(party);
+    }
+
+    /**
      * 라이딩 종료 → 파티를 끝낸 것으로 표시한다.
      * 호스트만 할 수 있다. 종료된 파티는 목록에 남지만 신청을 받지 않는다.
      */
@@ -157,6 +172,50 @@ public class PartyService {
         party.setStatus("ended");
         partyRepository.save(party);
         return toResponse(party);
+    }
+
+    /**
+     * 참가자가 스스로 준비 상태를 표시한다(대기방 화면용). 호스트도 자기 준비 상태를 켤 수 있다.
+     */
+    @Transactional
+    public PartyResponse setReady(Long partyId, Long userId, boolean ready) {
+        Party party = findParty(partyId);
+        User user = findUser(userId);
+
+        PartyMember member = partyMemberRepository.findByPartyAndUser(party, user)
+                .orElseThrow(() -> new RuntimeException("참가 내역 없음"));
+
+        member.setReady(ready);
+        partyMemberRepository.save(member);
+
+        return toResponse(partyRepository.findById(partyId).get());
+    }
+
+    /**
+     * 참가자가 스스로 파티를 나간다. 호스트는 나갈 수 없다(대신 파티 삭제).
+     * 정원이 차서 'full'이었다면, 자리가 났으니 다시 신청 받을 수 있게 'open'으로 되돌린다.
+     */
+    @Transactional
+    public PartyResponse leave(Long partyId, Long userId) {
+        Party party = findParty(partyId);
+        User user = findUser(userId);
+
+        if (party.getHost().getId().equals(userId)) {
+            throw new RuntimeException("호스트는 파티를 나갈 수 없습니다. 파티 삭제를 이용하세요.");
+        }
+
+        PartyMember member = partyMemberRepository.findByPartyAndUser(party, user)
+                .orElseThrow(() -> new RuntimeException("참가 내역 없음"));
+
+        boolean wasJoined = "joined".equals(member.getStatus());
+        partyMemberRepository.delete(member);
+
+        if (wasJoined && "full".equals(party.getStatus())) {
+            party.setStatus("open");
+            partyRepository.save(party);
+        }
+
+        return toResponse(partyRepository.findById(partyId).get());
     }
 
     @Transactional

@@ -70,6 +70,20 @@ public class PartyController {
         }
     }
 
+    // 라이딩만 종료 (파티는 유지, 호스트 전용)
+    @PostMapping("/{id}/stop-ride")
+    public ResponseEntity<?> stopRide(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        Long userId = body.get("userId");
+        if (userId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "로그인이 필요합니다"));
+        }
+        try {
+            return ResponseEntity.ok(partyService.stopRide(id, userId));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
+        }
+    }
+
     // 라이딩 종료 → 파티 종료 (호스트 전용)
     @PostMapping("/{id}/end")
     public ResponseEntity<?> end(@PathVariable Long id, @RequestBody Map<String, Long> body) {
@@ -82,6 +96,20 @@ public class PartyController {
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
         }
+    }
+
+    // 참가자 스스로 준비 상태 표시 (대기방 화면)
+    @PostMapping("/{id}/ready")
+    public ResponseEntity<?> setReady(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Long userId = ((Number) body.get("userId")).longValue();
+        boolean ready = Boolean.TRUE.equals(body.get("ready"));
+        return handle(() -> partyService.setReady(id, userId, ready));
+    }
+
+    // 참가자 스스로 파티 나가기 (호스트 제외)
+    @PostMapping("/{id}/leave")
+    public ResponseEntity<?> leave(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+        return handle(() -> partyService.leave(id, body.get("userId")));
     }
 
     @PostMapping("/{id}/requests/{userId}/approve")

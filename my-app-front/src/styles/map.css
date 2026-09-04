@@ -1089,3 +1089,75 @@
   from { opacity: 0; transform: translate(-50%, -12px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* 함께 타는 사람 HUD — 라이딩 중 지도 왼쪽 위에 얇게 뜨는 목록 */
+.ridersHud {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 220px;
+  max-height: calc(100% - 36px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 14px 36px rgba(12, 27, 39, 0.22);
+}
+
+.ridersHudRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 9px;
+}
+.ridersHudRow.isMe { background: var(--surface-2); }
+
+.ridersHudAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.72rem;
+}
+
+.ridersHudName {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ridersHudName em {
+  margin-left: 4px;
+  color: var(--mint-dark);
+  font-style: normal;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.ridersHudSpeed {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+@media (max-width: 639px) {
+  .ridersHud { left: 10px; top: 10px; max-width: 168px; }
+}

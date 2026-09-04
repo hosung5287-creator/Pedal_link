@@ -59,9 +59,9 @@
 
 /* 펼쳐지는 패널 */
 .partyDockPanel {
-  width: 320px;
+  width: 420px;
   max-width: calc(100vw - 48px);
-  max-height: min(520px, calc(100vh - 120px));
+  max-height: min(680px, calc(100vh - 120px));
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);
@@ -102,6 +102,23 @@
   flex-shrink: 0;
 }
 .pdClose:hover { background: rgba(255, 255, 255, 0.3); }
+
+.pdHeadActions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.pdExpand {
+  border: 0;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pdExpand:hover { background: rgba(255, 255, 255, 0.3); }
 
 /* 탭 */
 .pdTabs {
@@ -177,6 +194,18 @@
 
 .pdMemberDist { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
 
+.pdReadyTag {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.pdReadyTag.isReady { background: #dcfce7; color: #047857; }
+
 .pdTag {
   padding: 1px 7px;
   border-radius: 999px;
@@ -186,6 +215,37 @@
   font-weight: 800;
 }
 .pdTagHost { background: var(--accent-soft); color: var(--mint-dark); }
+
+/* 채팅 탭 — 내가 속한 방이 여럿일 때 고르는 목록 */
+.pdChatRoomList { list-style: none; margin: 0; padding: 8px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-height: 0; }
+.pdChatRoomItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.pdChatRoomItem:hover { background: var(--wash); }
+
+.pdChatBack {
+  flex-shrink: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.pdChatBack:hover { color: var(--mint-dark); }
 
 /* 채팅 탭 — 미니 채팅창 */
 .pdChat {
@@ -384,7 +444,8 @@
 
 /* 탭 내용이 패널 안에서 스크롤되도록 */
 .pdMembers,
-.pdChat { flex: 1 1 auto; min-height: 0; }
+.pdChat,
+.pdPartyPane { flex: 1 1 auto; min-height: 0; }
 .pdMembers { overflow-y: auto; }
 
 /* 근처 탭 */
@@ -457,8 +518,78 @@
 
 /* 파티 탭 — 파티 없을 때 안내 */
 .pdPartyEmpty {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 12px;
   padding: 36px 24px;
 }
+
+/* 파티 탭 — "내 파티" / "파티 목록" 서브탭 */
+.pdPartySubTabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.pdPartySubTabs button {
+  flex: 1;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pdPartySubTabs button.isActive { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(12, 27, 39, 0.12); }
+
+/* 파티 탭 — 둘러보는 파티 목록 */
+.pdPartyList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pdPartyCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.pdPartyCardInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pdPartyCardInfo strong { color: var(--ink); font-size: 0.92rem; }
+.pdPartyCardInfo span { color: var(--muted); font-size: 0.78rem; }
+.pdPartyCardMeta { font-weight: 600; }
+
+.pdPartyStateTag {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.pdPartyStateTag.isJoined { background: var(--accent-soft); color: var(--mint-dark); }
+
+.pdApplyBtn {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pdApplyBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.pdApplyBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.pdApplyError { margin: 0; color: var(--crit); font-size: 0.82rem; font-weight: 700; }
+.pdCreateBtnList { flex-shrink: 0; }

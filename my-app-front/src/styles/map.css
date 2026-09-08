@@ -604,19 +604,50 @@
     min-height: 430px;
   }
 
+  /* .routePlanner 는 지도 위에 겹치는 오버레이(position:absolute)다.
+     예전처럼 그리드 행으로 취급하면(auto 1fr) 흐름에 남는 자식이 지도 하나뿐이라
+     지도가 auto 행에 들어가고, height:100% 가 0 으로 접혀 지도가 사라진다.
+     데스크톱과 같은 단일 셀 그리드를 유지한다. */
   .mapWorkspace {
-    /* 모바일: 세로 배치, 사이드바 + 지도 순서 */
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: 1fr;
     min-height: 0;
   }
 
+  /* 폰에서는 드로어를 화면 폭에 맞춰 아래쪽 시트처럼 띄운다 */
   .routePlanner {
+    top: auto;
+    width: 100%;
+    max-height: 62dvh;
     border-right: 0;
-    border-bottom: 1px solid var(--line);
-    /* 모바일 사이드바: 내용이 적을 때 줄어들고 넘치면 스크롤 */
-    max-height: 45vh;
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
     overflow-y: auto;
+  }
+
+  /* 닫을 때도 옆이 아니라 아래로 내린다 */
+  .mapWorkspace.panelClosed .routePlanner {
+    transform: translateY(100%);
+  }
+
+  /* 손잡이도 옆(세로 탭)이 아니라 시트 위에 붙는 가로 손잡이로 */
+  .panelToggle {
+    top: auto;
+    left: 50%;
+    bottom: calc(62dvh + env(safe-area-inset-bottom));
+    width: 56px;
+    height: 22px;
+    transform: translateX(-50%);
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    transition: bottom 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mapWorkspace.panelClosed .panelToggle {
+    left: 50%;
+    bottom: calc(0px + env(safe-area-inset-bottom));
   }
 
   .leafletMap {
@@ -981,7 +1012,7 @@
 .mapFabStack {
   position: absolute;
   right: 24px;
-  bottom: 94px;           /* 파티 도크 FAB + 간격 위 */
+  bottom: 88px;           /* 파티 도크 FAB(52) + bottom(24) + 간격(12) 위 */
   z-index: 1000;          /* Leaflet 컨트롤(1000)과 같은 층 */
   display: flex;
   flex-direction: column;
@@ -990,8 +1021,9 @@
 }
 
 .mapFab {
-  width: 46px;
-  height: 46px;
+  /* 파티 도크 FAB 과 동일 크기 */
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1015,7 +1047,11 @@
 }
 
 @media (max-width: 639px) {
-  .mapFabStack { right: 16px; bottom: 84px; }
+  .mapFabStack {
+    right: calc(16px + env(safe-area-inset-right));
+    /* 도크 FAB(52) + safe-area + 간격 */
+    bottom: calc(80px + env(safe-area-inset-bottom));
+  }
 }
 
 /* 지금 누를 수 없는 라이딩 버튼은 눌리지 않는다는 게 보이게 */

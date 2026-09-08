@@ -21,7 +21,7 @@
 .rrRoom {
   position: relative;
   width: min(720px, 100%);
-  height: min(820px, calc(100vh - 48px));
+  height: min(820px, calc(100dvh - 48px));
   border-radius: 22px;
   overflow: hidden;
   background: #dbe4ea;

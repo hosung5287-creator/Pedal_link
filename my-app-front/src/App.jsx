@@ -12,6 +12,7 @@ import MapPage from './pages/MapPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import PartyDock from './components/PartyDock';
+import MobileNav from './components/MobileNav';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import PartyPage from './pages/PartyPage';
@@ -51,6 +52,7 @@ function App() {
     setSearch(query ? `?${query}` : '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
 
   const openMap = (e) => { e.preventDefault(); moveTo('/map'); };
   const moveHome = (e) => { e.preventDefault(); moveTo('/'); };
@@ -118,6 +120,8 @@ function App() {
   return (
     <>
       {page}
+      {/* 모바일 햄버거 — .navLinks 가 숨는 767px 이하에서만 보인다 */}
+      <MobileNav currentPath={currentPath} user={user} onNavigate={moveTo} onLogout={handleLogout} />
       {/* 파티 소속/모집중일 때 뜨는 플로팅 도크 (지도 포함 전 화면 우측 하단) */}
       {user && <PartyDock user={user} onMoveParty={moveParty} />}
     </>

@@ -35,3 +35,29 @@
 .u-pill--accent { background: var(--mint); color: #fff; }
 .u-pill--soft { background: var(--accent-soft); color: var(--mint-dark); }
 
+
+/* 히어로 우측의 알약형 주요 액션 버튼.
+   둘러보기의 "게시물 올리기", 파티의 "링크 만들기" 가 함께 쓴다. */
+.composeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s, filter 0.12s;
+}
+
+.composeBtn:hover { filter: brightness(1.06); }
+.composeBtn:active { transform: translateY(1px); }
+
+@media (max-width: 600px) {
+  .composeBtn { padding: 8px 12px; font-size: 0.86rem; }
+}

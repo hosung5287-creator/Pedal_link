@@ -1,13 +1,17 @@
 import '../styles/party.css';
 
 import BrandLogo from '../components/BrandLogo';
+import { PartyRoomPanel } from '../components/PartyRoom';
+import CreatePartyModal from '../components/CreatePartyModal';
+import RouteMapThumbnail from '../components/RouteMapThumbnail';
 
 import { useEffect, useState } from 'react';
 import { text } from '../constants';
 import {
-  getParties, getMyRoutesForParty, createParty,
+  getParties, createParty,
   applyToParty, approveRequest, rejectRequest, deleteParty,
 } from '../api/parties';
+import { getRouteById } from '../api/routes';
 
 // 모임 시간 표시용 포맷
 function formatStartAt(iso) {
@@ -16,81 +20,6 @@ function formatStartAt(iso) {
   return d.toLocaleString('ko-KR', {
     month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
-}
-
-// 저장 경로 한 개 + "링크 만들기" 폼
-function RouteToParty({ route, onCreate, isLoggedIn, onLoginNeeded }) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [startAt, setStartAt] = useState('');
-  const [maxMembers, setMaxMembers] = useState(6);
-  const [submitting, setSubmitting] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!startAt) return;
-    setSubmitting(true);
-    try {
-      await onCreate({ route, title, startAt, maxMembers });
-      setOpen(false);
-      setTitle(''); setStartAt(''); setMaxMembers(6);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (!isLoggedIn) {
-    return (
-      <li className="routePick">
-        <div className="routePickInfo">
-          <h4>{route.routeName}</h4>
-          <p>{route.fromLabel} → {route.toLabel}</p>
-        </div>
-        <button type="button" className="partyPrimaryBtn" onClick={onLoginNeeded}>
-          {text.partyLoginNeeded}
-        </button>
-      </li>
-    );
-  }
-
-  return (
-    <li className="routePick">
-      <div className="routePickInfo">
-        <h4>{route.routeName}</h4>
-        <p>
-          {route.fromLabel} → {route.toLabel}
-          {route.distanceKm != null && <span> · {route.distanceKm} km</span>}
-        </p>
-      </div>
-
-      {open ? (
-        <form className="partyForm" onSubmit={submit}>
-          <label>
-            <span>{text.partyFormTitle}</span>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={text.partyFormTitlePlaceholder} />
-          </label>
-          <div className="partyFormRow">
-            <label>
-              <span>{text.partyFormTime}</span>
-              <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} required />
-            </label>
-            <label className="partyFormMax">
-              <span>{text.partyFormMax}</span>
-              <input type="number" min="2" max="30" value={maxMembers} onChange={(e) => setMaxMembers(e.target.value)} />
-            </label>
-          </div>
-          <div className="partyFormActions">
-            <button type="button" className="partyGhostBtn" onClick={() => setOpen(false)}>{text.partyCancel}</button>
-            <button type="submit" className="partyPrimaryBtn" disabled={submitting}>{text.partyCreate}</button>
-          </div>
-        </form>
-      ) : (
-        <button type="button" className="partyPrimaryBtn" onClick={() => setOpen(true)}>
-          {text.partyMakeButton}
-        </button>
-      )}
-    </li>
-  );
 }
 
 // 신청자 측 액션 버튼 (상태에 따라 다르게)
@@ -108,6 +37,34 @@ function ApplyAction({ myState, full, isLoggedIn, onApply, onLoginNeeded }) {
     return <button type="button" className="partyPrimaryBtn partyJoinBtn" disabled>{text.partyFull}</button>;
   }
   return <button type="button" className="partyPrimaryBtn partyJoinBtn" onClick={onApply}>{text.partyApply}</button>;
+}
+
+// 파티 카드 상단 미디어 — 올린 사진이 있으면 사진, 없으면 경로 지도.
+// 파티 응답(PartyResponse)에는 좌표가 없어서 경로를 한 번 더 불러온다.
+function PartyCardMedia({ party }) {
+  const [route, setRoute] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (!party.routeId) { setRoute(null); return undefined; }
+    getRouteById(party.routeId)
+      .then((r) => { if (alive) setRoute(r); })
+      .catch(() => { if (alive) setRoute(null); });
+    return () => { alive = false; };
+  }, [party.routeId]);
+
+  const path = route?.bikeRoute?.length ? route.bikeRoute : null;
+
+  return (
+    <div className="partyCardMedia">
+      {route?.photo
+        ? <img className="partyCardPhoto" src={route.photo} alt="" loading="lazy" />
+        : path
+          ? <RouteMapThumbnail path={path} />
+          : <div className="partyCardMediaEmpty" aria-hidden="true" />}
+      <span className="partyCardMediaTag">{party.routeName}</span>
+    </div>
+  );
 }
 
 // 파티 카드
@@ -131,6 +88,8 @@ function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLogi
 
   return (
     <article className={`partyCard${full ? ' isFull' : ''}${ended ? ' isEnded' : ''}`}>
+      <PartyCardMedia party={party} />
+
       <div className="partyCardHead">
         <h3>{party.title}</h3>
         {isHost ? (
@@ -226,19 +185,35 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
   const me = { id: user?.id ?? 'me', name: user?.name ?? '나' };
   const isLoggedIn = !!user;
 
-  const [routes, setRoutes] = useState([]);
   const [parties, setParties] = useState([]);
+  const [composing, setComposing] = useState(false);
+  const [view, setView] = useState('list');   // 'list' = 모집 중인 링크, 'room' = 내 파티
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [roomId, setRoomId] = useState(null);
+
+  // 내가 호스트이거나 참여 확정된 파티 = 대기방을 열 수 있는 파티
+  const myRooms = parties.filter((p) =>
+    p.status !== 'ended'
+    && (p.hostId === me.id || (p.participants || []).some((m) => m.userId === me.id)));
+  const room = myRooms.find((r) => r.id === roomId) || myRooms[0] || null;
 
   useEffect(() => {
     let alive = true;
-    Promise.all([getMyRoutesForParty(user?.id), getParties()]).then(([r, p]) => {
-      if (!alive) return;
-      setRoutes(r);
-      setParties(p);
-      setLoading(false);
-    });
+    getParties()
+      .then((p) => {
+        if (!alive) return;
+        setParties(p);
+      })
+      // 서버가 죽었거나 500 을 주면 여기서 잡는다.
+      // catch 가 없으면 loading 이 true 로 남아 화면이 "불러오는 중…" 에서 영영 멈춘다.
+      .catch(() => {
+        if (!alive) return;
+        setError(text.partyLoadFailed);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
     return () => { alive = false; };
     // 마운트 시 1회만 로드 (user?.id 는 최초 렌더 값 사용 의도)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -274,42 +249,107 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
         <div className="navLinks">
           <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>
-          <a href="/">{text.nearby}</a>
           <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
         <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>
       </nav>
 
+      {/* 왼쪽 세로 네비로 모집 목록 ↔ 내 파티 전환.
+          파티가 없어도 전환은 되고, 내 파티가 비어 있으면 안내를 보여준다. */}
+      <div className="partyBody">
+      <nav className="partyViewSwitch" role="tablist" aria-label={text.partyViewSwitch}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'list'}
+          className={view === 'list' ? 'isActive' : ''}
+          onClick={() => setView('list')}
+          title={text.partyViewList}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+               strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 21l-4.3-4.3M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
+          </svg>
+          <span>{text.partyViewList}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'room'}
+          className={view === 'room' ? 'isActive' : ''}
+          onClick={() => setView('room')}
+          title={text.partyViewRoom}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+               strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8M22 21v-2a4 4 0 0 0-3-3.87" />
+          </svg>
+          <span>{text.partyViewRoom}</span>
+          {myRooms.length > 0 && <span className="partyViewCount">{myRooms.length}</span>}
+        </button>
+      </nav>
+
+      <div className="partyBodyMain">
       <header className="partyHero">
-        <p className="eyebrow">{text.partyEyebrow}</p>
-        <h1>{text.partyTitle}</h1>
-        <p className="partyHeroSub">{text.partySub}</p>
+        <div className="partyHeroText">
+          <p className="eyebrow">{text.partyEyebrow}</p>
+          <h1>{text.partyTitle}</h1>
+          <p className="partyHeroSub">{text.partySub}</p>
+        </div>
+        {/* 둘러보기의 "게시물 올리기"와 같은 자리·같은 모양 */}
+        <button
+          type="button"
+          className="composeBtn"
+          onClick={isLoggedIn ? () => setComposing(true) : onMoveLogin}
+        >
+          {isLoggedIn ? text.partyMakeButton : text.login}
+        </button>
       </header>
 
-      <main className="partyLayout">
-        <section className="partySection">
-          <h2>{text.partyMyRoutes}</h2>
-          {/* 내 저장 경로는 로그인해야 볼 수 있다 (비로그인이면 목록을 아예 불러오지 않음) */}
-          {!isLoggedIn ? (
-            <div className="partyLoginPrompt">
-              <p>{text.partyRoutesLoginNeeded}</p>
-              <button type="button" className="partyPrimaryBtn" onClick={onMoveLogin}>
-                {text.login}
-              </button>
-            </div>
-          ) : loading ? (
-            <p className="partyEmpty">불러오는 중…</p>
-          ) : routes.length === 0 ? (
-            <p className="partyEmpty">{text.partyNoRoutes}</p>
+
+      {view === 'room' && (
+        <section className="partyRoomSection">
+          {room ? (
+            <PartyRoomPanel
+              key={room.id}
+              inline
+              party={room}
+              rooms={myRooms}
+              user={user}
+              onSelectRoom={setRoomId}
+              onUpdate={replaceParty}
+              onRemove={(id) => setParties((prev) => prev.filter((p) => p.id !== id))}
+              onStartRide={onStartRide}
+            />
           ) : (
-            <ul className="routePickList">
-              {routes.map((r) => (
-                <RouteToParty key={r.id} route={r} onCreate={handleCreate} isLoggedIn={isLoggedIn} onLoginNeeded={onMoveLogin} />
-              ))}
-            </ul>
+            <div className="partyRoomEmpty">
+              <span className="partyRoomEmptyIcon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor"
+                     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8M22 21v-2a4 4 0 0 0-3-3.87" />
+                </svg>
+              </span>
+              <strong>{loading ? text.browseLoading : text.partyRoomEmptyTitle}</strong>
+              {!loading && (
+                <>
+                  <p>{isLoggedIn ? text.partyRoomEmptySub : text.partyRoomEmptyLogin}</p>
+                  <button
+                    type="button"
+                    className="partyPrimaryBtn"
+                    onClick={isLoggedIn ? () => setView('list') : onMoveLogin}
+                  >
+                    {isLoggedIn ? text.partyViewList : text.login}
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </section>
+      )}
 
+      {view === 'list' && (
+        <>
+      <main className="partyLayout">
         <section className="partySection">
           <h2>{text.partyOpenList}</h2>
           {error && <p className="partyError">{error}</p>}
@@ -337,6 +377,18 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
           )}
         </section>
       </main>
+        </>
+      )}
+      </div>
+      </div>
+
+      {composing && (
+        <CreatePartyModal
+          user={user}
+          onClose={() => setComposing(false)}
+          onCreate={handleCreate}
+        />
+      )}
     </div>
   );
 }

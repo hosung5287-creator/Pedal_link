@@ -12,7 +12,6 @@ export default function SettingsPage({ user, onMoveHome, onMoveBrowse, onMovePar
         <div className="navLinks">
           <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>
-          <a href="/">{text.nearby}</a>
           <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
         <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>

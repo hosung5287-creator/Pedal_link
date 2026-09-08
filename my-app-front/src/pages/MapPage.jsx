@@ -900,8 +900,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
           <div className="navLinks">
             <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
             <a href="/party" onClick={onMoveParty}>{text.party}</a>
-            <a href="/">{text.nearby}</a>
-            <a href="/map">{text.makeCourse}</a>
+              <a href="/map">{text.makeCourse}</a>
           </div>
           <a className="signupBackLink" href="/" onClick={onBackHome}>{text.partyBackHome}</a>
         </nav>

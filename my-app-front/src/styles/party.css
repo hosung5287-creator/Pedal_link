@@ -6,7 +6,7 @@
 
 /* ===== 파티 페이지 ===== */
 .partyPage {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--wash);
 }
 
@@ -39,12 +39,19 @@
   color: var(--ink);
 }
 
+/* 둘러보기(.browseHero)와 같은 구조 — 텍스트 왼쪽, 버튼 오른쪽 아래 정렬 */
 .partyHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
   padding: 40px 0 36px;
   text-align: left;
 }
+
+.partyHeroText { min-width: 0; }
 
 .partyHero .eyebrow {
   margin: 0 0 8px;
@@ -493,3 +500,196 @@
   font-size: 0.9rem;
   font-weight: 700;
 }
+
+/* 페이지 본문으로 펼친 라이딩 대기방 (PartyRoomPanel inline) */
+.partyRoomSection {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 36px 0 8px;
+}
+
+/* .composeBtn(둘러보기) 을 그대로 쓰므로 파티 전용 버튼 스타일은 두지 않는다 */
+.partyHero .composeBtn { flex-shrink: 0; }
+
+/* 파티 카드 상단 미디어 (사진 또는 경로 지도) */
+.partyCardMedia {
+  position: relative;
+  /* 카드 padding(20) 을 상쇄해 미디어가 카드 위쪽에 꽉 차게 */
+  margin: -20px -20px 4px;
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.partyCardMedia .feedThumb,
+.partyCardPhoto,
+.partyCardMediaEmpty {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+
+.partyCardMediaTag {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 500;
+  max-width: calc(100% - 20px);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(12, 27, 39, 0.8);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 모달 안 2열 (시간 + 인원) */
+.composeFieldRow { display: flex; gap: 12px; }
+.composeFieldRow > .composeField { flex: 1 1 0; min-width: 0; }
+
+/* 본문 왼쪽에 붙는 슬림 레일 네비 + 본문 2단.
+   화면 끝에 고정하지 않고 컨텐츠 왼쪽(라이딩 대기방 옆)에 나란히 둔다.
+   대신 폭을 아이콘 크기(76px)로 줄여 본문이 좁아지는 걸 최소화한다. */
+.partyBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.partyBodyMain {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 본문 안의 섹션들은 이미 자기 폭·여백을 갖고 있으므로 여기서는 해제한다 */
+.partyBodyMain .partyHero,
+.partyBodyMain .partyLayout,
+.partyBodyMain .partyRoomSection {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.partyBodyMain .partyLayout,
+.partyBodyMain .partyRoomSection { padding-top: 0; padding-bottom: 64px; }
+
+/* 모집 중인 링크 ↔ 내 파티 */
+.partyViewSwitch {
+  /* 히어로(링크/파티/설명) 높이만큼 내려서 "모집 중인 링크" 제목과 나란히 선다.
+     레일은 별도 열이라 이 값을 키워도 오른쪽 본문은 밀리지 않는다. */
+  margin-top: 186px;
+  /* 스크롤해도 따라온다 */
+  position: sticky;
+  top: 20px;
+  flex: 0 0 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.partyViewSwitch button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 11px 2px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+}
+.partyViewSwitch button:hover { background: var(--wash); color: var(--ink); }
+.partyViewSwitch button.isActive {
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+}
+
+/* 좁은 화면: 2단을 풀고 본문 위 가로 한 줄로 */
+@media (max-width: 900px) {
+  .partyBody {
+    flex-direction: column;
+    width: calc(100% - 28px);
+    gap: 16px;
+  }
+
+  .partyViewSwitch {
+    position: static;
+    flex-direction: row;
+    width: 100%;
+    flex-basis: auto;
+    margin-top: 0;
+  }
+  .partyViewSwitch button {
+    flex: 1 1 0;
+    flex-direction: row;
+    gap: 8px;
+    min-height: 44px;
+    font-size: 0.9rem;
+  }
+  .partyViewCount { position: static; }
+}
+
+/* 내 파티 탭 배지 (참여 중인 파티 수) */
+.partyViewCount {
+  /* 레일에서는 아이콘 우상단 뱃지 */
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* 내 파티가 없을 때 안내 */
+.partyRoomEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 64px 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.partyRoomEmptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.partyRoomEmpty strong { color: var(--ink); font-size: 1.1rem; }
+.partyRoomEmpty p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.55; }
+.partyRoomEmpty .partyPrimaryBtn { margin-top: 6px; }

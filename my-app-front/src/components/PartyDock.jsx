@@ -47,7 +47,6 @@ export default function PartyDock({ user, onMoveParty }) {
   const [roomInitialId, setRoomInitialId] = useState(null); // 파티 룸을 열 때 바로 보여줄 방
   const [ridingId, setRidingId] = useState(null); // 라이딩 룸이 떠 있는 파티 id
   const [tab, setTab] = useState('near');
-  const [partySubTab, setPartySubTab] = useState('mine'); // 'mine' | 'list'
   const [applyingId, setApplyingId] = useState(null);
   const [applyError, setApplyError] = useState('');
   const [locs, setLocs] = useState({});
@@ -150,7 +149,6 @@ export default function PartyDock({ user, onMoveParty }) {
 
   const members = party?.participants || [];
   const memberIds = new Set(members.map((m) => m.userId));
-  const effectivePartySubTab = inParty ? partySubTab : 'list';
 
   const browsableParties = allParties.filter((p) => p.status !== 'ended');
 
@@ -223,6 +221,34 @@ export default function PartyDock({ user, onMoveParty }) {
                 <span className="pdSwitch" aria-hidden="true"><span className="pdSwitchKnob" /></span>
               </button>
 
+              {/* 내 파티 멤버 — 파티 탭에 있던 '내 파티' 서브탭을 여기로 옮겼다.
+                  근처 탭이 "사람" 탭이 되어 멤버와 주변 라이더를 한 화면에서 본다. */}
+              {inParty && (
+                <>
+                  <p className="pdNearGroup">{t.myPartyGroup} · {party.title}</p>
+                  <ul className="pdMembers">
+                    {members.map((m) => (
+                      <li key={m.userId}>
+                        <button type="button" className="pdMember" onClick={() => setSelected(m)}>
+                          <span className="pdAvatar" aria-hidden="true">{letterOf(m.name)}</span>
+                          <span className="pdMemberInfo">
+                            <span className="pdMemberName">
+                              {m.name}
+                              {m.userId === party.hostId && <span className="pdTag pdTagHost">{t.hostBadge}</span>}
+                              {m.userId === user.id && <span className="pdTag">{t.meBadge}</span>}
+                            </span>
+                            <span className={`pdReadyTag${m.ready ? ' isReady' : ''}`}>
+                              {m.ready ? `✓ ${t.readyDone}` : t.readyWaiting}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="pdNearGroup">{t.nearbyGroup}</p>
+                </>
+              )}
+
               {nearby.length === 0 ? (
                 <p className="pdNearHint">{t.nearEmpty}</p>
               ) : (
@@ -250,46 +276,10 @@ export default function PartyDock({ user, onMoveParty }) {
             </div>
           )}
 
-          {/* 파티 — "내 파티"(멤버 목록)와 "파티 목록"(둘러보고 신청)을 나눔 */}
+          {/* 파티 — 둘러보고 신청하는 목록. 내 파티 멤버는 근처 탭으로 옮겼다. */}
           {curTab === 'party' && (
             <div className="pdPartyPane">
-              {inParty && (
-                <div className="pdPartySubTabs">
-                  <button type="button" className={effectivePartySubTab === 'mine' ? 'isActive' : ''} onClick={() => setPartySubTab('mine')}>
-                    {t.mySubTab}
-                  </button>
-                  <button type="button" className={effectivePartySubTab === 'list' ? 'isActive' : ''} onClick={() => setPartySubTab('list')}>
-                    {t.listSubTab}
-                  </button>
-                </div>
-              )}
-
-              {effectivePartySubTab === 'mine' && inParty && (
-                <ul className="pdMembers">
-                  {members.length === 0 && <li className="pdEmpty">{t.emptyMembers}</li>}
-                  {members.map((m) => (
-                    <li key={m.userId}>
-                      <button type="button" className="pdMember" onClick={() => setSelected(m)}>
-                        <span className="pdAvatar" aria-hidden="true">{letterOf(m.name)}</span>
-                        <span className="pdMemberInfo">
-                          <span className="pdMemberName">
-                            {m.name}
-                            {m.userId === party.hostId && <span className="pdTag pdTagHost">{t.hostBadge}</span>}
-                            {m.userId === user.id && <span className="pdTag">{t.meBadge}</span>}
-                          </span>
-                          <span className={`pdReadyTag${m.ready ? ' isReady' : ''}`}>
-                            {m.ready ? `✓ ${t.readyDone}` : t.readyWaiting}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {effectivePartySubTab === 'list' && (
-                <>
-                  {applyError && <p className="pdApplyError">{applyError}</p>}
+              {applyError && <p className="pdApplyError">{applyError}</p>}
                   {browsableParties.length === 0 ? (
                     <div className="pdPartyEmpty">
                       <span className="pdEmptyIcon" aria-hidden="true"><PeopleIcon size={28} /></span>
@@ -329,11 +319,9 @@ export default function PartyDock({ user, onMoveParty }) {
                         );
                       })}
                     </ul>
-                  )}
-                </>
               )}
 
-              {/* 서브탭과 무관하게 항상 보이게 */}
+              {/* 목록이 짧아도 아래에 붙는다 */}
               <button type="button" className="pdCreateBtn pdCreateBtnList" onClick={(e) => { setOpen(false); onMoveParty?.(e); }}>
                 {t.createBtn}
               </button>

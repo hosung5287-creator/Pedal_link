@@ -63,7 +63,10 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded }) {
         </div>
       </header>
 
-      <RouteMapThumbnail path={item.path} />
+      {/* 사진을 올린 게시물은 사진을, 아니면 경로 지도 썸네일을 보여준다 */}
+      {item.photo
+        ? <img className="feedPhoto" src={item.photo} alt="" loading="lazy" />
+        : <RouteMapThumbnail path={item.path} />}
 
       <dl className="feedStats">
         <div>
@@ -190,7 +193,6 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
         <div className="navLinks">
           <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>
-          <a href="/">{text.nearby}</a>
           <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
         <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>

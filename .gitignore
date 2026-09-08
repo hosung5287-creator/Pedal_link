@@ -13,6 +13,10 @@
 .classpath
 bin/
 
+# Node (의존성 — 커밋 금지)
+node_modules/
+**/node_modules/
+
 # Gradle
 .gradle/
 build/

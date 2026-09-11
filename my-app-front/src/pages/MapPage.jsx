@@ -1,4 +1,6 @@
 import '../styles/map.css';
+import '../styles/course-planner.css';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 import BrandLogo from '../components/BrandLogo';
 
@@ -43,7 +45,7 @@ function proxBubbleHtml(name, dist) {
     + `<span class="proxDist">${fmtProxDist(dist)}</span></span>`;
 }
 
-export default function MapPage({ user: userProp, partyId, onBackHome, onMoveParty, onMoveBrowse }) {
+export default function MapPage({ user: userProp, partyId, onBackHome, onMoveParty, onMoveBrowse , onMoveCrew}) {
   const user = userProp ?? (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
   const [mapLayer, setMapLayer] = useState('mapnik');
   const [startQuery, setStartQuery] = useState('');
@@ -60,6 +62,8 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const [routeList, setRouteList] = useState([]);
   const [showRouteList, setShowRouteList] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const reveal = { initial: { opacity: 0, height: 0 }, animate: { opacity: 1, height: 'auto' }, exit: { opacity: 0, height: 0 }, transition: { duration: reduceMotion ? 0 : 0.22 } };
   const [saveRouteName, setSaveRouteName] = useState('');
   const [toast, setToast] = useState(null); // { msg, type: 'info'|'error' }
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -894,27 +898,20 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
         </div>
       )}
 
-      <header className="mapTopbar">
-        <nav className="navbar mapNav" aria-label={text.nav}>
-          <a className="brand" href="/" onClick={onBackHome}><BrandLogo className="brandLogo" />PedalLink</a>
-          <div className="navLinks">
-            <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
-            <a href="/party" onClick={onMoveParty}>{text.party}</a>
-            <a href="/">{text.nearby}</a>
-            <a href="/map">{text.makeCourse}</a>
-          </div>
-          <a className="signupBackLink" href="/" onClick={onBackHome}>{text.partyBackHome}</a>
-        </nav>
-        {party && (
-          <div className="mapPartyBanner">
-            <strong>{party.title}</strong>
-            <span>{text.partyRideBanner} · {party.participants.map(m => m.name).join(', ')}</span>
-          </div>
-        )}
-      </header>
-
       <section className={`mapWorkspace${panelOpen ? '' : ' panelClosed'}`}>
-        <aside className={`routePlanner${searchMode ? ' searchActive' : ''}`} aria-label="Route planner">
+        <a className="mapHomeFloating" href="/" onClick={onBackHome} aria-label="PedalLink 홈으로">
+          <BrandLogo className="brandLogo" /><span>PedalLink</span>
+        </a>
+        <aside className={`routePlanner${searchMode ? ' searchActive' : ''}`} aria-label="코스 만들기">
+          <nav className="plannerBrandNav" aria-label="홈">
+            <a className="brand" href="/" onClick={onBackHome} aria-label="PedalLink 홈으로"><BrandLogo className="brandLogo" />PedalLink</a>
+          </nav>
+          {party && (
+            <div className="mapPartyBanner">
+              <strong>{party.title}</strong>
+              <span>{text.partyRideBanner} · {party.participants.map(m => m.name).join(', ')}</span>
+            </div>
+          )}
           {searchMode ? (
             <>
               <div className="searchOverlayHeader">
@@ -955,6 +952,114 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
             </>
           ) : (
             <>
+              <div className="pointInputWrapper">
+                <div className="dotsColumn">
+                  <span className="pointDot startDot" />
+                  <span className="pointLine" />
+                  <span className="pointDot endDot" />
+                </div>
+                <div className="fieldsColumn">
+                  <button className="pointField" type="button" onClick={() => openSearch('start')}><span className="pointCaption">출발지</span>
+                    {(startQuery || startPoint)
+                      ? <span className="pointLabel">{startQuery || startPoint.label || `${startPoint.lat.toFixed(4)}, ${startPoint.lng.toFixed(4)}`}</span>
+                      : <span className="pointPlaceholder">{text.startPlaceholder}</span>
+                    }
+                  </button>
+                  <button className="pointField" type="button" onClick={() => openSearch('end')}><span className="pointCaption">도착지</span>
+                    {(endQuery || endPoint)
+                      ? <span className="pointLabel">{endQuery || endPoint.label || `${endPoint.lat.toFixed(4)}, ${endPoint.lng.toFixed(4)}`}</span>
+                      : <span className="pointPlaceholder">{text.endPlaceholder}</span>
+                    }
+                  </button>
+                </div>
+              </div>
+              <div className="routeLegend" aria-label="Route legend">
+                <span className="routeSample bikeSample" />
+                <span>{text.bikeRoute}</span>
+                <span className="routeSample shortestSample" />
+                <span>{text.shortestRoute}</span>
+              </div>
+              <p className={`routeStatus${isRouting ? " isCalculating" : ""}`} aria-live="polite">
+                {isRouting ? text.searching : status}
+              </p>
+
+              {/* 경로 분석 (BRouter 데이터) */}
+              <AnimatePresence initial={false}>
+              {routeStats && !isRouting && (
+                <motion.div key="analysis" className="routeAnalysis" {...reveal}>
+                  <div className="analysisHeading">코스 정보<span>계산 완료</span></div>
+                  <div className="analysisStats">
+                    <div className="statTile">
+                      <span className="statValue">{routeStats.distanceKm}</span>
+                      <span className="statLabel">총 거리 · km</span>
+                    </div>
+                    <div className="statTile">
+                      <span className="statValue">{routeStats.ascendM}</span>
+                      <span className="statLabel">m 상승</span>
+                    </div>
+                    <div className="statTile">
+                      <span className="statValue">{routeStats.timeMin}</span>
+                      <span className="statLabel">예상 시간 · 분</span>
+                    </div>
+                  </div>
+                  {routeStats.roadMix?.length > 0 && (
+                    <div className="analysisGroup">
+                      <h4 className="analysisTitle">길 구성</h4>
+                      <div className="analysisTrack">
+                        {routeStats.roadMix.map((r) => (
+                          <span key={r.key} className="analysisSeg" style={{ width: `${r.pct}%`, background: r.color }} title={`${r.label} ${r.pct}%`} />
+                        ))}
+                      </div>
+                      <ul className="analysisLegend">
+                        {routeStats.roadMix.map((r) => (
+                          <li key={r.key}>
+                            <span className="legendDot" style={{ background: r.color }} />
+                            <span className="legendName">{r.label}</span>
+                            <span className="legendPct">{r.pct}%</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+              </AnimatePresence>
+
+              {/* 저장/마커지우기는 한 줄, 목록은 아래 전체 폭 — 10px 간격 */}
+              <div className="plannerActions">
+                <div className="plannerActionsRow">
+                  <motion.button whileTap={reduceMotion ? undefined : { scale: 0.98 }} className="resetButton btn btn--solid plannerSavePrimary" type="button" onClick={saveRoute} aria-expanded={saveModalOpen}>
+                    코스 저장 <span aria-hidden="true">↗</span>
+                  </motion.button>
+                  <button className="resetButton btn plannerReset" type="button" onClick={resetPlanner}>{text.reset}</button>
+                </div>
+
+                {/* 경로 이름 입력 모달 */}
+                <AnimatePresence initial={false}>
+                {saveModalOpen && (
+                  <motion.div key="save" className="routeSaveModal" {...reveal}>
+                    <label htmlFor="course-save-name">코스 이름</label>
+                    <input
+                      type="text"
+                      id="course-save-name"
+                      value={saveRouteName}
+                      onChange={(e) => setSaveRouteName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
+                      placeholder="예: 한강 자전거 코스"
+                      autoFocus
+                    />
+                    <div className="routeSaveActions">
+                      <button type="button" className="btn btn--solid" onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
+                      <button type="button" className="btn" onClick={() => setSaveModalOpen(false)}>취소</button>
+                    </div>
+                  </motion.div>
+                )}
+                </AnimatePresence>
+                <button className="resetButton btn plannerActionsWide" type="button" onClick={loadRouteList}>
+                  저장된 경로 목록
+                </button>
+              </div>
+
               {/* 지도 설정 — 예전 상단 헤더에 있던 레이어/지역 선택을 패널로 옮김 */}
               <div className="plannerMapControls">
                 <label className="layerSelect">
@@ -1001,108 +1106,6 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
                     <div>거리: {(rideDistance / 1000).toFixed(2)}km</div>
                   </div>
                 )}
-              </div>
-
-              <div className="pointInputWrapper">
-                <div className="dotsColumn">
-                  <span className="pointDot startDot" />
-                  <span className="pointLine" />
-                  <span className="pointDot endDot" />
-                </div>
-                <div className="fieldsColumn">
-                  <button className="pointField" type="button" onClick={() => openSearch('start')}>
-                    {startQuery
-                      ? <span className="pointLabel">{startQuery}</span>
-                      : <span className="pointPlaceholder">{text.startPlaceholder}</span>
-                    }
-                  </button>
-                  <button className="pointField" type="button" onClick={() => openSearch('end')}>
-                    {endQuery
-                      ? <span className="pointLabel">{endQuery}</span>
-                      : <span className="pointPlaceholder">{text.endPlaceholder}</span>
-                    }
-                  </button>
-                </div>
-              </div>
-              <div className="routeLegend" aria-label="Route legend">
-                <span className="routeSample bikeSample" />
-                <span>{text.bikeRoute}</span>
-                <span className="routeSample shortestSample" />
-                <span>{text.shortestRoute}</span>
-              </div>
-              <p className="routeStatus" aria-live="polite">
-                {isRouting ? text.searching : status}
-              </p>
-
-              {/* 경로 분석 (BRouter 데이터) */}
-              {routeStats && (
-                <div className="routeAnalysis">
-                  <div className="analysisStats">
-                    <div className="statTile">
-                      <span className="statValue">{routeStats.distanceKm}</span>
-                      <span className="statLabel">km</span>
-                    </div>
-                    <div className="statTile">
-                      <span className="statValue">{routeStats.ascendM}</span>
-                      <span className="statLabel">m 상승</span>
-                    </div>
-                    <div className="statTile">
-                      <span className="statValue">{routeStats.timeMin}</span>
-                      <span className="statLabel">분</span>
-                    </div>
-                  </div>
-                  {routeStats.roadMix?.length > 0 && (
-                    <div className="analysisGroup">
-                      <h4 className="analysisTitle">길 구성</h4>
-                      <div className="analysisTrack">
-                        {routeStats.roadMix.map((r) => (
-                          <span key={r.key} className="analysisSeg" style={{ width: `${r.pct}%`, background: r.color }} title={`${r.label} ${r.pct}%`} />
-                        ))}
-                      </div>
-                      <ul className="analysisLegend">
-                        {routeStats.roadMix.map((r) => (
-                          <li key={r.key}>
-                            <span className="legendDot" style={{ background: r.color }} />
-                            <span className="legendName">{r.label}</span>
-                            <span className="legendPct">{r.pct}%</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 저장/마커지우기는 한 줄, 목록은 아래 전체 폭 — 10px 간격 */}
-              <div className="plannerActions">
-                <div className="plannerActionsRow">
-                  <button className="resetButton btn btn--solid" type="button" onClick={saveRoute}>
-                    경로 저장
-                  </button>
-                  <button className="resetButton btn btn--solid" type="button" onClick={resetPlanner}>{text.reset}</button>
-                </div>
-
-                {/* 경로 이름 입력 모달 */}
-                {saveModalOpen && (
-                  <div className="routeSaveModal">
-                    <p>경로 이름을 입력하세요</p>
-                    <input
-                      type="text"
-                      value={saveRouteName}
-                      onChange={(e) => setSaveRouteName(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') confirmSaveRoute(); if (e.key === 'Escape') setSaveModalOpen(false); }}
-                      placeholder="예: 한강 자전거 코스"
-                      autoFocus
-                    />
-                    <div className="routeSaveActions">
-                      <button type="button" className="btn btn--solid" onClick={confirmSaveRoute} disabled={!saveRouteName.trim()}>저장</button>
-                      <button type="button" className="btn" onClick={() => setSaveModalOpen(false)}>취소</button>
-                    </div>
-                  </div>
-                )}
-                <button className="resetButton btn btn--solid plannerActionsWide" type="button" onClick={loadRouteList}>
-                  저장된 경로 목록
-                </button>
               </div>
 
               {/* 경로 목록 패널 */}

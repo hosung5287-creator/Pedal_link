@@ -7,6 +7,7 @@ import { text } from '../constants';
 import { getFeed, toggleLike } from '../api/feed';
 import RouteMapThumbnail from '../components/RouteMapThumbnail';
 import ComposePostModal from '../components/ComposePostModal';
+import FeedSidebar from '../components/FeedSidebar';
 
 // 분 → "1시간 20분" / "45분"
 function formatDuration(min) {
@@ -34,7 +35,7 @@ function buildTags({ distanceKm, fromLabel, toLabel }) {
 function HeartIcon({ filled }) {
   return (
     // 색은 버튼의 color 를 따라간다 (App.css 의 .feedIconBtn / .isLiked)
-    <svg viewBox="0 0 24 24" width="24" height="24"
+    <svg viewBox="0 0 24 24" width="18" height="18"
       fill={filled ? 'currentColor' : 'none'} stroke="currentColor"
       strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z" />
@@ -42,108 +43,107 @@ function HeartIcon({ filled }) {
   );
 }
 
-function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded }) {
+// 상대 시각 — "7분" / "6시간" / "3일"
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff) || diff < 0) return '';
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour}시간`;
+  return `${Math.floor(hour / 24)}일`;
+}
+
+// 피드 게시물 한 개.
+// 카드 박스가 아니라 구분선으로 나뉘는 타임라인 형태다 (X/Threads 계열).
+// 순서: 작성자 한 줄 → 본문 → 미디어(코스 정보 바 포함) → 액션
+function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded, onOpenMap }) {
   // 작성 모달로 쓴 태그가 있으면 그걸 쓰고, 없으면 데이터에서 유도한다
   const tags = item.tags?.length ? item.tags : buildTags(item);
   const avatarLetter = (item.authorName || '?').trim().charAt(0);
 
+  const body = item.description
+    || (item.fromLabel && item.toLabel
+      ? `${item.fromLabel}에서 ${item.toLabel}까지 이어지는 코스입니다.`
+      : '');
+
   return (
-    <article className="feedCard">
-      <header className="feedHead">
-        <span className="feedAvatar" aria-hidden="true">{avatarLetter}</span>
-        <div className="feedHeadText">
+    <article className="feedPost">
+      <span className="feedAvatar" aria-hidden="true">{avatarLetter}</span>
+
+      <div className="feedBody">
+        {/* 이름 · 위치 · 시간을 한 줄로 (레퍼런스의 "Gustave Flowbert in Marketplace · 42m") */}
+        <p className="feedMeta">
           <strong>{item.authorName}</strong>
-          <p>
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 21s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z" />
-              <circle cx="12" cy="9" r="2.5" />
-            </svg>
-            {item.fromLabel || '위치 정보 없음'}
-          </p>
-        </div>
-      </header>
-
-      <RouteMapThumbnail path={item.path} />
-
-      <dl className="feedStats">
-        <div>
-          <dt>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 21s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z" />
-              <circle cx="12" cy="9" r="2.5" />
-            </svg>
-          </dt>
-          <dd>{item.distanceKm != null ? `${item.distanceKm}km` : '-'}</dd>
-        </div>
-        <div>
-          <dt>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-              <path d="M3 20 12 5l9 15z" />
-            </svg>
-          </dt>
-          <dd>{item.ascendM != null ? `${item.ascendM}m` : '-'}</dd>
-        </div>
-        <div>
-          <dt>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 7v5l3 2" />
-            </svg>
-          </dt>
-          <dd>{formatDuration(item.timeMin)}</dd>
-        </div>
-      </dl>
-
-      <div className="feedActions">
-        <button
-          type="button"
-          className={`feedIconBtn${item.liked ? ' isLiked' : ''}`}
-          aria-pressed={item.liked}
-          aria-label={item.liked ? text.browseUnlike : text.browseLike}
-          onClick={() => (isLoggedIn ? onLike(item.id) : onLoginNeeded())}
-        >
-          <HeartIcon filled={item.liked} />
-        </button>
-
-        <button type="button" className="feedIconBtn" disabled title={text.browsePreparing} aria-label={text.browseComment}>
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-            <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.6-.7L3 21l1.9-4.9A8.3 8.3 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
-          </svg>
-        </button>
-
-        <button type="button" className="feedIconBtn" disabled title={text.browsePreparing} aria-label={text.browseShare}>
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-            <path d="m8.6 10.6 6.8-4M8.6 13.4l6.8 4" />
-          </svg>
-        </button>
-
-        <button type="button" className="feedIconBtn feedBookmark" disabled title={text.browsePreparing} aria-label={text.browseSave}>
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-            <path d="M6 3h12v18l-6-4.5L6 21z" />
-          </svg>
-        </button>
-      </div>
-
-      <div className="feedCaption">
-        <strong className="feedLikes">{item.likeCount} likes</strong>
-        <p className="feedTitle">
-          <strong>{item.authorName}</strong> {item.routeName}
+          {item.fromLabel && <span className="feedMetaPlace">{item.fromLabel}</span>}
+          {timeAgo(item.createdAt) && <span className="feedMetaTime">{timeAgo(item.createdAt)}</span>}
         </p>
-        {item.description ? (
-          <p className="feedDesc">{item.description}</p>
-        ) : item.fromLabel && item.toLabel ? (
-          <p className="feedDesc">{item.fromLabel}에서 {item.toLabel}까지 이어지는 코스입니다.</p>
-        ) : null}
-        {tags.length > 0 && (
-          <p className="feedTags">{tags.map(t => `#${t}`).join(' ')}</p>
-        )}
+
+        {body && <p className="feedText">{body}</p>}
+        {tags.length > 0 && <p className="feedTags">{tags.map(t => `#${t}`).join(' ')}</p>}
+
+        <div className="feedMedia">
+          {item.photo
+            ? <img className="feedPhoto" src={item.photo} alt="" loading="lazy" />
+            : <RouteMapThumbnail path={item.path} />}
+
+          {/* 미디어 하단 바 — 코스 이름·거리 + 지도로 보기 (레퍼런스의 "Billie · Template | Copy") */}
+          <div className="feedMediaBar">
+            <span className="feedMediaInfo">
+              <strong>{item.routeName || `${item.fromLabel} → ${item.toLabel}`}</strong>
+              <span>
+                {item.distanceKm != null ? `${item.distanceKm}km` : '-'}
+                {item.ascendM != null ? ` · ↑${item.ascendM}m` : ''}
+                {item.timeMin != null ? ` · ${formatDuration(item.timeMin)}` : ''}
+              </span>
+            </span>
+            <button type="button" className="feedMediaBtn" onClick={onOpenMap}>
+              {text.browseOpenMap}
+            </button>
+          </div>
+        </div>
+
+        <div className="feedActions">
+          <button
+            type="button"
+            className={`feedAction${item.liked ? ' isLiked' : ''}`}
+            aria-pressed={item.liked}
+            aria-label={item.liked ? text.browseUnlike : text.browseLike}
+            onClick={() => (isLoggedIn ? onLike(item.id) : onLoginNeeded())}
+          >
+            <HeartIcon filled={item.liked} />
+            {item.likeCount}
+          </button>
+
+          <button type="button" className="feedAction" disabled title={text.browsePreparing} aria-label={text.browseComment}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+              <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-3.6-.7L3 21l1.9-4.9A8.3 8.3 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
+            </svg>
+            0
+          </button>
+
+          <button type="button" className="feedAction" disabled title={text.browsePreparing} aria-label={text.browseShare}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+              <path d="m8.6 10.6 6.8-4M8.6 13.4l6.8 4" />
+            </svg>
+            0
+          </button>
+
+          <button type="button" className="feedAction feedBookmark" disabled title={text.browsePreparing} aria-label={text.browseSave}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+              <path d="M6 3h12v18l-6-4.5L6 21z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </article>
   );
 }
 
-export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, onMoveParty, onMoveBrowse }) {
+export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, onMoveParty, onMoveBrowse , onMoveCrew}) {
   const isLoggedIn = !!user;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -188,9 +188,9 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
       <nav className="navbar browseNav" aria-label={text.nav}>
         <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
         <div className="navLinks">
-          <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
+          <a href="/browse" onClick={onMoveBrowse}>{text.feed}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>
-          <a href="/">{text.nearby}</a>
+          <a href="/crew" onClick={onMoveCrew}>{text.crew}</a>
           <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
         <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>
@@ -199,28 +199,33 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
       <header className="browseHero">
         <div className="browseHeroText">
           <p className="eyebrow">{text.browseEyebrow}</p>
-          <h1>{text.browseTitle}</h1>
-          <p className="browseHeroSub">{text.browseSub}</p>
+          <h1>{text.feedTitle}</h1>
         </div>
         <button type="button" className="composeBtn" onClick={openCompose}>{text.browseCompose}</button>
       </header>
 
-      <main className="feedList">
-        {loading && <p className="browseEmpty">{text.browseLoading}</p>}
-        {error && <p className="browseEmpty">{error}</p>}
-        {!loading && !error && items.length === 0 && (
-          <p className="browseEmpty">{text.browseNoFeed}</p>
-        )}
-        {items.map(item => (
-          <FeedCard
-            key={item.id}
-            item={item}
-            isLoggedIn={isLoggedIn}
-            onLike={handleLike}
-            onLoginNeeded={onMoveLogin}
-          />
-        ))}
-      </main>
+      {/* 피드(왼쪽) + 랭킹 사이드바(오른쪽) 2단 */}
+      <div className="feedLayout">
+        <main className="feedList">
+          {loading && <p className="browseEmpty">{text.browseLoading}</p>}
+          {error && <p className="browseEmpty">{error}</p>}
+          {!loading && !error && items.length === 0 && (
+            <p className="browseEmpty">{text.browseNoFeed}</p>
+          )}
+          {items.map(item => (
+            <FeedCard
+              key={item.id}
+              item={item}
+              isLoggedIn={isLoggedIn}
+              onLike={handleLike}
+              onLoginNeeded={onMoveLogin}
+              onOpenMap={onOpenMap}
+            />
+          ))}
+        </main>
+
+        <FeedSidebar items={items} onOpenMap={onOpenMap} />
+      </div>
 
       {composeOpen && (
         <ComposePostModal

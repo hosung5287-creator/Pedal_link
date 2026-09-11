@@ -2,7 +2,7 @@
    상단 네비는 다른 탭과 동일 규격, 아래는 1180 컨테이너. */
 
 .accountPage {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--wash);
 }
 

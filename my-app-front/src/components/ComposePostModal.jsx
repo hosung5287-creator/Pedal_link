@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { text } from '../constants';
 import { getRoutes } from '../api/routes';
 import { publishPost } from '../api/feed';
+import { compressImage, formatBytes, MAX_UPLOAD_BYTES } from '../utils/image';
 
 // 저장된 내 경로 하나를 골라 문구·해시태그를 붙여 피드에 올리는 모달.
 // "게시물"은 별도 테이블이 아니라 경로(routes)에 딸린 내용이다.
@@ -13,6 +14,9 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
   const [tags, setTags] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [photo, setPhoto] = useState(null);      // { dataUrl, bytes, width, height }
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
@@ -35,6 +39,26 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const pickPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    // 같은 파일을 다시 골라도 onChange 가 걸리도록 입력값을 비운다
+    e.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) { setError(text.browsePhotoTypeError); return; }
+    if (file.size > MAX_UPLOAD_BYTES) { setError(text.browsePhotoTooBig); return; }
+
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      setPhoto(await compressImage(file));
+    } catch {
+      setError(text.browsePhotoReadError);
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!routeId || submitting) return;
@@ -42,7 +66,9 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
     setSubmitting(true);
     setError(null);
     try {
-      const card = await publishPost(routeId, { userId: user.id, description, tags });
+      const card = await publishPost(routeId, {
+        userId: user.id, description, tags, photo: photo?.dataUrl ?? null,
+      });
       onPublished(card);
       onClose();
     } catch (err) {
@@ -105,6 +131,44 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
                 placeholder={text.browseComposeTagsPlaceholder}
               />
             </label>
+
+            <div className="composeField">
+              <span>{text.browseComposePhoto}</span>
+
+              {/* 실제 input 은 숨기고 버튼/미리보기로 조작한다 (기본 파일 입력은 스타일이 안 먹는다) */}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="composeFileInput"
+                onChange={pickPhoto}
+              />
+
+              {photo ? (
+                <div className="composePhoto">
+                  <img src={photo.dataUrl} alt={text.browseComposePhotoAlt} />
+                  <div className="composePhotoBar">
+                    <span>{photo.width}×{photo.height} · {formatBytes(photo.bytes)}</span>
+                    <button type="button" className="composePhotoRemove" onClick={() => setPhoto(null)}>
+                      {text.browseComposePhotoRemove}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="composePhotoBtn"
+                  disabled={photoBusy}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7h3l2-2h8l2 2h3v13H3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+                  </svg>
+                  {photoBusy ? text.browseComposePhotoBusy : text.browseComposePhotoAdd}
+                </button>
+              )}
+            </div>
 
             {error && <p className="composeError">{error}</p>}
 

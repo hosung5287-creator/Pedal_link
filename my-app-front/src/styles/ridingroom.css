@@ -20,8 +20,9 @@
 
 .rrRoom {
   position: relative;
-  width: min(720px, 100%);
-  height: min(820px, calc(100vh - 48px));
+  /* 라이딩 중에는 지도가 주인공이라 화면을 넓게 쓴다 */
+  width: min(1280px, 100%);
+  height: min(940px, calc(100dvh - 32px));
   border-radius: 22px;
   overflow: hidden;
   background: #dbe4ea;

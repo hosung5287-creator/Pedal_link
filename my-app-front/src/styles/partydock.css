@@ -14,9 +14,9 @@
 /* 동그란 플로팅 버튼 (FAB) */
 .partyDockFab {
   position: relative;
-  /* 지도의 .mapFab 과 크기를 맞춘다 (플로팅 버튼 전부 52px) */
-  width: 52px;
-  height: 52px;
+  /* 지도의 .mapFab 과 크기를 맞춘다 (플로팅 버튼 전부 58px) */
+  width: 58px;
+  height: 58px;
   border: 0;
   border-radius: 999px;
   background: var(--grad);
@@ -39,6 +39,23 @@
   box-shadow: 0 8px 22px rgba(12, 27, 39, 0.18);
 }
 .partyDockFab.isInactive.isOpen { background: var(--ink); }
+
+/* 라이딩 중 — 초록. 누르면 도크가 아니라 라이딩 화면이 바로 열린다 */
+.partyDockFab.isRiding {
+  background: linear-gradient(120deg, #10b981, #059669);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.45);
+  animation: pdRidePulse 2s ease-in-out infinite;
+}
+
+@keyframes pdRidePulse {
+  0%, 100% { box-shadow: 0 10px 30px rgba(16, 185, 129, 0.45); }
+  50% { box-shadow: 0 10px 30px rgba(16, 185, 129, 0.45), 0 0 0 10px rgba(16, 185, 129, 0.14); }
+}
+
+/* 모션을 줄이는 설정이면 깜빡임을 끈다 */
+@media (prefers-reduced-motion: reduce) {
+  .partyDockFab.isRiding { animation: none; }
+}
 
 /* 멤버 수 배지 */
 .partyDockBadge {
@@ -318,41 +335,6 @@
 }
 .pdChatSendBtn:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
 
-/* 파티 미소속 빈 상태 */
-.pdEmptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 36px 24px;
-  text-align: center;
-}
-.pdEmptyIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--muted);
-}
-.pdEmptyState strong { color: var(--ink); font-size: 1.02rem; }
-.pdEmptyState p { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
-.pdFindBtn {
-  margin-top: 6px;
-  min-height: 42px;
-  padding: 0 20px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--mint);
-  color: #ffffff;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.pdFindBtn:hover { background: var(--mint-dark); }
 
 /* 멤버 프로필 팝업 */
 .pdProfileBackdrop {
@@ -472,8 +454,6 @@
   text-align: center;
 }
 
-/* 근처 탭 하단 "파티 찾기" CTA */
-.pdNearCta { margin: 4px 12px 12px; }
 
 /* 파티 탭 — 즉석 개설 폼 */
 .pdPartyPane {
@@ -482,19 +462,6 @@
   gap: 12px;
   padding: 16px;
   overflow-y: auto;
-}
-.pdPaneTitle { color: var(--ink); font-size: 0.98rem; font-weight: 800; }
-.pdCreateField { display: flex; flex-direction: column; gap: 6px; }
-.pdCreateField > span { font-size: 0.8rem; font-weight: 800; color: var(--muted); }
-.pdCreateField select {
-  min-height: 42px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  cursor: pointer;
 }
 .pdCreateErr { margin: 0; color: var(--crit); font-size: 0.85rem; font-weight: 700; }
 .pdCreateBtn {
@@ -510,17 +477,18 @@
 }
 .pdCreateBtn:hover:not(:disabled) { background: var(--mint-dark); }
 .pdCreateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
-.pdGhostBtn {
-  min-height: 40px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
+
+/* 파티 목록이 비었을 때 안내 아이콘 (pdPartyEmpty 안에서 쓴다) */
+.pdEmptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
 }
-.pdGhostBtn:hover { background: var(--wash); }
 
 /* 파티 탭 — 파티 없을 때 안내 */
 .pdPartyEmpty {
@@ -637,3 +605,11 @@
   font-weight: 800;
 }
 .pdNearGroup:first-of-type { padding-top: 8px; }
+
+/* 라이딩 중 FAB 안의 브랜드 로고 — 버튼 색(흰색)을 따라간다 */
+.partyDockLogo {
+  display: block;
+  width: auto;
+  height: 26px;
+  color: #ffffff;
+}

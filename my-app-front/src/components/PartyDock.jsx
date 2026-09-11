@@ -7,6 +7,9 @@ import { getOtherLocations } from '../api/locations';
 import { useLocationShare } from '../hooks/useLocationShare';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
+import { markRead } from '../utils/chatUnread';
+import { OPEN_RIDING_EVENT } from '../utils/riding';
+import BrandLogo from './BrandLogo';
 import PartyRoom from './PartyRoom';
 import RidingRoom from './RidingRoom';
 
@@ -63,6 +66,10 @@ export default function PartyDock({ user, onMoveParty }) {
     && (p.hostId === user?.id || (p.participants || []).some((m) => m.userId === user?.id)));
   const myRoomIds = myRooms.map((r) => r.id).join(',');
 
+  // 라이딩이 시작된 내 파티 — 있으면 FAB 이 초록으로 바뀌고, 눌렀을 때 바로 라이딩 화면을 연다
+  const ridingParty = myRooms.find((r) => r.rideStartedAt && r.status !== 'ended') || null;
+  const isRiding = !!ridingParty;
+
   const [chatRoomId, setChatRoomId] = useState(null);
 
   // 채팅방이 하나뿐이면 바로 열고, 여러 개면 고른 방이 없어질 때만 목록으로 돌린다
@@ -82,8 +89,10 @@ export default function PartyDock({ user, onMoveParty }) {
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
-    if (curTab === 'chat') chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, curTab]);
+    if (curTab !== 'chat') return;
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    markRead(chatRoomId, chatMessages);
+  }, [chatMessages, curTab, chatRoomId]);
 
   const sendChat = () => {
     if (!chatInput.trim()) return;
@@ -97,6 +106,19 @@ export default function PartyDock({ user, onMoveParty }) {
       sendChat();
     }
   };
+
+  // 파티 페이지 등 도크 바깥에서 "라이딩 시작"을 눌렀을 때도 같은 화면을 띄운다
+  useEffect(() => {
+    const onOpen = (e) => {
+      const id = e.detail?.partyId;
+      if (id == null) return;
+      setOpen(false);
+      setRoomOpen(false);
+      setRidingId(id);
+    };
+    window.addEventListener(OPEN_RIDING_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_RIDING_EVENT, onOpen);
+  }, []);
 
   // 내 파티 찾기
   useEffect(() => {
@@ -402,14 +424,18 @@ export default function PartyDock({ user, onMoveParty }) {
 
       <button
         type="button"
-        className={`partyDockFab${open ? ' isOpen' : ''}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-label={inParty ? party.title : t.findTitle}
+        className={`partyDockFab${open ? ' isOpen' : ''}${isRiding && !open ? ' isRiding' : ''}`}
+        // 라이딩 중이면 도크를 여는 대신 라이딩 화면으로 바로 들어간다
+        onClick={() => (isRiding ? setRidingId(ridingParty.id) : setOpen((o) => !o))}
+        aria-label={isRiding ? t.ridingOpen : inParty ? party.title : t.findTitle}
       >
         {open ? (
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
+        ) : isRiding ? (
+          // 라이딩 중에는 브랜드 자전거 로고를 그대로 쓴다 (색은 currentColor → 흰색)
+          <BrandLogo className="partyDockLogo" />
         ) : (
           <>
             <PeopleIcon />

@@ -46,7 +46,7 @@
   gap: 24px;
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 40px 0 36px;
+  padding: 28px 0 20px;
   text-align: left;
 }
 
@@ -73,12 +73,13 @@
   color: var(--muted);
 }
 
+/* 2단 레이아웃의 왼쪽 열을 그대로 채운다 (폭은 .feedLayout 이 정한다) */
 .feedList {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 32px 20px 64px;
-  display: grid;
-  gap: 24px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .browseEmpty {
@@ -91,52 +92,10 @@
   text-align: center;
 }
 
-.feedCard {
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
 
-/* 헤더 — 아바타 + 이름 + 위치 */
-.feedHead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
-}
 
-.feedAvatar {
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--grad);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 1.05rem;
-}
 
-.feedHeadText strong {
-  display: block;
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: var(--ink);
-}
 
-.feedHeadText p {
-  margin: 3px 0 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 700;
-}
 
 /* 경로 썸네일 */
 .feedThumb {
@@ -180,99 +139,20 @@
 .thumbStart { fill: var(--good); }
 .thumbEnd { fill: var(--crit); }
 
-/* 거리 · 상승 · 시간 */
-.feedStats {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0;
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--line);
-}
 
-.feedStats > div {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 
-.feedStats dt {
-  display: flex;
-  color: var(--mint);
-}
 
-.feedStats dd {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--ink);
-}
 
-/* 좋아요 · 댓글 · 공유 · 저장 */
-.feedActions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 18px;
-}
 
-.feedIconBtn {
-  background: none;
-  border: 0;
-  padding: 2px;
-  display: flex;
-  color: var(--ink);
-  cursor: pointer;
-  transition: transform 0.12s, color 0.12s;
-}
 
-.feedIconBtn:hover:not(:disabled) {
-  color: var(--mint-dark);
-}
 
-.feedIconBtn:active:not(:disabled) {
-  transform: scale(0.9);
-}
 
-.feedIconBtn:disabled {
-  color: #b6cbd6;
-  cursor: not-allowed;
-}
 
-.feedIconBtn.isLiked {
-  color: var(--crit);
-}
 
-.feedBookmark {
-  margin-left: auto;
-}
 
-/* 캡션 */
-.feedCaption {
-  padding: 0 18px 18px;
-}
 
-.feedLikes {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 900;
-  color: var(--ink);
-  margin-bottom: 8px;
-}
 
-.feedTitle {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: var(--ink);
-}
 
-.feedDesc {
-  margin: 0 0 6px;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
 
 .feedTags {
   margin: 0;
@@ -284,7 +164,6 @@
 @media (max-width: 600px) {
   .browseHero { padding: 32px 16px 28px; }
   .browseHero h1 { font-size: 1.9rem; }
-  .feedList { padding: 20px 14px 48px; gap: 18px; }
 }
 
 /* ── 둘러보기: 게시물 올리기 버튼 + 작성 모달 ─────────── */
@@ -510,4 +389,295 @@
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: var(--surface-2);
+}
+
+/* ── 피드 2단 레이아웃 (왼쪽 피드 / 오른쪽 랭킹) ───────── */
+
+/* 본문 열은 X/Threads 규격(600px)에 맞춘다. 828px 은 한 줄이 너무 길고
+   미디어가 2.3:1 로 납작해져서 피드처럼 안 보인다. */
+.feedLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 600px) 320px;
+  justify-content: center;
+  align-items: start;
+  gap: 40px;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 0 0 64px;
+}
+
+/* 2단 안에서는 피드가 왼쪽 열을 채운다 (가운데 정렬 해제) */
+
+.feedSide {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sideCard {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.sideHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.sideHead h2 { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--ink); }
+
+.sideMore {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mint-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sideMore:hover { text-decoration: underline; }
+
+.sideList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+/* 인기 코스 한 줄 */
+.sideRoute { display: flex; align-items: center; gap: 10px; }
+
+.sideRank {
+  flex-shrink: 0;
+  width: 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.sideThumb {
+  flex-shrink: 0;
+  width: 56px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+/* 피드용 썸네일을 작은 칸에 맞춘다 */
+.sideThumb .feedThumb {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.sideRouteInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sideRouteInfo strong {
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sideRouteInfo > span { color: var(--muted); font-size: 0.74rem; }
+
+/* 활발한 지역 한 줄 */
+.sideRegion { display: flex; flex-direction: column; gap: 6px; }
+.sideRegionInfo { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sideRegionInfo strong { color: var(--ink); font-size: 0.85rem; font-weight: 700; }
+.sideRegionInfo > span { flex-shrink: 0; color: var(--muted); font-size: 0.72rem; }
+
+.sideBar {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.sideBarFill { display: block; height: 100%; border-radius: 999px; background: var(--grad); }
+
+.sideNote { margin: 12px 0 0; color: var(--muted); font-size: 0.7rem; line-height: 1.5; }
+
+/* ── 피드 카드 정돈 (테두리·여백을 가볍게) ─────────────── */
+
+
+
+
+
+
+@media (max-width: 1023px) {
+  /* 좁아지면 사이드바를 숨기고 피드만 (모바일에서 랭킹은 부차적) */
+  .feedLayout { grid-template-columns: minmax(0, 1fr); }
+  .feedLayout .feedList { max-width: 680px; margin: 0 auto; }
+  .feedSide { display: none; }
+}
+
+@media (max-width: 600px) {
+  .feedLayout { width: calc(100% - 28px); }
+}
+
+/* ── 피드 게시물 (타임라인) ─────────────────────────────
+   카드 박스가 아니라 얇은 구분선으로 나뉜다. 아바타는 왼쪽 고정,
+   나머지가 오른쪽 한 열에 쌓이는 X/Threads 계열 배치. */
+
+.feedList { gap: 0; }
+
+.feedPost {
+  display: flex;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.feedPost:first-child { padding-top: 4px; }
+.feedPost:last-child { border-bottom: 0; }
+
+.feedAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--grad);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+/* 아바타 오른쪽 한 열 — 여기서만 세로로 쌓인다 */
+.feedBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 이름 · 위치 · 시간 한 줄 */
+.feedMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.86rem;
+}
+.feedMeta strong { color: var(--ink); font-weight: 800; }
+.feedMetaPlace,
+.feedMetaTime {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 앞 항목과 가운뎃점으로 구분 — 마크업에 점을 넣지 않는다 */
+.feedMetaPlace::before,
+.feedMetaTime::before { content: '· '; }
+
+.feedText {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.feedTags { margin: 0; color: var(--mint-dark); font-size: 0.85rem; font-weight: 600; }
+
+/* 미디어 — 둥근 모서리 안에 하단 정보 바까지 함께 들어간다 */
+.feedMedia {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+/* 높이를 px 로 박지 않고 비율로 잡는다 — 열 폭이 바뀌어도 납작해지지 않는다.
+   지도라서 인스타의 4:5(세로) 대신 4:3 을 쓴다. */
+.feedMedia .feedThumb {
+  aspect-ratio: 4 / 3;
+  height: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.feedPhoto {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.feedMediaBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.feedMediaInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.feedMediaInfo strong {
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feedMediaInfo > span { color: var(--muted); font-size: 0.74rem; }
+
+.feedMediaBtn {
+  flex-shrink: 0;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.feedMediaBtn:hover { background: var(--wash); border-color: var(--mint); color: var(--mint-dark); }
+
+/* 액션 — 아이콘 + 숫자를 붙여 한 줄로 (레퍼런스의 ♡117 💬32 ⇄8) */
+.feedActions { display: flex; align-items: center; gap: 22px; margin-top: 2px; }
+
+.feedAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.feedAction:hover:not(:disabled) { color: var(--mint-dark); }
+.feedAction:disabled { cursor: not-allowed; opacity: 0.65; }
+.feedAction.isLiked { color: var(--crit); }
+.feedBookmark { margin-left: auto; }
+
+@media (max-width: 600px) {
+  .feedActions { gap: 18px; }
 }

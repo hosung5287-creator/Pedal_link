@@ -45,7 +45,7 @@
   position: fixed;
   inset: 0;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
   background: var(--wash);
 }
@@ -1012,7 +1012,7 @@
 .mapFabStack {
   position: absolute;
   right: 24px;
-  bottom: 88px;           /* 파티 도크 FAB(52) + bottom(24) + 간격(12) 위 */
+  bottom: 94px;           /* 파티 도크 FAB(58) + bottom(24) + 간격(12) 위 */
   z-index: 1000;          /* Leaflet 컨트롤(1000)과 같은 층 */
   display: flex;
   flex-direction: column;
@@ -1022,8 +1022,8 @@
 
 .mapFab {
   /* 파티 도크 FAB 과 동일 크기 */
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1049,8 +1049,8 @@
 @media (max-width: 639px) {
   .mapFabStack {
     right: calc(16px + env(safe-area-inset-right));
-    /* 도크 FAB(52) + safe-area + 간격 */
-    bottom: calc(80px + env(safe-area-inset-bottom));
+    /* 도크 FAB(58) + safe-area + 간격 */
+    bottom: calc(86px + env(safe-area-inset-bottom));
   }
 }
 

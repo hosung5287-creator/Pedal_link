@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import PartyDock from './components/PartyDock';
 import MobileNav from './components/MobileNav';
+import CrewPage from './pages/CrewPage';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import PartyPage from './pages/PartyPage';
@@ -59,6 +60,7 @@ function App() {
   const moveSignup = (e) => { e.preventDefault(); moveTo('/signup'); };
   const moveLogin = (e) => { e.preventDefault(); moveTo('/login'); };
   const moveParty = (e) => { e.preventDefault(); moveTo('/party'); };
+  const moveCrew = (e) => { e.preventDefault(); moveTo('/crew'); };
   const moveBrowse = (e) => { e.preventDefault(); moveTo('/browse'); };
   const moveProfile = (e) => { e.preventDefault(); moveTo('/profile'); };
   const moveSettings = (e) => { e.preventDefault(); moveTo('/settings'); };
@@ -84,25 +86,27 @@ function App() {
   let page;
   if (currentPath === '/map') {
     const partyId = new URLSearchParams(search).get('partyId');
-    page = <MapPage user={user} partyId={partyId} onBackHome={moveHome} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+    page = <MapPage onMoveCrew={moveCrew} user={user} partyId={partyId} onBackHome={moveHome} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
   } else if (currentPath === '/signup') {
     page = <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   } else if (currentPath === '/login') {
     page = <LoginPage onMoveHome={moveHome} onMoveSignup={moveSignup} onLogin={handleLogin} />;
   } else if (currentPath === '/party') {
-    page = <PartyPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
+    page = <PartyPage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onStartRide={movePartyRide} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
+  } else if (currentPath === '/crew') {
+    page = <CrewPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
   } else if (currentPath === '/browse') {
-    page = <BrowsePage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+    page = <BrowsePage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
   } else if (currentPath === '/chat') {
     const partyId = new URLSearchParams(search).get('partyId');
-    page = <ChatPage user={user} partyId={partyId} onMoveHome={moveHome} onMoveParty={moveParty} onOpenMap={openMap} onMoveBrowse={moveBrowse} />;
+    page = <ChatPage onMoveCrew={moveCrew} user={user} partyId={partyId} onMoveHome={moveHome} onMoveParty={moveParty} onOpenMap={openMap} onMoveBrowse={moveBrowse} />;
   } else if (currentPath === '/profile') {
-    page = <ProfilePage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
+    page = <ProfilePage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
   } else if (currentPath === '/settings') {
-    page = <SettingsPage user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
+    page = <SettingsPage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
   } else {
     page = (
-      <HomePage
+      <HomePage onMoveCrew={moveCrew}
         user={user}
         onOpenMap={openMap}
         onMoveHome={moveHome}

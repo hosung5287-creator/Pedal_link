@@ -4,7 +4,7 @@ import BrandLogo from '../components/BrandLogo';
 import { text, account } from '../constants';
 
 // 프로필 페이지 (뼈대) — 로그인 사용자 정보 + "내 활동" 자리표시.
-export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMoveParty, onOpenMap }) {
+export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMoveParty, onOpenMap , onMoveCrew}) {
   const letter = (user?.name || '?').trim().charAt(0);
 
   return (
@@ -12,8 +12,9 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
       <nav className="navbar accountNav" aria-label={text.nav}>
         <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
         <div className="navLinks">
-          <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
+          <a href="/browse" onClick={onMoveBrowse}>{text.feed}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>
+          <a href="/crew" onClick={onMoveCrew}>{text.crew}</a>
           <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
         <a className="signupBackLink" href="/" onClick={onMoveHome}>{text.partyBackHome}</a>

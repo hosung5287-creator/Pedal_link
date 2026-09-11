@@ -1,5 +1,10 @@
-# Claude Code 로컬 설정
 .claude/
+.agents/
+.codex/
+.cursor/
+.windsurf/
+AGENTS.md
+GEMINI.md
 
 # Superpowers SDD 스크래치(진행 원장 등)
 .superpowers/
@@ -32,8 +37,18 @@ Thumbs.db
 # 크롬/크래시패드 등이 남기는 로그 (앱과 무관)
 debug.log
 
+# 환경변수 (API 키가 들어간다 — .bak 등 사본까지 막는다)
+.env.local
+.env.local.*
+**/.env.local
+**/.env.local.*
+
 # 작업표
 docs
 
 # 개인 참고 문서 (프로젝트 구조 지도)
 PROJECT_MAP.md
+
+# Local Remotion project, source recordings, and generated media
+/pedal-link-motion/
+/output/

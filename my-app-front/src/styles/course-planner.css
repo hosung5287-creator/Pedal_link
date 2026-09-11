@@ -1,0 +1,71 @@
+/* Scoped refinement of the live route planner. Map geometry stays unchanged. */
+.plannerBrandNav { padding-bottom:20px; border-bottom:1px solid var(--line); flex-shrink:0; }
+.plannerBrandNav .brand { display:inline-flex; align-items:center; gap:10px; color:var(--ink); text-decoration:none; font-size:22px; font-weight:750; }
+.plannerBrandNav .brandLogo,.mapHomeFloating .brandLogo { width:32px; height:32px; }
+.mapOnlyPage .routePlanner.searchActive .plannerBrandNav { padding:20px 24px; }
+.mapOnlyPage .mapPartyBanner { flex-direction:column; gap:5px; padding:12px; border:1px solid var(--line); border-radius:10px; font-size:12px; flex-shrink:0; }
+.mapOnlyPage .routePlanner.searchActive .mapPartyBanner { margin:12px 14px 0; }
+.mapHomeFloating { display:none; position:absolute; top:16px; left:16px; z-index:1000; align-items:center; gap:8px; min-height:44px; padding:8px 12px; border:1px solid var(--line); border-radius:12px; background:var(--paper); color:var(--ink); text-decoration:none; font-size:16px; font-weight:700; box-shadow:0 4px 16px #14334b12; }
+.mapWorkspace.panelClosed .mapHomeFloating { display:inline-flex; }
+.plannerBrandNav a:focus-visible,.mapHomeFloating:focus-visible { outline:2px solid var(--mint); outline-offset:4px; }
+.mapOnlyPage .routePlanner { padding:24px; gap:20px; background:#fff; box-shadow:8px 0 36px #14334b0a; }
+.plannerEyebrow { color:#0284c7; font-size:10px; font-weight:700; letter-spacing:1.8px; }
+.plannerTitleRow { display:flex; justify-content:space-between; align-items:center; margin-top:9px; }
+.plannerTitleRow h1 { margin:0; font-size:25px; font-weight:650; letter-spacing:-1px; }
+.plannerMode { padding:5px 9px; border-radius:6px; background:#edf7fc; color:#3984aa; font-size:11px; }
+.plannerHeading p { margin:9px 0 0; font-size:12px; color:#738796; }
+.mapOnlyPage .pointInputWrapper { gap:12px; margin:0; }
+.mapOnlyPage .dotsColumn { padding:26px 0; }
+.mapOnlyPage .startDot { background:#0ea5e9; box-shadow:0 0 0 4px #eaf7fd; }
+.mapOnlyPage .endDot { background:#334b5b; border-radius:3px; box-shadow:0 0 0 4px #edf2f5; }
+.mapOnlyPage .pointLine { width:1px; background:#d9e4eb; }
+.mapOnlyPage .fieldsColumn { gap:10px; }
+.mapOnlyPage .pointField { min-height:66px; padding:12px 15px; border:1px solid #e4ecf1; border-radius:12px; background:#fbfcfd; transition:background .18s,border-color .18s,box-shadow .18s; }
+.pointCaption { display:block; margin-bottom:5px; color:#738796; font-size:10px; font-weight:500; }
+.mapOnlyPage .pointLabel { font-size:14px; font-weight:600; }
+.mapOnlyPage .pointPlaceholder { font-size:13px; color:#8598a5; }
+.mapOnlyPage .pointField:hover,.mapOnlyPage .pointField:focus-visible { outline:none; border-color:#65bce5; background:#fff; box-shadow:0 0 0 3px #0ea5e90d; }
+.mapOnlyPage .routeLegend { display:flex; flex-wrap:wrap; gap:8px; border:0; padding:0; background:none; font-size:11px; font-weight:500; color:#738796; }
+.mapOnlyPage .routeLegend .routeSample { width:20px; }
+.mapOnlyPage .routeStatus { padding:12px 14px; border-radius:10px; background:#f4f8fb; color:#647f90; font-size:12px; font-weight:400; line-height:1.65; }
+.routeStatus.isCalculating::before { content:''; display:inline-block; width:7px; height:7px; margin-right:8px; border-radius:50%; background:#0ea5e9; animation:plannerPulse 1.2s ease-in-out infinite; }
+.mapOnlyPage .routeAnalysis { overflow:hidden; border:1px solid #e5edf2; border-radius:14px; padding:16px; background:white; }
+.analysisHeading { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; margin-bottom:16px; }
+.analysisHeading span { color:#397e64; background:#edf7f1; padding:4px 7px; border-radius:5px; font-size:10px; font-weight:400; }
+.mapOnlyPage .analysisStats { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:8px; }
+.mapOnlyPage .statTile { padding:0; background:transparent; border:0; text-align:left; align-items:flex-start; }
+.mapOnlyPage .statValue { font-size:24px; letter-spacing:-.8px; font-weight:550; color:#294657; }
+.mapOnlyPage .statTile:first-child .statValue { color:#0284c7; font-size:29px; }
+.mapOnlyPage .statLabel { font-size:10px; color:#78909e; }
+.mapOnlyPage .analysisTitle { font-size:11px; font-weight:500; color:#718794; }
+.mapOnlyPage .analysisLegend { font-size:11px; }
+.mapOnlyPage .plannerActionsRow { gap:8px; }
+.mapOnlyPage .plannerActionsRow .plannerSavePrimary { flex:1.6; display:flex; justify-content:space-between; align-items:center; padding:0 16px; background:#079bd8; border:1px solid #079bd8; box-shadow:0 3px 8px #0ea5e914; border-radius:10px; }
+.mapOnlyPage .plannerActionsRow .plannerReset { background:#f4f7f9; color:#708592; border:1px solid #e7edf1; font-size:12px; font-weight:500; border-radius:10px; }
+.mapOnlyPage .plannerActionsWide { background:white; color:#5f7d8e; border:1px solid #e4ecf1; font-weight:500; font-size:12px; border-radius:10px; }
+.mapOnlyPage .routeSaveModal { overflow:hidden; border:1px solid #deebf2; border-radius:12px; background:#f7fbfd; padding:15px; }
+.routeSaveModal label { display:block; font-size:12px; font-weight:600; margin-bottom:10px; }
+.mapOnlyPage .routeSaveModal input { width:100%; box-sizing:border-box; min-height:42px; border:1px solid #dce7ee; border-radius:8px; font-size:13px; background:white; }
+.mapOnlyPage .routeSaveActions .btn { min-height:38px; font-size:12px; border-radius:8px; }
+.mapOnlyPage .plannerMapControls { padding-top:18px; border-top:1px solid #edf1f4; gap:10px; }
+.mapOnlyPage .plannerMapControls label { font-size:10px; font-weight:500; color:#7f94a1; min-width:0; flex:1; }
+.mapOnlyPage .plannerMapControls select { width:100%; min-width:0; min-height:36px; padding-left:9px; font-size:11px; font-weight:400; border-radius:8px; background:#fbfcfd; }
+.mapOnlyPage .plannerRideBox { border:1px solid #e8eef2; padding:12px; border-radius:12px; background:#fafcfd; }
+.mapOnlyPage .plannerRideBtn { min-height:38px; font-size:12px; font-weight:500; border-radius:8px; }
+.mapOnlyPage .plannerRideBtn:disabled { opacity:.4; }
+.mapOnlyPage .routePlanner.searchActive { padding:0; gap:0; }
+.mapOnlyPage .searchOverlayHeader { padding:18px 14px; }
+.mapOnlyPage .searchOverlayInput { font-size:14px; }
+.mapOnlyPage .routePlanner button:focus-visible { outline:2px solid #0ea5e9; outline-offset:3px; }
+@keyframes plannerPulse { 50% { opacity:.3; } }
+@media (max-width:767px) {
+ .mapHomeFloating { display:inline-flex; top:max(12px, env(safe-area-inset-top)); left:12px; }
+ .plannerBrandNav { display:none; }
+ .mapOnlyPage .routePlanner { padding:20px 20px calc(20px + env(safe-area-inset-bottom)); border-radius:22px 22px 0 0; }
+ .plannerTitleRow h1 { font-size:22px; }
+ .mapOnlyPage .routePlanner.searchActive { padding:0; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .mapOnlyPage .routePlanner,.mapOnlyPage .panelToggle,.mapOnlyPage .pointField { transition:none; }
+ .routeStatus.isCalculating::before { animation:none; }
+}

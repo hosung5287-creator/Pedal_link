@@ -1,0 +1,465 @@
+/* 크루(정기 모임) 페이지 — 크루 찾기 격자 + 크루 상세 3단.
+   레이아웃은 파티 페이지(party.css)와 같은 규격을 따른다.
+   시안: design/untitled.pen 의 "PL Crew 찾기" / "PL Crew 상세" 프레임. */
+
+.crewPage {
+  min-height: 100dvh;
+  background: var(--wash);
+  color: var(--ink);
+}
+
+/* 상단 네비는 밝은 배경 위 — 글씨를 어둡게 (파티/둘러보기와 동일) */
+.crewNav {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px max(20px, calc((100% - 1180px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.crewNav .navLinks a { color: var(--muted); transition: color 0.15s; }
+.crewNav .navLinks a:hover { color: var(--ink); }
+.crewPage .brand,
+.crewPage .signupBackLink { color: var(--ink); }
+.crewPage .signupBackLink:hover { color: var(--mint-dark); }
+
+.crewBody {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 24px 0 64px;
+}
+
+/* ── 탭 (크루 찾기 / 내 크루) ─────────────────────────── */
+
+.crewTabs {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.crewTabs button:not(.crewCreateBtn) {
+  position: relative;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s;
+}
+
+/* 활성 탭 밑줄 — 양 끝이 둥근 막대 */
+.crewTabs button:not(.crewCreateBtn)::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--mint);
+  opacity: 0;
+  transform: scaleX(0.6);
+  transition: opacity 0.18s, transform 0.18s;
+}
+.crewTabs button:not(.crewCreateBtn).isActive::before { opacity: 1; transform: none; }
+
+/* 두 탭을 가르는 세로선 — 위아래로 사라지는 그라데이션 */
+.crewTabs button:not(.crewCreateBtn):first-child::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  right: -12px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, transparent, var(--ink) 22%, var(--ink) 78%, transparent);
+}
+
+.crewTabs button:not(.crewCreateBtn):hover { color: var(--ink); background: var(--wash); }
+.crewTabs button:not(.crewCreateBtn).isActive { color: var(--ink); }
+
+.crewTabLabel { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.crewTabLabel > strong { font-size: 0.98rem; font-weight: 800; letter-spacing: -0.2px; }
+.crewTabLabel > span { color: var(--muted); font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+.crewTabs button:not(.crewCreateBtn).isActive .crewTabLabel > span { color: var(--mint-dark); }
+
+/* 오른쪽 끝 "크루 만들기" — 둘러보기의 .composeBtn 을 그대로 쓴다 */
+.crewCreateBtn {
+  align-self: center;
+  margin-left: auto;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.crewCreateBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── 크루 카드 격자 ──────────────────────────────────── */
+
+.crewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 22px;
+}
+
+.crewCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.crewCardCover {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 170px;
+  padding: 0;
+  border: 0;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.crewCardCover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.crewCoverEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--accent-soft);
+}
+.crewCoverLogo { display: block; width: auto; height: 34px; color: var(--mint); }
+
+.crewCardTag {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(12, 27, 39, 0.8);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.crewCardBody { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+
+.crewCardName {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.06rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.crewCardName:hover { color: var(--mint-dark); }
+
+.crewCardMeta { display: grid; gap: 6px; margin: 0; }
+.crewCardMeta.isRow { grid-auto-flow: column; justify-content: start; gap: 18px; }
+.crewCardMeta > div { display: flex; align-items: center; gap: 7px; }
+.crewCardMeta dt { color: var(--muted); font-size: 0.74rem; font-weight: 800; }
+.crewCardMeta dd { margin: 0; color: var(--ink); font-size: 0.8rem; font-weight: 600; }
+
+.crewJoinBtn {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.crewJoinBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.crewJoinBtn.isJoined { background: var(--surface-2); border: 1px solid var(--line); color: var(--good); }
+.crewJoinBtn.isPending { background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); cursor: not-allowed; }
+
+.crewEmpty {
+  margin: 0;
+  padding: 48px 24px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+
+.crewError {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: var(--crit);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+/* ── 크루 상세 ──────────────────────────────────────── */
+
+.crewBack {
+  margin-bottom: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.crewBack:hover { color: var(--mint-dark); }
+
+.crewDetailHead {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 20px;
+}
+
+.crewDetailAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--accent-soft);
+}
+.crewDetailAvatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.crewDetailText { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.crewDetailText h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.7rem;
+  letter-spacing: -0.5px;
+}
+
+.crewRoleTag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.crewDesc { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
+
+.crewCols { display: flex; align-items: stretch; gap: 18px; height: 520px; }
+.crewCol { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.crewColChat { flex: 1 1 auto; min-width: 0; }
+.crewColMembers { flex: 0 0 330px; }
+.crewColControl { flex: 0 0 360px; }
+
+.crewColTitle { margin: 0; flex-shrink: 0; color: var(--muted); font-size: 0.82rem; font-weight: 800; }
+.crewSubTitle { margin: 0; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
+
+.crewChatCard,
+.crewControlCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+/* 아직 서버가 없는 영역 안내 */
+.crewSoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  padding: 24px;
+  text-align: center;
+}
+.crewSoon strong { color: var(--ink); font-size: 1rem; }
+.crewSoon p { margin: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.55; }
+
+.crewSoonBadge {
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.crewCountBadge {
+  margin-left: auto;
+  min-width: 18px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--crit);
+  color: #ffffff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* 멤버 목록 */
+.crewMembers {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.crewMember { display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 12px; }
+.crewMember.isMe { background: var(--accent-soft); }
+
+.crewAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--mint-dark);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.crewMemberInfo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.crewMemberName { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: 0.88rem; font-weight: 700; }
+
+.crewTag {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+.crewTag.isLeader { background: var(--mint); }
+
+/* 이번 주 참석 여부 */
+.crewAttend { font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+.crewAttend.is-yes { color: var(--good); }
+.crewAttend.is-no { color: var(--crit); }
+
+.crewEmptyRow { margin: 0; padding: 20px 12px; color: var(--muted); font-size: 0.86rem; text-align: center; }
+
+/* 관리 패널 */
+.crewPrimaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.crewPrimaryBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+.crewPrimaryBtn .crewSoonBadge { margin-left: 0; background: rgba(255, 255, 255, 0.25); color: #ffffff; }
+
+.crewUpcoming { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.crewUpcoming li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.crewUpcomingInfo { display: flex; flex-direction: column; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.crewUpcomingInfo strong { color: var(--ink); font-size: 0.84rem; font-weight: 800; }
+.crewUpcomingInfo span { color: var(--muted); font-size: 0.74rem; }
+
+.crewSmallBtn {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.crewSmallBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.crewMenu { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+
+.crewMenuBtn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.crewMenuBtn:hover:not(:disabled) { background: var(--wash); border-color: var(--mint); }
+.crewMenuBtn:disabled { color: var(--muted); cursor: not-allowed; }
+.crewMenuBtn.isDanger { border-color: rgba(239, 68, 68, 0.35); color: var(--crit); }
+.crewMenuBtn.isDanger:hover { background: #fef2f2; border-color: var(--crit); }
+
+/* ── 좁은 화면 ──────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .crewCols { flex-direction: column; height: auto; }
+  .crewColMembers,
+  .crewColControl { flex: 0 0 auto; }
+  .crewChatCard { min-height: 220px; }
+  .crewMembers { max-height: 320px; }
+}
+
+@media (max-width: 767px) {
+  .crewBody { width: calc(100% - 28px); }
+  .crewTabs { flex-wrap: wrap; }
+  .crewTabs button:not(.crewCreateBtn) { flex: 1 1 0; padding: 12px 10px; }
+  .crewTabLabel > span { display: none; }
+  .crewCreateBtn { order: -1; width: 100%; margin: 0 0 12px; justify-content: center; }
+  .crewDetailHead { flex-direction: column; align-items: flex-start; }
+  .crewCardMeta.isRow { grid-auto-flow: row; gap: 6px; }
+}

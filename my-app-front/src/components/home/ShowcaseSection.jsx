@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import CourseTabs from './CourseTabs';
 import { fadeUp, stagger, viewportOnce } from '../../utils/motion';
 
 // 쇼케이스 섹션 — 헤드(뱃지+제목+설명) + 큰 이미지 자리 + 3칸 기능.
@@ -24,6 +25,7 @@ export default function ShowcaseSection({ id, variant, eyebrow, title, sub, imag
           <motion.p className="homeShowcaseSub" variants={fadeUp}>{sub}</motion.p>
         </motion.div>
 
+        {features.every(feature => feature.image) ? <CourseTabs features={features} /> : <>
         <motion.div
           className="homeImgSlot"
           variants={fadeUp}
@@ -50,6 +52,7 @@ export default function ShowcaseSection({ id, variant, eyebrow, title, sub, imag
             </motion.div>
           ))}
         </motion.div>
+        </>}
       </div>
     </section>
   );

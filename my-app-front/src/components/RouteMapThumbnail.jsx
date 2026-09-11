@@ -20,9 +20,10 @@ export default function RouteMapThumbnail({ path }) {
   }, [inView]);
 
   useEffect(() => {
-    if (!inView || !nodeRef.current || !path || path.length < 2) return;
+    if (!inView || !nodeRef.current || !path || path.length < 2) return undefined;
 
-    const map = L.map(nodeRef.current, {
+    const node = nodeRef.current;
+    const map = L.map(node, {
       // 정지된 캡처처럼 — 모든 상호작용 끔
       zoomControl: false,
       attributionControl: false,
@@ -46,11 +47,27 @@ export default function RouteMapThumbnail({ path }) {
     L.circleMarker(latlngs[0], { radius: 5, weight: 2, color: '#ffffff', fillColor: '#10b981', fillOpacity: 1 }).addTo(map);
     L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, weight: 2, color: '#ffffff', fillColor: '#ef4444', fillOpacity: 1 }).addTo(map);
 
-    map.fitBounds(line.getBounds(), { padding: [18, 18] });
-    // 컨테이너 크기 확정 후 타일이 정확히 채워지도록
-    const t = setTimeout(() => map.invalidateSize(), 60);
+    const bounds = line.getBounds();
+    map.fitBounds(bounds, { padding: [18, 18] });
 
-    return () => { clearTimeout(t); map.remove(); };
+    // Leaflet 은 지도를 만든 시점의 컨테이너 크기를 기억한다.
+    // 화면 밖(IntersectionObserver rootMargin)에서 만들어지거나 폰트·이미지 때문에
+    // 레이아웃이 나중에 확정되면, 기억한 크기와 실제 크기가 어긋나 지도가 잘려 보인다.
+    // 크기가 바뀔 때마다 다시 계산하고 경로도 다시 맞춘다.
+    const refit = () => {
+      map.invalidateSize({ animate: false });
+      map.fitBounds(bounds, { padding: [18, 18] });
+    };
+    const t = setTimeout(refit, 60);
+
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refit) : null;
+    ro?.observe(node);
+
+    return () => {
+      clearTimeout(t);
+      ro?.disconnect();
+      map.remove();
+    };
   }, [inView, path]);
 
   if (!path || path.length < 2) {

@@ -6,6 +6,7 @@ import { approveRequest, rejectRequest, leaveParty, deleteParty, startPartyRide,
 import { getRouteById } from '../api/routes';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
+import { markRead } from '../utils/chatUnread';
 import RouteMapThumbnail from './RouteMapThumbnail';
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
@@ -146,7 +147,9 @@ export function PartyRoomPanel({ party, rooms, user, onSelectRoom, onClose, onUp
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // 이 방을 보고 있으므로 여기까지 읽은 것으로 표시 → 파티 탭 뱃지가 줄어든다
+    markRead(party.id, messages);
+  }, [messages, party.id]);
 
   const isHost = party.hostId === user.id;
   const members = party.participants || [];

@@ -1,9 +1,11 @@
 export const text = {
   nav: '주요 내비게이션',
   browse: '둘러보기',
+  feed: '피드',
   makeCourse: '코스 만들기',
   nearby: '근처',
   party: '파티',
+  crew: '크루',
   mapButton: '지도 보기',
   eyebrow: '주말 자전거 코스',
   headline: '다음 라이딩을 계획해보세요',
@@ -92,22 +94,24 @@ export const text = {
   partyTitle: '파티',
   partyEyebrow: '링크',
   partySub: '저장한 코스로 같이 탈 사람을 지금 모아보세요.',
-  partyMyRoutes: '내 저장 경로로 링크 만들기',
   partyNoRoutes: '저장된 경로가 없어요. 지도에서 경로를 먼저 저장해보세요.',
-  partyRoutesLoginNeeded: '로그인하면 내가 저장한 경로로 링크를 만들 수 있어요.',
   routeListLoginNeeded: '로그인 후 이용할 수 있습니다.',
   partyMakeButton: '링크 만들기',
   partyCreateSub: '저장한 코스를 골라 같이 탈 사람을 모아보세요.',
   partyCreateFailed: '링크를 만들지 못했습니다.',
   partyOpenList: '모집 중인 링크',
   partyNoParties: '아직 열린 링크가 없어요. 첫 링크를 만들어보세요!',
-  partyBrowseTitle: '다른 링크 둘러보기',
   partyViewSwitch: '파티 화면 전환',
   partyViewRoom: '내 파티',
   partyRoomEmptyTitle: '참여 중인 파티가 없어요',
   partyRoomEmptySub: '모집 중인 링크에 참여하거나, 내 코스로 링크를 열어보세요.',
   partyRoomEmptyLogin: '로그인하면 참여 중인 파티를 여기서 볼 수 있어요.',
   partyViewList: '모집 중인 링크',
+  partyViewListHint: '참여할 파티 찾기',
+  partyOpenRoom: '대기방 열기',
+  partyRidingNow: '라이딩 중',
+  partyCountUnit: '개 참여 중',
+  partyViewRoomHint: '참여 중인 파티 없음',
   partyFormTime: '모임 시간',
   partyFormMax: '최대 인원',
   partyFormTitle: '링크 제목 (선택)',
@@ -137,6 +141,7 @@ export const text = {
   partyDeleteYes: '삭제',
   partyDeleteNo: '취소',
   partyDeleteFailed: '삭제하지 못했습니다.',
+  partyRideStartFailed: '라이딩을 시작하지 못했습니다.',
   partyLoadFailed: '파티 목록을 불러오지 못했습니다. 서버 상태를 확인해 주세요.',
   rideStart: '라이딩 시작',
   rideStop: '라이딩 종료',
@@ -166,8 +171,7 @@ export const text = {
   closingMap: '지도 보기',
   closingParty: '파티 보기',
   browseEyebrow: '라이더 피드',
-  browseSub: '다른 라이더들이 저장한 코스를 구경해보세요.',
-  browseTitle: '라이더들의 코스를 둘러보세요',
+  feedTitle: '피드',
   browseLoading: '불러오는 중…',
   browseNoFeed: '아직 공유된 코스가 없어요. 지도에서 경로를 저장하면 여기에 올라옵니다.',
   browseLoadFailed: '피드를 불러오지 못했습니다.',
@@ -176,6 +180,7 @@ export const text = {
   browseComment: '댓글',
   browseShare: '공유',
   browseSave: '저장',
+  browseOpenMap: '지도로 보기',
   browsePreparing: '준비 중인 기능입니다',
   browseCompose: '게시물 올리기',
   browseComposeTitle: '게시물 올리기',
@@ -197,6 +202,68 @@ export const text = {
   browseComposeCancel: '취소',
   browseComposeNoRoutes: '저장된 경로가 없어요. 지도에서 경로를 먼저 저장해주세요.',
   browseComposeFailed: '게시물을 올리지 못했습니다.',
+};
+
+// ── 피드 사이드바 (인기 코스 / 활발한 지역) ──────────
+export const feedSide = {
+  aria: '인기 코스와 활발한 지역',
+  topRoutes: '인기 코스',
+  topRegions: '활발한 지역',
+  seeAll: '지도에서 보기',
+  likes: '좋아요',
+  riders: '라이더',
+  courses: '코스',
+  unit: '명',
+  note: '최근 올라온 게시물을 기준으로 집계했어요.',
+};
+
+// ── 크루(정기 모임) ─────────────────────────────────
+export const crew = {
+  tabsLabel: '크루 화면 전환',
+  findTab: '크루 찾기',
+  findTabHint: '지역·요일로 탐색',
+  mineTab: '내 크루',
+  crewUnit: '개 참여 중',
+  noMyCrew: '가입한 크루 없음',
+  createCrew: '크루 만들기',
+
+  regionLabel: '지역',
+  scheduleLabel: '일정',
+  memberLabel: '인원',
+  noSchedule: '일정 미정',
+
+  join: '가입 신청',
+  joined: '가입됨',
+  pending: '승인 대기중',
+  leader: '리더',
+  me: '나',
+
+  backToList: '크루 목록',
+  chatTitle: '크루 채팅',
+  chatSoonTitle: '크루 채팅은 준비 중이에요',
+  chatSoonSub: '채팅방 번호가 파티와 겹치지 않도록 서버 작업이 끝나면 열립니다.',
+  memberListTitle: '크루 멤버',
+  noMembers: '아직 멤버 정보가 없어요.',
+  controlTitle: '크루 관리',
+  memberPanelTitle: '크루 메뉴',
+  openRide: '이번 주 라이딩 열기',
+  upcomingTitle: '예정된 라이딩',
+  noUpcoming: '예정된 라이딩이 없어요.',
+  attend: '참여',
+  attendYes: '이번 주 참석',
+  attendNo: '불참',
+  attendUnknown: '미정',
+  settings: '크루 설정',
+  manageRequests: '가입 요청 관리',
+  leave: '크루 나가기',
+
+  soon: '곧',
+  soonHint: '준비 중이에요.',
+  noCrew: '아직 만들어진 크루가 없어요.',
+  noMyCrewLong: '아직 가입한 크루가 없어요. 크루 찾기에서 참여해보세요.',
+  loadFailed: '크루 목록을 불러오지 못했습니다.',
+  joinFailed: '가입 신청에 실패했습니다.',
+  leaveFailed: '크루를 나가지 못했습니다.',
 };
 
 export const seoulCenter = [37.5665, 126.978];
@@ -363,9 +430,9 @@ export const homeCourse = {
   sub: '출발지와 도착지를 찍으면 거리·고도·예상 시간이 자동으로 계산됩니다.',
   imageLabel: '이미지 자리 — 지도/경로 편집 화면',
   features: [
-    { title: '실시간 계산', desc: '점을 찍는 순간 거리·상승·시간이 표시됩니다.' },
-    { title: '경로 저장', desc: '마음에 든 코스는 저장해 다시 꺼내 쓰세요.' },
-    { title: '함께 공유', desc: '완성한 코스를 파티에 올려 함께 달려요.' },
+    { title: '코스 그리기', desc: '지도 위에 출발지와 도착지를 찍어 보세요.', image: '/images/course/draw.png', alt: '한강 지도에서 출발 지점을 지정한 실제 코스 편집 화면' },
+    { title: '실시간 계산', desc: '거리·고도·예상 시간을 바로 확인하세요.', image: '/images/course/calculate.png', alt: '거리 0.4km, 상승 3m, 예상 시간 1분이 표시된 실제 계산 결과' },
+    { title: '저장한 코스', desc: '마음에 든 코스를 저장해 다시 꺼내 쓰세요.', image: '/images/course/saved.png', alt: '한강 코스와 경로가 저장되었습니다 알림이 표시된 실제 저장 완료 화면' },
   ],
 };
 
@@ -397,9 +464,59 @@ export const homeBrowse = {
   eyebrow: '둘러보기',
   title: '라이더들의 코스를 둘러보세요',
   sub: '다른 라이더가 완주한 코스를 피드에서 구경하고 저장하세요.',
-  imageLabel: '이미지 자리 — 코스 피드',
   points: ['썸네일·거리·고도 한눈에', '좋아요로 인기 코스 확인', '마음에 든 코스 저장'],
 };
+
+// 홈 "둘러보기" 섹션의 흐르는 피드 미리보기 (FeedMarquee 전용 정적 데이터).
+// 실제 피드를 부르지 않는다 — 홈은 로그인 전에도 뜨고, 지도 타일까지 얹으면 무거워진다.
+export const homeFeedSamples = [
+  {
+    photo: '/feed/hanriver-sunset.jpg',
+    author: '정우', place: '반포한강공원', time: '42분',
+    body: '반포에서 여의도까지 야경 보면서 천천히 달렸어요. 초보도 부담 없는 코스입니다.',
+    routeName: '한강 야경 코스', distance: '12.4km', ascend: '50m', duration: '48분',
+    likes: 117, comments: 32, shares: 8, tone: '#e9f2f7',
+    line: 'M28 196 C 92 168, 116 214, 172 138 S 252 92, 300 58',
+    start: [28, 196], end: [300, 58],
+  },
+  {
+    photo: '/feed/mountain-view.jpg',
+    author: '소연', place: '남산공원', time: '3시간',
+    body: '남산 업힐 3바퀴. 다리는 남아나질 않지만 정상 뷰는 진짜 좋습니다.',
+    routeName: '남산 업힐 반복', distance: '8.2km', ascend: '420m', duration: '41분',
+    likes: 91, comments: 11, shares: 3, tone: '#eaf3ec',
+    line: 'M40 210 C 96 178, 108 86, 168 104 S 254 190, 296 72',
+    start: [40, 210], end: [296, 72],
+  },
+  {
+    photo: '/feed/hanriver-bridge.jpg',
+    author: '민재', place: '잠수교 북단', time: '6시간',
+    body: '퇴근하고 가볍게 한 바퀴. 평일 저녁이라 사람도 적고 좋았어요.',
+    routeName: '퇴근길 순환', distance: '6.8km', ascend: '12m', duration: '22분',
+    likes: 46, comments: 7, shares: 2, tone: '#f1eff9',
+    line: 'M52 84 C 116 62, 158 158, 214 150 S 282 196, 292 168',
+    start: [52, 84], end: [292, 168],
+  },
+  {
+    photo: '/feed/cafe-stop.jpg',
+    author: '세훈', place: '아라뱃길', time: '어제',
+    body: '아라뱃길 왕복 완주했습니다. 바람만 없으면 정말 편한 코스예요.',
+    routeName: '아라뱃길 완주', distance: '31.0km', ascend: '38m', duration: '1시간 52분',
+    likes: 38, comments: 5, shares: 1, tone: '#faf1e8',
+    line: 'M24 130 C 88 124, 140 66, 196 94 S 268 150, 304 128',
+    start: [24, 130], end: [304, 128],
+  },
+  {
+    photo: '/feed/mtb-ridge.jpg',
+    author: '유진', place: '뚝섬유원지', time: '어제',
+    body: '뚝섬 한 바퀴 돌고 왔어요. 벚꽃 시즌엔 더 예쁠 것 같습니다.',
+    routeName: '뚝섬 한바퀴', distance: '18.5km', ascend: '24m', duration: '1시간 6분',
+    likes: 24, comments: 3, shares: 1, tone: '#e9f2f7',
+    line: 'M60 70 C 96 150, 156 178, 200 130 S 268 68, 288 152',
+    start: [60, 70], end: [288, 152],
+  },
+];
+
 
 // S6 · CTA
 export const homeCta = {
@@ -458,6 +575,7 @@ export const partyDock = {
   viewAllParties: '전체 파티 보기',
   noPartyTitle: '아직 참여한 파티가 없어요',
   chatNeedParty: '파티에 참여하면 멤버와 채팅할 수 있어요.',
+  ridingOpen: '라이딩 화면 열기',
   findTitle: '근처 라이더',
   nearbyPrefix: '근처',
   memberTag: '파티원',

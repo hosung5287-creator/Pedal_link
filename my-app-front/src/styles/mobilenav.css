@@ -1,0 +1,149 @@
+/* 모바일 햄버거 내비게이션.
+   페이지마다 있는 .navLinks 가 767px 이하에서 숨겨지므로(App.css) 그 자리를 대신한다.
+   768px 이상에서는 버튼 자체가 사라져 데스크톱 화면에는 영향이 없다. */
+
+.mnavBtn {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+  z-index: 1500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  /* 손가락 최소 터치 영역 44px */
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(12, 27, 39, 0.14);
+}
+
+.mnavBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(12, 27, 39, 0.5);
+  animation: mnavFade 0.15s ease-out;
+}
+
+@keyframes mnavFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mnavSheet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, 84vw);
+  /* dvh: 모바일 주소창이 접혔다 펴져도 높이가 어긋나지 않는다 */
+  height: 100dvh;
+  padding:
+    calc(16px + env(safe-area-inset-top)) 16px
+    calc(16px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  box-shadow: -8px 0 30px rgba(12, 27, 39, 0.25);
+  animation: mnavSlide 0.18s ease-out;
+}
+
+@keyframes mnavSlide {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
+.mnavHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 4px 4px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mnavTitle {
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 800;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mnavClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.mnavList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.mnavItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  /* 터치 타겟 48px */
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.mnavItem:active { background: var(--wash); }
+.mnavItem.isActive { background: var(--accent-soft); color: var(--mint-dark); }
+
+.mnavAuth {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.mnavGhost,
+.mnavSolid {
+  flex: 1 1 0;
+  min-height: 46px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.mnavGhost { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.mnavSolid { border: 0; background: var(--mint); color: #ffffff; }
+
+/* 데스크톱에서는 .navLinks 가 보이므로 햄버거를 띄우지 않는다 */
+@media (max-width: 767px) {
+  .mnavBtn { display: inline-flex; }
+}

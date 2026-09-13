@@ -37,7 +37,7 @@ body { background: var(--bg); }
 }
 
 .app {
-  min-height: 100vh;
+  min-height: 100dvh;
   color: var(--ink);
   background: var(--wash);
 }
@@ -529,5 +529,22 @@ main {
 
   .routeCard {
     width: 286px;
+  }
+}
+
+/* ── 모바일: 네비 우측 요소를 햄버거(MobileNav)로 흡수 ────────────
+   767px 이하에서 .navLinks 가 숨겨지는데, 그 자리를 고정 위치의 햄버거 버튼이
+   차지한다. 우상단의 "홈으로"/유저메뉴와 겹치므로 함께 숨기고,
+   대신 그 항목들을 햄버거 시트 안에 넣는다. */
+@media (max-width: 767px) {
+  .navbar .signupBackLink,
+  .navbar .navActions,
+  .navbar .userMenu {
+    display: none;
+  }
+
+  /* 햄버거 버튼(44px)이 브랜드 로고를 덮지 않도록 오른쪽 여백 확보 */
+  .navbar {
+    padding-right: 52px;
   }
 }

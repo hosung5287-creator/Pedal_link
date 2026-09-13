@@ -18,6 +18,7 @@ export default function HeroSection({
   onMoveProfile,
   onMoveSettings,
   onLogout,
+  onMoveCrew,
 }) {
   const [videoFailed, setVideoFailed] = useState(false);
   const [reducedMotion] = useState(
@@ -48,9 +49,9 @@ export default function HeroSection({
       <nav className="navbar" aria-label={text.nav}>
         <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
         <div className="navLinks">
-          <a href="/browse" onClick={onMoveBrowse}>{text.browse}</a>
+          <a href="/browse" onClick={onMoveBrowse}>{text.feed}</a>
           <a href="/party" onClick={onMoveParty}>{text.party}</a>
-          <a href="/">{text.nearby}</a>
+          <a href="/crew" onClick={onMoveCrew}>{text.crew}</a>
           <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
         <div className="navActions">

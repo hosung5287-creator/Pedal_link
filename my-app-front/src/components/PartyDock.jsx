@@ -7,6 +7,9 @@ import { getOtherLocations } from '../api/locations';
 import { useLocationShare } from '../hooks/useLocationShare';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
+import { markRead } from '../utils/chatUnread';
+import { OPEN_RIDING_EVENT } from '../utils/riding';
+import BrandLogo from './BrandLogo';
 import PartyRoom from './PartyRoom';
 import RidingRoom from './RidingRoom';
 
@@ -47,7 +50,6 @@ export default function PartyDock({ user, onMoveParty }) {
   const [roomInitialId, setRoomInitialId] = useState(null); // 파티 룸을 열 때 바로 보여줄 방
   const [ridingId, setRidingId] = useState(null); // 라이딩 룸이 떠 있는 파티 id
   const [tab, setTab] = useState('near');
-  const [partySubTab, setPartySubTab] = useState('mine'); // 'mine' | 'list'
   const [applyingId, setApplyingId] = useState(null);
   const [applyError, setApplyError] = useState('');
   const [locs, setLocs] = useState({});
@@ -63,6 +65,10 @@ export default function PartyDock({ user, onMoveParty }) {
     p.status !== 'ended'
     && (p.hostId === user?.id || (p.participants || []).some((m) => m.userId === user?.id)));
   const myRoomIds = myRooms.map((r) => r.id).join(',');
+
+  // 라이딩이 시작된 내 파티 — 있으면 FAB 이 초록으로 바뀌고, 눌렀을 때 바로 라이딩 화면을 연다
+  const ridingParty = myRooms.find((r) => r.rideStartedAt && r.status !== 'ended') || null;
+  const isRiding = !!ridingParty;
 
   const [chatRoomId, setChatRoomId] = useState(null);
 
@@ -83,8 +89,10 @@ export default function PartyDock({ user, onMoveParty }) {
   const chatBottomRef = useRef(null);
 
   useEffect(() => {
-    if (curTab === 'chat') chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, curTab]);
+    if (curTab !== 'chat') return;
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    markRead(chatRoomId, chatMessages);
+  }, [chatMessages, curTab, chatRoomId]);
 
   const sendChat = () => {
     if (!chatInput.trim()) return;
@@ -98,6 +106,19 @@ export default function PartyDock({ user, onMoveParty }) {
       sendChat();
     }
   };
+
+  // 파티 페이지 등 도크 바깥에서 "라이딩 시작"을 눌렀을 때도 같은 화면을 띄운다
+  useEffect(() => {
+    const onOpen = (e) => {
+      const id = e.detail?.partyId;
+      if (id == null) return;
+      setOpen(false);
+      setRoomOpen(false);
+      setRidingId(id);
+    };
+    window.addEventListener(OPEN_RIDING_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_RIDING_EVENT, onOpen);
+  }, []);
 
   // 내 파티 찾기
   useEffect(() => {
@@ -150,7 +171,6 @@ export default function PartyDock({ user, onMoveParty }) {
 
   const members = party?.participants || [];
   const memberIds = new Set(members.map((m) => m.userId));
-  const effectivePartySubTab = inParty ? partySubTab : 'list';
 
   const browsableParties = allParties.filter((p) => p.status !== 'ended');
 
@@ -223,6 +243,34 @@ export default function PartyDock({ user, onMoveParty }) {
                 <span className="pdSwitch" aria-hidden="true"><span className="pdSwitchKnob" /></span>
               </button>
 
+              {/* 내 파티 멤버 — 파티 탭에 있던 '내 파티' 서브탭을 여기로 옮겼다.
+                  근처 탭이 "사람" 탭이 되어 멤버와 주변 라이더를 한 화면에서 본다. */}
+              {inParty && (
+                <>
+                  <p className="pdNearGroup">{t.myPartyGroup} · {party.title}</p>
+                  <ul className="pdMembers">
+                    {members.map((m) => (
+                      <li key={m.userId}>
+                        <button type="button" className="pdMember" onClick={() => setSelected(m)}>
+                          <span className="pdAvatar" aria-hidden="true">{letterOf(m.name)}</span>
+                          <span className="pdMemberInfo">
+                            <span className="pdMemberName">
+                              {m.name}
+                              {m.userId === party.hostId && <span className="pdTag pdTagHost">{t.hostBadge}</span>}
+                              {m.userId === user.id && <span className="pdTag">{t.meBadge}</span>}
+                            </span>
+                            <span className={`pdReadyTag${m.ready ? ' isReady' : ''}`}>
+                              {m.ready ? `✓ ${t.readyDone}` : t.readyWaiting}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="pdNearGroup">{t.nearbyGroup}</p>
+                </>
+              )}
+
               {nearby.length === 0 ? (
                 <p className="pdNearHint">{t.nearEmpty}</p>
               ) : (
@@ -250,46 +298,10 @@ export default function PartyDock({ user, onMoveParty }) {
             </div>
           )}
 
-          {/* 파티 — "내 파티"(멤버 목록)와 "파티 목록"(둘러보고 신청)을 나눔 */}
+          {/* 파티 — 둘러보고 신청하는 목록. 내 파티 멤버는 근처 탭으로 옮겼다. */}
           {curTab === 'party' && (
             <div className="pdPartyPane">
-              {inParty && (
-                <div className="pdPartySubTabs">
-                  <button type="button" className={effectivePartySubTab === 'mine' ? 'isActive' : ''} onClick={() => setPartySubTab('mine')}>
-                    {t.mySubTab}
-                  </button>
-                  <button type="button" className={effectivePartySubTab === 'list' ? 'isActive' : ''} onClick={() => setPartySubTab('list')}>
-                    {t.listSubTab}
-                  </button>
-                </div>
-              )}
-
-              {effectivePartySubTab === 'mine' && inParty && (
-                <ul className="pdMembers">
-                  {members.length === 0 && <li className="pdEmpty">{t.emptyMembers}</li>}
-                  {members.map((m) => (
-                    <li key={m.userId}>
-                      <button type="button" className="pdMember" onClick={() => setSelected(m)}>
-                        <span className="pdAvatar" aria-hidden="true">{letterOf(m.name)}</span>
-                        <span className="pdMemberInfo">
-                          <span className="pdMemberName">
-                            {m.name}
-                            {m.userId === party.hostId && <span className="pdTag pdTagHost">{t.hostBadge}</span>}
-                            {m.userId === user.id && <span className="pdTag">{t.meBadge}</span>}
-                          </span>
-                          <span className={`pdReadyTag${m.ready ? ' isReady' : ''}`}>
-                            {m.ready ? `✓ ${t.readyDone}` : t.readyWaiting}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {effectivePartySubTab === 'list' && (
-                <>
-                  {applyError && <p className="pdApplyError">{applyError}</p>}
+              {applyError && <p className="pdApplyError">{applyError}</p>}
                   {browsableParties.length === 0 ? (
                     <div className="pdPartyEmpty">
                       <span className="pdEmptyIcon" aria-hidden="true"><PeopleIcon size={28} /></span>
@@ -329,11 +341,9 @@ export default function PartyDock({ user, onMoveParty }) {
                         );
                       })}
                     </ul>
-                  )}
-                </>
               )}
 
-              {/* 서브탭과 무관하게 항상 보이게 */}
+              {/* 목록이 짧아도 아래에 붙는다 */}
               <button type="button" className="pdCreateBtn pdCreateBtnList" onClick={(e) => { setOpen(false); onMoveParty?.(e); }}>
                 {t.createBtn}
               </button>
@@ -414,14 +424,18 @@ export default function PartyDock({ user, onMoveParty }) {
 
       <button
         type="button"
-        className={`partyDockFab${open ? ' isOpen' : ''}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-label={inParty ? party.title : t.findTitle}
+        className={`partyDockFab${open ? ' isOpen' : ''}${isRiding && !open ? ' isRiding' : ''}`}
+        // 라이딩 중이면 도크를 여는 대신 라이딩 화면으로 바로 들어간다
+        onClick={() => (isRiding ? setRidingId(ridingParty.id) : setOpen((o) => !o))}
+        aria-label={isRiding ? t.ridingOpen : inParty ? party.title : t.findTitle}
       >
         {open ? (
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
+        ) : isRiding ? (
+          // 라이딩 중에는 브랜드 자전거 로고를 그대로 쓴다 (색은 currentColor → 흰색)
+          <BrandLogo className="partyDockLogo" />
         ) : (
           <>
             <PeopleIcon />

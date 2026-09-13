@@ -6,7 +6,7 @@
 
 /* ===== 파티 페이지 ===== */
 .partyPage {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--wash);
 }
 
@@ -39,12 +39,19 @@
   color: var(--ink);
 }
 
+/* 둘러보기(.browseHero)와 같은 구조 — 텍스트 왼쪽, 버튼 오른쪽 아래 정렬 */
 .partyHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
   padding: 40px 0 36px;
   text-align: left;
 }
+
+.partyHeroText { min-width: 0; }
 
 .partyHero .eyebrow {
   margin: 0 0 8px;
@@ -89,57 +96,10 @@
   text-align: center;
 }
 
-/* 비로그인일 때 "내 저장 경로" 자리에 들어가는 안내 */
-.partyLoginPrompt {
-  display: grid;
-  justify-items: center;
-  gap: 14px;
-  padding: 28px 24px;
-  border: 1px dashed var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-  text-align: center;
-}
 
-.partyLoginPrompt p {
-  margin: 0;
-  color: var(--muted);
-}
 
-/* 이 안내 안에서는 버튼을 가운데로 (기본값이 justify-self: start) */
-.partyLoginPrompt .partyPrimaryBtn {
-  justify-self: center;
-}
 
-/* 저장 경로 목록 */
-.routePickList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 12px;
-}
 
-.routePick {
-  display: grid;
-  gap: 12px;
-  padding: 16px 18px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-}
-
-.routePickInfo h4 {
-  margin: 0 0 4px;
-  font-size: 1.05rem;
-  color: var(--ink);
-}
-
-.routePickInfo p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.92rem;
-}
 
 /* 공통 버튼 */
 .partyPrimaryBtn {
@@ -224,16 +184,18 @@
 }
 
 /* 번개 카드 */
+/* 크루 격자(.crewGrid) 와 같은 규격 */
 .partyGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 22px;
 }
 
 .partyCard {
   display: grid;
   gap: 12px;
-  padding: 20px;
+  /* 크루 카드(.crewCardBody) 와 같은 여백 */
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface);
@@ -492,4 +454,288 @@
   color: var(--crit);
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+/* 페이지 본문으로 펼친 라이딩 대기방 (PartyRoomPanel inline) */
+.partyRoomSection {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 36px 0 8px;
+}
+
+/* .composeBtn(둘러보기) 을 그대로 쓰므로 파티 전용 버튼 스타일은 두지 않는다 */
+.partyHero .composeBtn { flex-shrink: 0; }
+
+/* 파티 카드 상단 미디어 (사진 또는 경로 지도) */
+.partyCardMedia {
+  position: relative;
+  /* 카드 padding(16) 을 상쇄해 미디어가 카드 위쪽에 꽉 차게 */
+  margin: -16px -16px 4px;
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+/* 크루 커버와 같은 높이 */
+.partyCardMedia .feedThumb,
+.partyCardPhoto,
+.partyCardMediaEmpty {
+  display: block;
+  width: 100%;
+  height: 170px;
+  aspect-ratio: auto;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+
+.partyCardMediaTag {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 500;
+  max-width: calc(100% - 20px);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(12, 27, 39, 0.8);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 모달 안 2열 (시간 + 인원) */
+.composeFieldRow { display: flex; gap: 12px; }
+.composeFieldRow > .composeField { flex: 1 1 0; min-width: 0; }
+
+/* 히어로 아래 가로 탭 — 모집 중인 링크 ↔ 내 파티 */
+.partyBody {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.partyBodyMain { min-width: 0; }
+
+/* 본문 안의 섹션들은 이미 자기 폭·여백을 갖고 있으므로 여기서는 해제한다 */
+.partyBodyMain .partyHero,
+.partyBodyMain .partyLayout,
+.partyBodyMain .partyRoomSection {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.partyBodyMain .partyLayout,
+.partyBodyMain .partyRoomSection { padding-top: 0; padding-bottom: 64px; }
+
+/* 가로 탭 — 밑줄형. 아이콘 + 라벨 + 보조설명 한 줄.
+   오른쪽 끝에는 "링크 만들기" 버튼이 붙는다. */
+.partyViewSwitch {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  margin: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 탭이 아니라 액션이므로 아래 탭 규칙(:not 으로 제외)을 받지 않는다.
+   색·모양은 둘러보기의 "게시물 올리기"(.composeBtn) 를 그대로 쓴다. */
+.partyViewSwitch .partyViewAction {
+  align-self: center;
+  margin-left: auto;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.partyViewSwitch button:not(.partyViewAction) {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s;
+}
+
+/* 활성 탭 밑줄 — 양 끝이 둥근 막대. border 대신 가상요소라
+   비활성일 때도 자리를 차지하지 않아 글자가 흔들리지 않는다. */
+.partyViewSwitch button:not(.partyViewAction)::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--mint);
+  opacity: 0;
+  transform: scaleX(0.6);
+  transition: opacity 0.18s, transform 0.18s;
+}
+.partyViewSwitch button:not(.partyViewAction).isActive::before {
+  opacity: 1;
+  transform: none;
+}
+
+/* 두 탭을 가르는 세로선 — 가운데가 진하고 위아래로 사라지는 그라데이션.
+   단색 막대보다 부드럽게 끊어져 밑줄·테두리와 부딪히지 않는다. */
+.partyViewSwitch button:not(.partyViewAction):first-child::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  right: -12px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--ink) 22%,
+    var(--ink) 78%,
+    transparent
+  );
+}
+
+.partyViewSwitch button:not(.partyViewAction):hover {
+  color: var(--ink);
+  background: var(--wash);
+}
+.partyViewSwitch button:not(.partyViewAction).isActive {
+  color: var(--ink);
+  background: transparent;
+}
+
+/* 아이콘 — 비활성은 옅은 회색 원, 활성은 민트 원에 흰 아이콘 */
+.partyViewSwitch button:not(.partyViewAction) svg {
+  flex-shrink: 0;
+  box-sizing: content-box;
+  padding: 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+}
+.partyViewSwitch button:not(.partyViewAction).isActive svg {
+  background: var(--grad);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+}
+
+.partyViewLabel { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+/* 파티 제목이 길어도 탭이 밀리지 않게 한 줄로 자른다 */
+.partyViewLabel > strong {
+  max-width: 220px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.partyViewLabel > span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.partyViewSwitch button:not(.partyViewAction).isActive .partyViewLabel > span {
+  color: var(--mint-dark);
+}
+
+@media (max-width: 767px) {
+  .partyBody { width: calc(100% - 28px); }
+  .partyViewSwitch button:not(.partyViewAction) { flex: 1 1 0; padding: 12px 10px; gap: 8px; }
+  /* 좁은 화면에서는 탭 아래 줄로 내려 전체 폭을 쓴다 */
+  .partyViewSwitch { flex-wrap: wrap; }
+  .partyViewSwitch .partyViewAction {
+    order: -1;
+    width: 100%;
+    margin: 0 0 12px;
+    justify-content: center;
+  }
+  .partyViewSwitch button:not(.partyViewAction) svg { padding: 6px; }
+  .partyViewLabel > span { display: none; }
+}
+
+/* 내 파티 탭 배지 (참여 중인 파티 수) */
+/* 안 읽은 채팅 뱃지 — 알림처럼 눈에 띄게 (빨강 + 흰 링) */
+.partyViewCount {
+  align-self: flex-start;
+  margin-top: 2px;
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--crit);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--wash);
+}
+
+/* 내 파티가 없을 때 안내 */
+.partyRoomEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 64px 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.partyRoomEmptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.partyRoomEmpty strong { color: var(--ink); font-size: 1.1rem; }
+.partyRoomEmpty p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.55; }
+.partyRoomEmpty .partyPrimaryBtn { margin-top: 6px; }
+
+/* 내 파티: 목록 → 대기방 으로 들어갔을 때 뒤로가기 (크루의 .crewBack 과 동일) */
+.partyBack {
+  display: block;
+  margin-bottom: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.partyBack:hover { color: var(--mint-dark); }
+
+/* 라이딩 진행 중 표시 */
+.partyRidingTag {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #047857;
+  font-size: 0.68rem;
+  font-weight: 800;
 }

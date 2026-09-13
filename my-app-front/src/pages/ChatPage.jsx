@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 
 import BrandLogo from '../components/BrandLogo';
 import { useChat } from '../hooks/useChat';
+import { text } from '../constants';
 import { displayTime } from '../utils/chat';
 
-export default function ChatPage({ user, partyId, onMoveHome, onMoveParty, onOpenMap, onMoveBrowse }) {
+export default function ChatPage({ user, partyId, onMoveHome, onMoveParty, onOpenMap, onMoveBrowse, onMoveCrew }) {
   const { messages, connected, historyError, sendMessage } = useChat(partyId, user);
   const [input, setInput] = useState('');
   const bottomRef = useRef(null);
@@ -30,12 +31,13 @@ export default function ChatPage({ user, partyId, onMoveHome, onMoveParty, onOpe
 
   return (
     <div className="chatPage">
-      <nav className="navbar chatNav" aria-label="메뉴">
+      <nav className="navbar chatNav" aria-label={text.nav}>
         <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
         <div className="navLinks">
-          <a href="/browse" onClick={onMoveBrowse}>둘러보기</a>
-          <a href="/party" onClick={onMoveParty}>파티</a>
-          <a href="/map" onClick={onOpenMap}>코스 만들기</a>
+          <a href="/browse" onClick={onMoveBrowse}>{text.feed}</a>
+          <a href="/party" onClick={onMoveParty}>{text.party}</a>
+          <a href="/crew" onClick={onMoveCrew}>{text.crew}</a>
+          <a href="/map" onClick={onOpenMap}>{text.makeCourse}</a>
         </div>
       </nav>
 

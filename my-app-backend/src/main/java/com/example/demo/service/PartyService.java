@@ -66,6 +66,47 @@ public class PartyService {
         return toResponse(partyRepository.findById(saved.getId()).get());
     }
 
+    /**
+     * 매칭 신청이 수락됐을 때 호출 — 두 사람을 곧바로 joined 상태로 묶은 2인 파티를 만든다.
+     * 일반 파티 생성(createParty)과 달리 신청/승인 과정 없이 둘 다 즉시 확정된다.
+     */
+    @Transactional
+    public PartyResponse createMatchedParty(Long userAId, Long userBId) {
+        User a = findUser(userAId);
+        User b = findUser(userBId);
+
+        Party party = new Party();
+        party.setHost(a);
+        party.setTitle(a.getName() + " & " + b.getName());
+        party.setStartAt(java.time.LocalDateTime.now());
+        party.setMaxMembers(2);
+        party.setStatus("full");
+        Party saved = partyRepository.save(party);
+
+        PartyMember hostMember = new PartyMember();
+        hostMember.setParty(saved);
+        hostMember.setUser(a);
+        hostMember.setStatus("joined");
+        partyMemberRepository.save(hostMember);
+        saved.getMembers().add(hostMember);
+
+        PartyMember guestMember = new PartyMember();
+        guestMember.setParty(saved);
+        guestMember.setUser(b);
+        guestMember.setStatus("joined");
+        partyMemberRepository.save(guestMember);
+        saved.getMembers().add(guestMember);
+
+        // saved.getMembers() 를 직접 채워둔다 — findById 로 다시 읽어도 같은 영속성 컨텍스트라
+        // 방금 저장한 멤버가 자동으로 안 보인다(1차 캐시가 기존 빈 컬렉션을 그대로 들고 있음).
+        return toResponse(saved);
+    }
+
+    /** 종료되지 않은 파티에 이미 참여 중인지 — 매칭 신청 가능 여부 검증에 쓴다 */
+    public boolean isInActiveParty(Long userId) {
+        return partyMemberRepository.existsByUser_IdAndStatusAndParty_StatusNot(userId, "joined", "ended");
+    }
+
     @Transactional
     public PartyResponse apply(Long partyId, Long userId) {
         Party party = findParty(partyId);

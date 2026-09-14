@@ -39,4 +39,17 @@ public class RideRecordController {
     public List<RideRecord> list(@RequestParam Long userId) {
         return rideRecordRepository.findByUserIdOrderByRidedAtDesc(userId);
     }
+
+    // 프로필에 보여줄 누적 통계 — 기록이 많지 않은 서비스 규모라 그냥 합산한다
+    @GetMapping("/stats")
+    public Map<String, Object> stats(@RequestParam Long userId) {
+        List<RideRecord> records = rideRecordRepository.findByUserIdOrderByRidedAtDesc(userId);
+        double totalDistanceKm = records.stream().mapToDouble(RideRecord::getDistanceKm).sum();
+        int totalDurationMin = records.stream().mapToInt(RideRecord::getDurationMin).sum();
+        return Map.of(
+                "rideCount", records.size(),
+                "totalDistanceKm", totalDistanceKm,
+                "totalDurationMin", totalDurationMin
+        );
+    }
 }

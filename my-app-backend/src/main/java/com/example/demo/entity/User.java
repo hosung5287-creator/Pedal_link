@@ -24,5 +24,15 @@ public class User {
 
     private boolean locationShareEnabled = false;
 
+    // 프로필 — 기본 정보
+    private String profileImageUrl;
+    private String bio;
+    private String bikeInfo;
+
+    // male | female | none
+    private String gender;
+    private Integer age;
+    private String region;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 }

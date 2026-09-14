@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.SignupRequest;
+import com.example.demo.dto.UserProfileResponse;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -51,12 +52,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("message", "이메일 또는 비밀번호가 틀렸습니다."));
         }
 
-        return ResponseEntity.ok(Map.of(
-            "id", user.getId(),
-            "name", user.getName(),
-            "email", user.getEmail(),
-            "locationShareEnabled", user.isLocationShareEnabled()
-        ));
+        return ResponseEntity.ok(UserProfileResponse.from(user));
     }
 
     @PutMapping("/users/{id}/location-sharing")

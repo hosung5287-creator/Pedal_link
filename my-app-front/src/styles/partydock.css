@@ -430,6 +430,61 @@
 .pdMember.isNear { background: #f0fbf4; }
 .pdMemberDist.isNear { color: var(--good); font-weight: 800; }
 
+/* 근처 탭 목록 행 — 매칭 신청 버튼이 붙으면 행이 [프로필 버튼][신청 버튼]으로 나뉜다 */
+.pdMembers li { display: flex; align-items: center; gap: 4px; }
+.pdMembers li .pdMember { flex: 1; min-width: 0; width: auto; }
+
+.pdMatchBtn {
+  flex-shrink: 0;
+  margin-right: 6px;
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pdMatchBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.pdMatchBtn:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+
+/* 매칭 신청 받음 배너 — 개인/파티 라이딩 오버레이(z-index 2000~2100)보다도 위에,
+   화면 어디에 있든 항상 뜬다. 도크의 flex 흐름과 무관하게 화면 상단 중앙에 고정. */
+.pdMatchBanner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 20px 48px rgba(12, 27, 39, 0.28);
+  animation: pdPop 0.16s ease-out;
+}
+.pdMatchBannerActions { display: flex; gap: 6px; flex-shrink: 0; }
+.pdMatchAcceptBtn, .pdMatchRejectBtn {
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pdMatchAcceptBtn { background: var(--mint); color: #ffffff; }
+.pdMatchAcceptBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.pdMatchRejectBtn { background: var(--surface-2); color: var(--muted); }
+.pdMatchAcceptBtn:disabled, .pdMatchRejectBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* 탭 내용이 패널 안에서 스크롤되도록 */
 .pdMembers,
 .pdChat,
@@ -605,6 +660,119 @@
   font-weight: 800;
 }
 .pdNearGroup:first-of-type { padding-top: 8px; }
+
+/* 헤더의 "혼자 타기" 버튼 — pdExpand와 같은 크기의 원형 아이콘 버튼 */
+.pdSoloBtn {
+  border: 0;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pdSoloBtn:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* 개인 라이딩 시작 팝업 — 자유주행 / 코스 선택 */
+.pdSoloBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(12, 27, 39, 0.45);
+}
+
+.pdSoloModal {
+  width: min(360px, 100%);
+  padding: 24px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(12, 27, 39, 0.3);
+}
+.pdSoloModal h3 { margin: 0 0 14px; color: var(--ink); font-size: 1.05rem; }
+
+.pdSoloFreeBtn {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pdSoloFreeBtn:hover { background: var(--mint-dark); }
+
+.pdSoloOr {
+  margin: 16px 0 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.pdSoloRouteList {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.pdSoloRouteList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.pdSoloRouteList li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.pdSoloRouteList li button {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: var(--surface-2);
+  color: var(--mint-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pdSoloRouteList li button:hover { background: var(--wash); }
+
+.pdSoloCancel {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pdSoloCancel:hover { background: var(--wash); }
 
 /* 라이딩 중 FAB 안의 브랜드 로고 — 버튼 색(흰색)을 따라간다 */
 .partyDockLogo {

@@ -240,8 +240,9 @@ export const crew = {
 
   backToList: '크루 목록',
   chatTitle: '크루 채팅',
-  chatSoonTitle: '크루 채팅은 준비 중이에요',
-  chatSoonSub: '채팅방 번호가 파티와 겹치지 않도록 서버 작업이 끝나면 열립니다.',
+  chatEmpty: '아직 메시지가 없어요. 첫 메시지를 보내보세요!',
+  chatPlaceholder: '메시지를 입력하세요…',
+  chatSend: '전송',
   memberListTitle: '크루 멤버',
   noMembers: '아직 멤버 정보가 없어요.',
   controlTitle: '크루 관리',
@@ -255,6 +256,10 @@ export const crew = {
   attendUnknown: '미정',
   settings: '크루 설정',
   manageRequests: '가입 요청 관리',
+  noPending: '대기 중인 가입 신청이 없어요.',
+  approve: '수락',
+  reject: '거절',
+  requestActionFailed: '처리하지 못했어요. 다시 시도해주세요.',
   leave: '크루 나가기',
 
   soon: '곧',

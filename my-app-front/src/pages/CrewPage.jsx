@@ -2,9 +2,11 @@ import '../styles/crew.css';
 
 import BrandLogo from '../components/BrandLogo';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { text, crew as t } from '../constants';
-import { getCrews, getCrew, joinCrew, leaveCrew } from '../api/crews';
+import { getCrews, getCrew, joinCrew, leaveCrew, approveMember, rejectMember } from '../api/crews';
+import { useChat } from '../hooks/useChat';
+import { displayTime } from '../utils/chat';
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
 
@@ -58,11 +60,49 @@ function CrewCard({ crew, isLoggedIn, onJoin, onOpen, onLoginNeeded }) {
 }
 
 // 크루 상세 — 채팅 / 멤버 / 관리 3단. 파티 대기방(PartyRoomPanel)과 같은 구성.
-function CrewDetail({ crew, user, onBack, onLeave }) {
+function CrewDetail({ crew, user, onBack, onLeave, onUpdate }) {
   const isLeader = crew.leaderId === user?.id;
   const members = crew.members || [];
   const upcoming = crew.upcoming || [];
   const pending = crew.pendingRequests || [];
+
+  // 파티 채팅(chat_messages)과 완전히 분리된 별도 테이블/엔드포인트를 쓰므로 crew.id를 그대로 쓴다.
+  const { messages, connected, historyError, sendMessage } = useChat(crew.id, user, 'crew-chat');
+  const [chatInput, setChatInput] = useState('');
+  const chatBottomRef = useRef(null);
+
+  const [showRequests, setShowRequests] = useState(false);
+  const [reqBusy, setReqBusy] = useState(false);
+  const [reqError, setReqError] = useState('');
+
+  const runRequestAction = async (fn) => {
+    setReqBusy(true);
+    setReqError('');
+    try {
+      onUpdate(await fn());
+    } catch {
+      setReqError(t.requestActionFailed);
+    } finally {
+      setReqBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendChat = () => {
+    if (!chatInput.trim()) return;
+    sendMessage(chatInput);
+    setChatInput('');
+  };
+
+  const handleChatKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChat();
+    }
+  };
 
   return (
     <section className="crewDetail">
@@ -87,13 +127,39 @@ function CrewDetail({ crew, user, onBack, onLeave }) {
       </header>
 
       <div className="crewCols">
-        {/* 크루 채팅 — roomType 이 없어 파티 채팅과 방 번호가 겹칠 수 있으므로 아직 연결하지 않는다 */}
+        {/* 크루 채팅 — 파티와 완전히 분리된 crew-chat 채널을 쓴다 */}
         <section className="crewCol crewColChat">
           <h2 className="crewColTitle">{t.chatTitle}</h2>
           <div className="crewChatCard">
-            <div className="crewSoon">
-              <strong>{t.chatSoonTitle}</strong>
-              <p>{t.chatSoonSub}</p>
+            {historyError && <p className="crewError">{historyError}</p>}
+            <div className="crewChatMessages">
+              {messages.length === 0 && <p className="crewEmptyRow">{t.chatEmpty}</p>}
+              {messages.map((msg, i) => {
+                const mine = msg.senderId === user?.id;
+                return (
+                  <div key={msg.id ?? i} className={`crewChatBubbleRow${mine ? ' isMine' : ''}`}>
+                    <div className="crewChatBubble">
+                      {!mine && <div className="crewChatSender">{msg.senderName}</div>}
+                      <p className="crewChatContent">{msg.content}</p>
+                      <div className="crewChatTime">{displayTime(msg)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={chatBottomRef} />
+            </div>
+            <div className="crewChatInputRow">
+              <input
+                type="text"
+                className="crewChatInput"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={handleChatKeyDown}
+                placeholder={t.chatPlaceholder}
+              />
+              <button type="button" className="crewChatSendBtn" onClick={sendChat} disabled={!connected || !chatInput.trim()}>
+                {t.chatSend}
+              </button>
             </div>
           </div>
         </section>
@@ -155,7 +221,7 @@ function CrewDetail({ crew, user, onBack, onLeave }) {
                   <button type="button" className="crewMenuBtn" disabled title={t.soonHint}>
                     {t.settings}<span className="crewSoonBadge">{t.soon}</span>
                   </button>
-                  <button type="button" className="crewMenuBtn" disabled title={t.soonHint}>
+                  <button type="button" className="crewMenuBtn" onClick={() => setShowRequests((v) => !v)}>
                     {t.manageRequests}
                     {pending.length > 0 && <span className="crewCountBadge">{pending.length}</span>}
                   </button>
@@ -165,6 +231,34 @@ function CrewDetail({ crew, user, onBack, onLeave }) {
                 {t.leave}
               </button>
             </div>
+
+            {isLeader && showRequests && (
+              <>
+                {reqError && <p className="crewError">{reqError}</p>}
+                <ul className="crewRequests">
+                  {pending.length === 0 && <li className="crewEmptyRow">{t.noPending}</li>}
+                  {pending.map((p) => (
+                    <li key={p.userId} className="crewRequestRow">
+                      <span>{p.name}</span>
+                      <span className="crewRequestActions">
+                        <button
+                          type="button" className="crewApproveBtn" disabled={reqBusy}
+                          onClick={() => runRequestAction(() => approveMember(crew.id, p.userId))}
+                        >
+                          {t.approve}
+                        </button>
+                        <button
+                          type="button" className="crewRejectBtn" disabled={reqBusy}
+                          onClick={() => runRequestAction(() => rejectMember(crew.id, p.userId))}
+                        >
+                          {t.reject}
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </section>
       </div>
@@ -181,14 +275,25 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
   const [view, setView] = useState('find');   // 'find' = 크루 찾기, 'mine' = 내 크루
   const [openId, setOpenId] = useState(null); // 상세로 들어간 크루
 
+  // 서버 응답엔 myState가 없다(누가 보든 같은 데이터) — 로그인 유저 id로 여기서 계산한다.
+  // 파티 도크의 myStateOf와 같은 패턴.
+  const withMyState = (c) => {
+    if (!c) return c;
+    const isLeader = c.leaderId === user?.id;
+    const isMember = (c.members || []).some((m) => m.userId === user?.id);
+    const isPending = (c.pendingRequests || []).some((m) => m.userId === user?.id);
+    return { ...c, myState: isLeader || isMember ? 'joined' : isPending ? 'pending' : 'none' };
+  };
+
   useEffect(() => {
     let alive = true;
     getCrews()
-      .then((list) => { if (alive) setCrews(list || []); })
+      .then((list) => { if (alive) setCrews((list || []).map(withMyState)); })
       .catch(() => { if (alive) setError(t.loadFailed); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const myCrews = crews.filter((c) => c.myState === 'joined');
   const shown = view === 'mine' ? myCrews : crews;
@@ -200,7 +305,7 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
   const handleJoin = async (id) => {
     setError('');
     try {
-      replace(await joinCrew(id, user.id));
+      replace(withMyState(await joinCrew(id, user.id)));
     } catch {
       setError(t.joinFailed);
     }
@@ -209,7 +314,7 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
   const handleLeave = async (id) => {
     setError('');
     try {
-      replace(await leaveCrew(id, user.id));
+      replace(withMyState(await leaveCrew(id, user.id)));
       setOpenId(null);
     } catch {
       setError(t.leaveFailed);
@@ -222,7 +327,7 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
     if (crews.find((c) => c.id === id)?.members?.length) return;
     try {
       const full = await getCrew(id);
-      if (full) replace(full);
+      if (full) replace(withMyState(full));
     } catch { /* 목록 정보만으로도 화면은 뜬다 */ }
   };
 
@@ -241,7 +346,13 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
 
       <div className="crewBody">
         {openCrew ? (
-          <CrewDetail crew={openCrew} user={user} onBack={() => setOpenId(null)} onLeave={handleLeave} />
+          <CrewDetail
+            crew={openCrew}
+            user={user}
+            onBack={() => setOpenId(null)}
+            onLeave={handleLeave}
+            onUpdate={(updated) => replace(withMyState(updated))}
+          />
         ) : (
           <>
             <nav className="crewTabs" role="tablist" aria-label={t.tabsLabel}>

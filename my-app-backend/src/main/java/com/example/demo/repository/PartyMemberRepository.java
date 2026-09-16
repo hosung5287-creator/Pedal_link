@@ -12,4 +12,7 @@ public interface PartyMemberRepository extends JpaRepository<PartyMember, Long> 
     List<PartyMember> findByPartyAndStatus(Party party, String status);
     boolean existsByPartyAndUser(Party party, User user);
     long countByPartyAndStatus(Party party, String status);
+
+    // 매칭 신청 가능 여부 확인용 — 종료되지 않은 파티에 이미 참여(joined) 중인지
+    boolean existsByUser_IdAndStatusAndParty_StatusNot(Long userId, String status, String partyStatus);
 }

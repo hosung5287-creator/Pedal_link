@@ -9,11 +9,15 @@ import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
 import { markRead } from '../utils/chatUnread';
 import { OPEN_RIDING_EVENT } from '../utils/riding';
+import { getMyRoutesForParty } from '../api/parties';
+import { sendMatchRequest, getIncomingMatches, getOutgoingMatches, acceptMatch, rejectMatch } from '../api/matches';
 import BrandLogo from './BrandLogo';
 import PartyRoom from './PartyRoom';
 import RidingRoom from './RidingRoom';
+import PersonalRidingRoom from './PersonalRidingRoom';
 
 const NEAR_M = 220;   // 이 거리 안이면 "접근 중"
+const MATCH_M = 50;   // 이 거리 안이어야 매칭 신청 버튼이 뜬다 (지오펜스와 같은 기준)
 
 function distanceM(a, b) {
   const R = 6371000;
@@ -56,6 +60,114 @@ export default function PartyDock({ user, onMoveParty }) {
   const [selected, setSelected] = useState(null);
   const myPos = useRef(null);
   const [locShare, setLocShare] = useLocationShare(user?.id);
+
+  // 개인 라이딩(파티 없이 혼자) — 시작 전 고르는 팝업 + 실제 떠 있는 세션
+  const [soloPicker, setSoloPicker] = useState(false);
+  const [soloRoutes, setSoloRoutes] = useState([]);
+  const [soloRoutesLoading, setSoloRoutesLoading] = useState(false);
+  const [soloConfig, setSoloConfig] = useState(null); // { route } | null
+
+  useEffect(() => {
+    if (!soloPicker || !user?.id) return;
+    let alive = true;
+    setSoloRoutesLoading(true);
+    getMyRoutesForParty(user.id).then((list) => {
+      if (alive) { setSoloRoutes(list); setSoloRoutesLoading(false); }
+    }).catch(() => { if (alive) setSoloRoutesLoading(false); });
+    return () => { alive = false; };
+  }, [soloPicker, user?.id]);
+
+  const startSolo = (route) => {
+    setSoloPicker(false);
+    setOpen(false);
+    setSoloConfig({ route: route || null });
+  };
+
+  // 매칭 신청 — 내가 보낸/받은 대기중 신청
+  const [incomingMatches, setIncomingMatches] = useState([]);
+  const [outgoingUserIds, setOutgoingUserIds] = useState(new Set());
+  const [matchSendingId, setMatchSendingId] = useState(null);
+  const [matchActingId, setMatchActingId] = useState(null);
+  // 폴링 콜백이 항상 최신 soloConfig 를 보게 하는 미러 (인터벌을 매번 새로 만들지 않기 위해)
+  const soloConfigRef = useRef(null);
+  useEffect(() => { soloConfigRef.current = soloConfig; }, [soloConfig]);
+  const handledAcceptedIdsRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const [incoming, outgoing] = await Promise.all([
+          getIncomingMatches(user.id),
+          getOutgoingMatches(user.id),
+        ]);
+        if (!alive) return;
+        setIncomingMatches(incoming || []);
+        setOutgoingUserIds(new Set((outgoing || []).filter((m) => m.status === 'pending').map((m) => m.toUserId)));
+
+        // 내가 개인 라이딩 중에 보낸 신청이 상대에게 수락됐으면, 나도 자동으로 파티 라이딩으로 전환한다.
+        const newlyAccepted = (outgoing || []).find((m) =>
+          m.status === 'accepted' && m.partyId != null && !handledAcceptedIdsRef.current.has(m.id));
+        if (newlyAccepted) {
+          handledAcceptedIdsRef.current.add(newlyAccepted.id);
+          if (soloConfigRef.current) {
+            const freshParties = await getParties();
+            if (!alive) return;
+            setAllParties(freshParties || []);
+            setSoloConfig(null);
+            setOpen(false);
+            setRidingId(newlyAccepted.partyId);
+          }
+        }
+      } catch { /* 다음 폴링에서 재시도 */ }
+    };
+    load();
+    const timer = setInterval(load, 5000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [user?.id]);
+
+  const handleSendMatch = async (toUserId) => {
+    if (matchSendingId) return;
+    setMatchSendingId(toUserId);
+    try {
+      await sendMatchRequest(user.id, toUserId);
+      setOutgoingUserIds((prev) => new Set(prev).add(toUserId));
+    } catch { /* 이미 신청했거나 상대가 파티에 속해 있는 경우 — 조용히 무시 */ } finally {
+      setMatchSendingId(null);
+    }
+  };
+
+  const handleAcceptMatch = async (req) => {
+    if (matchActingId) return;
+    setMatchActingId(req.id);
+    try {
+      const newParty = await acceptMatch(req.id, user.id);
+      setIncomingMatches((prev) => prev.filter((r) => r.id !== req.id));
+      setAllParties((prev) => (prev.some((p) => p.id === newParty.id)
+        ? prev.map((p) => (p.id === newParty.id ? newParty : p))
+        : [newParty, ...prev]));
+      // 개인 라이딩 중이었으면 곧바로 파티 라이딩으로 전환, 아니면 도크에 파티만 만들어두고 끝낸다
+      if (soloConfig) {
+        setSoloConfig(null);
+        setOpen(false);
+        setRidingId(newParty.id);
+      }
+    } catch { /* 이미 만료/처리된 신청 — 다음 폴링에서 목록에서 사라짐 */ } finally {
+      setMatchActingId(null);
+    }
+  };
+
+  const handleRejectMatch = async (req) => {
+    if (matchActingId) return;
+    setMatchActingId(req.id);
+    try {
+      await rejectMatch(req.id, user.id);
+      setIncomingMatches((prev) => prev.filter((r) => r.id !== req.id));
+    } catch { /* 무시 */ } finally {
+      setMatchActingId(null);
+    }
+  };
 
   const inParty = !!party;
   const curTab = tab;
@@ -210,6 +322,12 @@ export default function PartyDock({ user, onMoveParty }) {
               <span>{inParty ? `${members.length}${t.memberCountUnit}` : `${t.nearbyPrefix} ${nearby.length}${t.memberCountUnit}`}</span>
             </div>
             <div className="pdHeadActions">
+              <button type="button" className="pdSoloBtn" onClick={() => setSoloPicker(true)} aria-label={t.soloStart} title={t.soloStart}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="5.5" cy="17.5" r="3.5" /><circle cx="18.5" cy="17.5" r="3.5" />
+                  <path d="M15 6a1 1 0 100-2 1 1 0 000 2zM12 17.5V14l-3-3 4-3 2 3h3" />
+                </svg>
+              </button>
               {inParty && (
                 <button type="button" className="pdExpand" onClick={() => setRoomOpen(true)} aria-label="채팅방 전체보기" title="채팅방 전체보기">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -277,6 +395,8 @@ export default function PartyDock({ user, onMoveParty }) {
                 <ul className="pdMembers">
                   {nearby.map((o) => {
                     const near = o.dist != null && o.dist < NEAR_M;
+                    const canMatch = o.dist != null && o.dist <= MATCH_M && !memberIds.has(o.userId);
+                    const sent = outgoingUserIds.has(o.userId);
                     return (
                       <li key={o.userId}>
                         <button type="button" className={`pdMember${near ? ' isNear' : ''}`} onClick={() => setSelected(o)}>
@@ -290,6 +410,16 @@ export default function PartyDock({ user, onMoveParty }) {
                             <span className={`pdMemberDist${near ? ' isNear' : ''}`}>{fmtDist(o.dist) || t.locOff}</span>
                           </span>
                         </button>
+                        {canMatch && (
+                          <button
+                            type="button"
+                            className="pdMatchBtn"
+                            disabled={sent || matchSendingId === o.userId}
+                            onClick={() => handleSendMatch(o.userId)}
+                          >
+                            {sent ? t.matchSent : t.matchRequest}
+                          </button>
+                        )}
                       </li>
                     );
                   })}
@@ -422,6 +552,34 @@ export default function PartyDock({ user, onMoveParty }) {
         </div>
       )}
 
+      {incomingMatches.length > 0 && (
+        <div className="pdMatchBanner" role="alert">
+          <span className="pdAvatar" aria-hidden="true">{letterOf(incomingMatches[0].fromName)}</span>
+          <span className="pdMemberInfo">
+            <span className="pdMemberName">{incomingMatches[0].fromName}{t.matchRequestedSuffix}</span>
+            {incomingMatches.length > 1 && <span className="pdMemberDist">+{incomingMatches.length - 1}{t.matchMoreSuffix}</span>}
+          </span>
+          <div className="pdMatchBannerActions">
+            <button
+              type="button"
+              className="pdMatchAcceptBtn"
+              disabled={matchActingId === incomingMatches[0].id}
+              onClick={() => handleAcceptMatch(incomingMatches[0])}
+            >
+              {t.matchAccept}
+            </button>
+            <button
+              type="button"
+              className="pdMatchRejectBtn"
+              disabled={matchActingId === incomingMatches[0].id}
+              onClick={() => handleRejectMatch(incomingMatches[0])}
+            >
+              {t.matchReject}
+            </button>
+          </div>
+        </div>
+      )}
+
       <button
         type="button"
         className={`partyDockFab${open ? ' isOpen' : ''}${isRiding && !open ? ' isRiding' : ''}`}
@@ -443,6 +601,39 @@ export default function PartyDock({ user, onMoveParty }) {
           </>
         )}
       </button>
+
+      {soloPicker && (
+        <div className="pdSoloBackdrop" onClick={() => setSoloPicker(false)} role="presentation">
+          <div className="pdSoloModal" role="dialog" aria-label={t.soloPickerTitle} onClick={(e) => e.stopPropagation()}>
+            <h3>{t.soloPickerTitle}</h3>
+            <button type="button" className="pdSoloFreeBtn" onClick={() => startSolo(null)}>{t.soloFreeBtn}</button>
+            <p className="pdSoloOr">{t.soloOr}</p>
+            {soloRoutesLoading ? (
+              <p className="pdNearHint">{t.soloLoading}</p>
+            ) : soloRoutes.length === 0 ? (
+              <p className="pdNearHint">{t.soloNoRoutes}</p>
+            ) : (
+              <ul className="pdSoloRouteList">
+                {soloRoutes.map((r) => (
+                  <li key={r.id}>
+                    <span>{r.routeName}</span>
+                    <button type="button" onClick={() => startSolo(r)}>{t.soloStartCourseBtn}</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button type="button" className="pdSoloCancel" onClick={() => setSoloPicker(false)}>{t.soloCancel}</button>
+          </div>
+        </div>
+      )}
+
+      {soloConfig && (
+        <PersonalRidingRoom
+          user={user}
+          route={soloConfig.route}
+          onClose={() => setSoloConfig(null)}
+        />
+      )}
 
       {roomOpen && myRooms.length > 0 && (
         <PartyRoom

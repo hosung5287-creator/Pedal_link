@@ -1,7 +1,8 @@
 import { api, API_BASE } from './client';
 
-export async function getChatHistory(roomId) {
-  return api.get(`/api/chat/${roomId}/history`);
+// channel: 'chat'(파티, 기본값) | 'crew-chat'(크루) — 백엔드에 같은 이름의 REST/STOMP 엔드포인트가 있다.
+export async function getChatHistory(roomId, channel = 'chat') {
+  return api.get(`/api/${channel}/${roomId}/history`);
 }
 
 // sockjs-client 는 Node 의 global 객체를 참조해서 Vite(브라우저) 환경에서 그대로 쓰면

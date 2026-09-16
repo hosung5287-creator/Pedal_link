@@ -92,3 +92,26 @@ export const leaveCrew = (id, userId) =>
     mockState = mockState.map((c) => (c.id === Number(id) ? { ...c, myState: 'none' } : c));
     return mockState.find((c) => c.id === Number(id));
   });
+
+export const approveMember = (id, userId) =>
+  withMock(() => api.post(`/api/crews/${id}/requests/${userId}/approve`), () => {
+    mockState = mockState.map((c) => {
+      if (c.id !== Number(id)) return c;
+      const applicant = (c.pendingRequests || []).find((p) => p.userId === userId);
+      return {
+        ...c,
+        memberCount: c.memberCount + 1,
+        members: [...(c.members || []), { userId, name: applicant?.name || '멤버', role: 'member', attend: 'unknown' }],
+        pendingRequests: (c.pendingRequests || []).filter((p) => p.userId !== userId),
+      };
+    });
+    return mockState.find((c) => c.id === Number(id));
+  });
+
+export const rejectMember = (id, userId) =>
+  withMock(() => api.post(`/api/crews/${id}/requests/${userId}/reject`), () => {
+    mockState = mockState.map((c) => (c.id === Number(id)
+      ? { ...c, pendingRequests: (c.pendingRequests || []).filter((p) => p.userId !== userId) }
+      : c));
+    return mockState.find((c) => c.id === Number(id));
+  });

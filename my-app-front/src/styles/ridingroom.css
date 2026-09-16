@@ -75,6 +75,65 @@
 }
 .rrClose:hover { background: rgba(255, 255, 255, 0.35); }
 
+/* 개인 라이딩 — 자유주행/코스 이름 표시 */
+.rrModeTag {
+  position: absolute;
+  top: 76px;
+  left: 14px;
+  z-index: 1200;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+/* 개인 라이딩 중 지오펜스 근접/이탈 알림 — MapPage의 mapProxToast와 같은 톤 */
+.rrProxToast {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1250;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 10px 14px 10px 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 36px rgba(12, 27, 39, 0.22);
+  animation: rrProxIn 0.24s ease-out;
+}
+.rrProxToast.isLeaving .rrAvatar { background: #9fb3c0; }
+
+@keyframes rrProxIn {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.rrProxText { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.rrProxText strong { color: var(--ink); font-size: 0.88rem; font-weight: 800; white-space: nowrap; }
+.rrProxText span { color: var(--muted); font-size: 0.76rem; font-weight: 600; }
+
+.rrProxMatchBtn {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rrProxMatchBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.rrProxMatchBtn:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+
 .rrGeoError {
   position: absolute;
   top: 76px;

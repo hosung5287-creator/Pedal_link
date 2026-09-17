@@ -738,6 +738,30 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
     }
   }, []);
 
+  // 출발지 좌표 -> 행정구역(구/시) 이름. fromLabel(장소명)엔 구 이름이 안 들어있는 경우가
+  // 많아서 좌표로 따로 조회한다. 실패해도(키 없음/네트워크 오류) 저장 자체는 막지 않는다.
+  const fetchRegion = useCallback(async (lat, lng) => {
+    try {
+      const url = new URL('/v2/local/geo/coord2regioncode.json', window.location.origin);
+      url.searchParams.set('x', lng);
+      url.searchParams.set('y', lat);
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `KakaoAK ${KAKAO_API_KEY}` },
+      });
+      if (!res.ok) {
+        console.error('Kakao region lookup error', res.status, await res.text());
+        return null;
+      }
+      const data = await res.json();
+      const docs = data.documents || [];
+      const doc = docs.find((d) => d.region_type === 'H') || docs[0];
+      return doc?.region_2depth_name || doc?.region_1depth_name || null;
+    } catch (err) {
+      console.error('Kakao region lookup fetch error:', err);
+      return null;
+    }
+  }, []);
+
   const selectResult = useCallback((item) => {
     const point = { lat: item.lat, lng: item.lng, label: item.label };
     if (searchMode === 'start') {
@@ -766,6 +790,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   // 모달 확인 → 실제 저장
   const confirmSaveRoute = async () => {
     if (!saveRouteName.trim()) return;
+    const region = await fetchRegion(startPoint.lat, startPoint.lng);
     const body = {
       userId: user?.id ?? null,
       routeName: saveRouteName.trim(),
@@ -775,6 +800,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       toLat: endPoint.lat,
       toLng: endPoint.lng,
       toLabel: endPoint.label,
+      region,
       distanceKm: routeStats?.distanceKm ?? null,
       ascendM: routeStats?.ascendM ?? null,
       timeMin: routeStats?.timeMin ?? null,
@@ -1144,7 +1170,14 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
                           <div className="routeListInfo" onClick={() => loadRouteById(r.id)}>
                             <div className="routeListName">{r.routeName}</div>
                             <div className="routeListPath">{r.fromLabel} → {r.toLabel}</div>
-                            <div className="routeListDate">{new Date(r.createdAt).toLocaleDateString()}</div>
+                            <div className="routeListMeta">
+                              {r.region && (
+                                <span className="routeListRegion">
+                                  {r.region.split(',').map((s) => s.trim()).filter(Boolean).join(', ')}
+                                </span>
+                              )}
+                              <span className="routeListDate">{new Date(r.createdAt).toLocaleDateString()}</span>
+                            </div>
                           </div>
                         </li>
                       ))}

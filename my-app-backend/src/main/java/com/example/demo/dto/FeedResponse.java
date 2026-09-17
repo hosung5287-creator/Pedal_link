@@ -15,6 +15,7 @@ public class FeedResponse {
     private String routeName;
     private String fromLabel;
     private String toLabel;
+    private String region;
 
     private Double distanceKm;
     private Integer ascendM;

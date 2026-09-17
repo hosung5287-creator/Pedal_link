@@ -12,7 +12,7 @@ export const toggleLike = (routeId, userId) =>
 
 // 게시물 올리기 — 저장된 내 경로에 문구·해시태그·사진을 붙인다. 갱신된 카드 1장을 돌려준다.
 // photo 는 브라우저에서 줄인 JPEG data URL (utils/image.js). 없으면 null.
-export const publishPost = (routeId, { userId, description, tags, photo }) =>
+export const publishPost = (routeId, { userId, description, tags, photo, region }) =>
   api.post(`/api/routes/${routeId}/post`, {
-    userId: String(userId), description, tags, photo,
+    userId: String(userId), description, tags, photo, region,
   });

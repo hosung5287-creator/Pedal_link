@@ -4,7 +4,7 @@ import BrandLogo from '../components/BrandLogo';
 
 import { useEffect, useRef, useState } from 'react';
 import { text, crew as t } from '../constants';
-import { getCrews, getCrew, joinCrew, leaveCrew, approveMember, rejectMember } from '../api/crews';
+import { getCrews, getCrew, joinCrew, leaveCrew, approveMember, rejectMember, createCrew } from '../api/crews';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
 
@@ -266,6 +266,100 @@ function CrewDetail({ crew, user, onBack, onLeave, onUpdate }) {
   );
 }
 
+// 크루 만들기 모달 — 게시물/파티 만들기 모달과 같은 흐름이지만, 크루 페이지 CSS만으로
+// 완결되게 스타일을 따로 둔다(browse.css의 composeModal은 /browse를 거치지 않으면 안 실릴 수 있음).
+function CreateCrewModal({ user, onClose, onCreate }) {
+  const [name, setName] = useState('');
+  const [region, setRegion] = useState('');
+  const [scheduleText, setScheduleText] = useState('');
+  const [description, setDescription] = useState('');
+  const [tag, setTag] = useState('');
+  const [joinPolicy, setJoinPolicy] = useState('approval');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await onCreate({
+        leaderId: user.id,
+        name: name.trim(),
+        region: region.trim(),
+        scheduleText: scheduleText.trim(),
+        description: description.trim(),
+        tag: tag.trim(),
+        joinPolicy,
+      });
+    } catch {
+      setError(t.createFailed);
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="crewCreateBackdrop" onClick={onClose} role="presentation">
+      <div className="crewCreateModal" role="dialog" aria-modal="true" aria-labelledby="create-crew-title"
+           onClick={(e) => e.stopPropagation()}>
+        <h2 id="create-crew-title">{t.createCrew}</h2>
+
+        <form onSubmit={submit}>
+          <label className="crewCreateField">
+            <span>{t.nameLabel}</span>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={t.namePlaceholder} required />
+          </label>
+
+          <div className="crewCreateFieldRow">
+            <label className="crewCreateField">
+              <span>{t.regionLabel}</span>
+              <input type="text" value={region} onChange={(e) => setRegion(e.target.value)} placeholder={t.regionPlaceholder} />
+            </label>
+            <label className="crewCreateField">
+              <span>{t.scheduleLabel}</span>
+              <input type="text" value={scheduleText} onChange={(e) => setScheduleText(e.target.value)} placeholder={t.schedulePlaceholder} />
+            </label>
+          </div>
+
+          <label className="crewCreateField">
+            <span>{t.tagLabel}</span>
+            <input type="text" value={tag} onChange={(e) => setTag(e.target.value)} placeholder={t.tagPlaceholder} />
+          </label>
+
+          <label className="crewCreateField">
+            <span>{t.descriptionLabel}</span>
+            <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.descriptionPlaceholder} />
+          </label>
+
+          <label className="crewCreateField">
+            <span>{t.joinPolicyLabel}</span>
+            <select value={joinPolicy} onChange={(e) => setJoinPolicy(e.target.value)}>
+              <option value="approval">{t.joinPolicyApproval}</option>
+              <option value="open">{t.joinPolicyOpen}</option>
+            </select>
+          </label>
+
+          {error && <p className="crewError">{error}</p>}
+
+          <div className="crewCreateActions">
+            <button type="button" className="crewCreateCancelBtn" onClick={onClose} disabled={submitting}>{t.cancel}</button>
+            <button type="submit" className="crewCreatePrimaryBtn" disabled={submitting || !name.trim()}>
+              {submitting ? t.creating : t.createCrew}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onMoveBrowse, onMoveParty }) {
   const isLoggedIn = !!user;
 
@@ -274,6 +368,7 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
   const [error, setError] = useState('');
   const [view, setView] = useState('find');   // 'find' = 크루 찾기, 'mine' = 내 크루
   const [openId, setOpenId] = useState(null); // 상세로 들어간 크루
+  const [creating, setCreating] = useState(false); // 크루 만들기 모달
 
   // 서버 응답엔 myState가 없다(누가 보든 같은 데이터) — 로그인 유저 id로 여기서 계산한다.
   // 파티 도크의 myStateOf와 같은 패턴.
@@ -319,6 +414,13 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
     } catch {
       setError(t.leaveFailed);
     }
+  };
+
+  const handleCreate = async (body) => {
+    const created = await createCrew(body);
+    setCrews((prev) => [withMyState(created), ...prev]);
+    setCreating(false);
+    setOpenId(created.id);
   };
 
   // 목록에 상세 정보(멤버)가 없으면 한 건만 더 불러온다
@@ -381,7 +483,11 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
                 </span>
               </button>
 
-              <button type="button" className="composeBtn crewCreateBtn" disabled title={t.soonHint}>
+              <button
+                type="button"
+                className="composeBtn crewCreateBtn"
+                onClick={isLoggedIn ? () => setCreating(true) : onMoveLogin}
+              >
                 {t.createCrew}
               </button>
             </nav>
@@ -409,6 +515,10 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
           </>
         )}
       </div>
+
+      {creating && (
+        <CreateCrewModal user={user} onClose={() => setCreating(false)} onCreate={handleCreate} />
+      )}
     </div>
   );
 }

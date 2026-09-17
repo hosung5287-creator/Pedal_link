@@ -186,6 +186,7 @@ export const text = {
   browseComposeTitle: '게시물 올리기',
   browseComposeSub: '저장한 경로를 골라 소개 문구를 남겨보세요.',
   browseComposeRoute: '경로 선택',
+  browseComposeRegion: '지역 (여러 개 선택 가능)',
   browseComposeDesc: '문구',
   browseComposeDescPlaceholder: '예) 잠실에서 여의도까지 한강 야경을 즐기며 달리는 코스입니다.',
   browseComposeTags: '해시태그 (선택)',
@@ -269,6 +270,21 @@ export const crew = {
   loadFailed: '크루 목록을 불러오지 못했습니다.',
   joinFailed: '가입 신청에 실패했습니다.',
   leaveFailed: '크루를 나가지 못했습니다.',
+
+  nameLabel: '크루 이름',
+  namePlaceholder: '예: 한강 라이더스',
+  regionPlaceholder: '예: 서울 · 반포',
+  schedulePlaceholder: '예: 매주 토 07:00',
+  tagLabel: '태그',
+  tagPlaceholder: '예: 초보 환영',
+  descriptionLabel: '소개',
+  descriptionPlaceholder: '크루를 소개해주세요',
+  joinPolicyLabel: '가입 방식',
+  joinPolicyApproval: '승인 후 가입',
+  joinPolicyOpen: '누구나 바로 가입',
+  cancel: '취소',
+  creating: '만드는 중…',
+  createFailed: '크루를 만들지 못했어요. 다시 시도해주세요.',
 };
 
 export const seoulCenter = [37.5665, 126.978];
@@ -546,7 +562,7 @@ export const homeFooter = {
 export const account = {
   memberFallback: 'PedalLink 회원',
   profileActivityTitle: '내 활동',
-  profileActivity: ['내 코스', '주행 기록', '참여한 파티'],
+  profileActivity: ['내 코스', '참여한 파티'],
   settingsAccountTitle: '계정',
   settingsRows: ['이메일 변경', '비밀번호 변경', '위치 공유', '알림 설정'],
   soon: '준비 중',

@@ -40,6 +40,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   const rideStartMsRef = useRef(Date.now());
   const othersInsideRef = useRef(new Map()); // userId -> 지오펜스 안에 있는지
   const proxTimerRef = useRef(null);
+  const routeAscendMRef = useRef(null); // 코스 따라가기 모드일 때 그 코스의 상승고도 — 라이딩 기록에 스냅샷으로 남긴다
 
   const [rideTime, setRideTime] = useState(0);
   const [rideDistance, setRideDistance] = useState(0);
@@ -77,7 +78,9 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
     if (!route?.id) return;
     let alive = true;
     getRouteById(route.id).then((data) => {
-      if (!alive || !mapRef.current || !routeLayerRef.current) return;
+      if (!alive) return;
+      routeAscendMRef.current = data.ascendM ?? null;
+      if (!mapRef.current || !routeLayerRef.current) return;
       if (!data.bikeRoute?.length || !data.shortestRoute?.length) return;
       const bike = data.bikeRoute.map((p) => [p.lat, p.lng]);
       const shortest = data.shortestRoute.map((p) => [p.lat, p.lng]);
@@ -231,6 +234,9 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           distance: distanceKm,
           duration: durationMin,
           partyId: null,
+          routeId: route?.id ?? null,
+          routeName: route?.routeName ?? null,
+          ascendM: routeAscendMRef.current,
         }).catch(() => {});
       }
       setSummary({ distanceKm, durationMin, avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0 });

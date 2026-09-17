@@ -74,6 +74,7 @@ public class FeedService {
         r.setRouteName(route.getRouteName());
         r.setFromLabel(route.getFromLabel());
         r.setToLabel(route.getToLabel());
+        r.setRegion(route.getRegion());
         r.setDistanceKm(route.getDistanceKm());
         r.setAscendM(route.getAscendM());
         r.setTimeMin(route.getTimeMin());
@@ -101,7 +102,7 @@ public class FeedService {
      * 이 프로젝트에서 "게시물"은 별도 테이블이 아니라 경로에 딸린 내용이다.
      */
     @Transactional
-    public FeedResponse publish(Long routeId, Long userId, String description, String rawTags) {
+    public FeedResponse publish(Long routeId, Long userId, String description, String rawTags, String region) {
         Route route = routeRepository.findById(routeId)
                 .orElseThrow(() -> new IllegalArgumentException("경로를 찾을 수 없습니다"));
 
@@ -111,6 +112,9 @@ public class FeedService {
 
         route.setDescription(trimToNull(description, 500));
         route.setTags(normalizeTags(rawTags));
+        // 코스 저장 시 자동으로 못 채워졌거나 잘못됐을 때, 게시물 올리는 시점에 고쳐 쓸 수 있게 한다.
+        // 여러 지역을 콤마로 이어 붙여 저장할 수 있어(tags 필드와 같은 방식) 여유 있게 잡는다.
+        route.setRegion(trimToNull(region, 300));
         routeRepository.save(route);
 
         String authorName = userRepository.findById(userId).map(User::getName).orElse("익명 라이더");

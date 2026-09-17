@@ -119,12 +119,135 @@
 /* 라이딩 통계 */
 .accountStats {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-around;
-  gap: 12px;
+  gap: 16px 12px;
 }
-.accountStat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.accountStat { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 72px; }
 .accountStat strong { color: var(--ink); font-size: 1.4rem; font-weight: 900; }
 .accountStat span { color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+
+.accountAchieve {
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--wash);
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+/* 라이더 역량 — 가장 강한 항목이 항상 꽉 찬 막대(왼쪽→오른쪽)이고 나머지는 그에 비례한다 */
+.accountAbilityList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.accountAbilityRow {
+  display: grid;
+  grid-template-columns: 64px 1fr 72px;
+  align-items: center;
+  gap: 12px;
+}
+.accountAbilityLabel {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+.accountAbilityBarTrack {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.accountAbilityBarFill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--grad);
+  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accountAbilityBarFill { transition-duration: 0.01ms; }
+}
+.accountAbilityValue {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* 라이딩 기록 목록 */
+.accountEmptyHint {
+  margin: 0;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.accountRideList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.accountRideRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.accountRideRow:last-child { border-bottom: 0; }
+
+.accountRideMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.accountRideMain strong {
+  color: var(--ink);
+  font-size: 0.94rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountMountainBadge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 열마다 폭을 고정해서, 값 길이가 달라도(6.5km vs 25.0km 등) 다음 열이 안 밀리게 한다 */
+.accountRideMeta {
+  display: grid;
+  grid-template-columns: 60px 56px 40px 56px;
+  flex-shrink: 0;
+  gap: 0 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.accountRideMeta span { text-align: right; white-space: nowrap; }
 
 /* 기본 정보 수정 폼 */
 .accountEditGrid {

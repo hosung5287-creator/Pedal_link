@@ -3,7 +3,7 @@ import '../styles/browse.css';
 import BrandLogo from '../components/BrandLogo';
 
 import { useEffect, useState } from 'react';
-import { text } from '../constants';
+import { text, GU_LIST } from '../constants';
 import { getFeed, toggleLike } from '../api/feed';
 import RouteMapThumbnail from '../components/RouteMapThumbnail';
 import ComposePostModal from '../components/ComposePostModal';
@@ -16,6 +16,11 @@ function formatDuration(min) {
   const h = Math.floor(min / 60);
   const m = min % 60;
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
+}
+
+// "마포구,강동구" -> ["마포구", "강동구"] (게시물 올릴 때 여러 지역을 콤마로 이어 붙여 저장한다)
+function splitRegions(region) {
+  return (region || '').split(',').map((r) => r.trim()).filter(Boolean);
 }
 
 // 저장된 데이터에서 해시태그를 유도한다 (별도 태그 입력 기능이 아직 없으므로)
@@ -77,6 +82,9 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded, onOpenMap }) {
         {/* 이름 · 위치 · 시간을 한 줄로 (레퍼런스의 "Gustave Flowbert in Marketplace · 42m") */}
         <p className="feedMeta">
           <strong>{item.authorName}</strong>
+          {splitRegions(item.region).length > 0 && (
+            <span className="feedMetaRegion">{splitRegions(item.region).join(', ')}</span>
+          )}
           {item.fromLabel && <span className="feedMetaPlace">{item.fromLabel}</span>}
           {timeAgo(item.createdAt) && <span className="feedMetaTime">{timeAgo(item.createdAt)}</span>}
         </p>
@@ -149,6 +157,7 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [regionFilter, setRegionFilter] = useState('전체');
 
   useEffect(() => {
     let alive = true;
@@ -159,6 +168,10 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
   }, [user?.id]);
 
   const openCompose = () => (isLoggedIn ? setComposeOpen(true) : onMoveLogin());
+
+  const shownItems = regionFilter === '전체'
+    ? items
+    : items.filter((it) => splitRegions(it.region).includes(regionFilter));
 
   // 올린 게시물을 목록 맨 앞으로 (이미 있던 카드면 교체)
   const handlePublished = (card) => {
@@ -201,7 +214,16 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
           <p className="eyebrow">{text.browseEyebrow}</p>
           <h1>{text.feedTitle}</h1>
         </div>
-        <button type="button" className="composeBtn" onClick={openCompose}>{text.browseCompose}</button>
+        <div className="browseHeroActions">
+          <label className="browseRegionFilter">
+            <span>{text.regionLabel}</span>
+            <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}>
+              <option value="전체">{text.regionAll}</option>
+              {GU_LIST.map((gu) => <option key={gu} value={gu}>{gu}</option>)}
+            </select>
+          </label>
+          <button type="button" className="composeBtn" onClick={openCompose}>{text.browseCompose}</button>
+        </div>
       </header>
 
       {/* 피드(왼쪽) + 랭킹 사이드바(오른쪽) 2단 */}
@@ -209,10 +231,10 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
         <main className="feedList">
           {loading && <p className="browseEmpty">{text.browseLoading}</p>}
           {error && <p className="browseEmpty">{error}</p>}
-          {!loading && !error && items.length === 0 && (
+          {!loading && !error && shownItems.length === 0 && (
             <p className="browseEmpty">{text.browseNoFeed}</p>
           )}
-          {items.map(item => (
+          {shownItems.map(item => (
             <FeedCard
               key={item.id}
               item={item}

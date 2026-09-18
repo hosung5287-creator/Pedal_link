@@ -30,7 +30,6 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
   const watchIdRef = useRef(null);
   const followingRef = useRef(true);
   const rideDistanceRef = useRef(0); // 폴링 콜백에서 최신 거리값을 읽기 위한 미러
-  const routeAscendMRef = useRef(null); // 이 코스의 상승고도 — 라이딩 기록에 스냅샷으로 남긴다
   // 라이딩 시작 시각은 파티 공유값(rideStartedAt) 기준 — 각자 방을 연 시점이 아니라
   // 다 같은 시점부터 세야 경과 시간이 사람마다 다르게 보이지 않는다.
   const rideStartMsRef = useRef(party.rideStartedAt ? new Date(party.rideStartedAt).getTime() : Date.now());
@@ -66,7 +65,6 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     let alive = true;
     getRouteById(party.routeId).then((data) => {
       if (!alive) return;
-      routeAscendMRef.current = data.ascendM ?? null;
       if (!mapRef.current || !routeLayerRef.current) return;
       if (!data.bikeRoute?.length || !data.shortestRoute?.length) return;
       const bike = data.bikeRoute.map((p) => [p.lat, p.lng]);
@@ -224,7 +222,6 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
               partyId: party.id,
               routeId: party.routeId ?? null,
               routeName: party.routeName ?? null,
-              ascendM: routeAscendMRef.current,
             }).catch(() => {});
           }
           setSummary({
@@ -266,7 +263,6 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
           partyId: party.id,
           routeId: party.routeId ?? null,
           routeName: party.routeName ?? null,
-          ascendM: routeAscendMRef.current,
         }).catch(() => {});
       }
       // 파티(대기방)는 그대로 열어두고, rideStartedAt 만 지운다.

@@ -16,6 +16,6 @@ public class RideRecordRequest {
     private Long partyId;      // 파티 라이딩이면 파티 id (선택)
     private Long routeId;      // 어떤 코스를 탔는지 (선택, 자유주행이면 없음)
     private String routeName;
-    private Integer ascendM;   // 그 코스의 상승고도 스냅샷
+    // ascendM은 안 받는다 — 저장 시 routeId로 routes를 조인해서 구한다.
     private LocalDateTime ridedAt; // 보통은 서버가 now()로 채움 — 목업 데이터 넣을 때만 지정
 }

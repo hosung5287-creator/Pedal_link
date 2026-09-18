@@ -2,15 +2,20 @@ import '../styles/ridingroom.css';
 
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { makeTileLayer, makeCurrentLocationIcon, makeHeadingIcon, bearingBetween, drawRoutes } from '../utils/leaflet';
+import { makeTileLayer, makeCurrentLocationIcon, makeHeadingIcon, makeOtherUserIcon, bearingBetween, drawRoutes } from '../utils/leaflet';
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { getRouteById } from '../api/routes';
 import { sendMatchRequest, getOutgoingMatches } from '../api/matches';
+import { getProfile } from '../api/users';
 import { api } from '../api/client';
 
 // MapPage의 지오펜스와 같은 값 — 50m 안에 들어오면 알림, 250m 밖으로 나가야 이탈로 친다(끊김 방지용 여유)
 const GEOFENCE_RADIUS_M = 50;
 const GEOFENCE_EXIT_M = 250;
+// 이 거리 안이면 지도에 핀을 그려서 "근처에 누가 있는지" 보이게 한다 (매칭 가능 여부와는 별개)
+const VISIBLE_M = 500;
+
+const GENDER_LABEL = { male: '남성', female: '여성' };
 
 function fmtTime(sec) {
   const m = Math.floor(sec / 60);
@@ -24,6 +29,34 @@ function fmtProxDist(d) {
 }
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// 핀에 마우스를 올리거나(PC) 탭하면(모바일) 뜨는 프로필 미리보기 카드.
+// profile이 'loading'이면 아직 안 불러온 것, null이면 실패한 것 — 둘 다 이름/거리만 보여준다.
+function profileTooltipHtml(name, dist, profile) {
+  const head = `<div class="rrProfileHead">`
+    + `<span class="rrProfileAvatar">${escapeHtml(letterOf(name))}</span>`
+    + `<div class="rrProfileHeadText"><strong>${escapeHtml(name)}</strong><span class="rrProfileDist">${fmtProxDist(dist)}</span></div>`
+    + `</div>`;
+
+  if (!profile || profile === 'loading') {
+    return `<div class="rrProfileCard">${head}<p class="rrProfileLoading">${profile === 'loading' ? '불러오는 중…' : '정보를 불러오지 못했어요'}</p></div>`;
+  }
+
+  const metaParts = [];
+  if (GENDER_LABEL[profile.gender]) metaParts.push(GENDER_LABEL[profile.gender]);
+  if (profile.age) metaParts.push(`${profile.age}세`);
+  if (profile.region) metaParts.push(profile.region);
+  const meta = metaParts.length ? `<div class="rrProfileMeta">${escapeHtml(metaParts.join(' · '))}</div>` : '';
+  const bike = profile.bikeInfo ? `<div class="rrProfileMeta">🚲 ${escapeHtml(profile.bikeInfo)}</div>` : '';
+  const bio = profile.bio ? `<p class="rrProfileBio">${escapeHtml(profile.bio)}</p>` : '';
+
+  return `<div class="rrProfileCard">${head}${meta}${bike}${bio}</div>`;
+}
 
 // 파티 없이 혼자 타는 라이딩 화면. RidingRoom과 같은 오버레이 골격을 쓰지만
 // 참가자·방장·파티 종료 흐름이 없다 — 시작한 사람이 곧 끝내는 사람이다.
@@ -39,8 +72,9 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   const followingRef = useRef(true);
   const rideStartMsRef = useRef(Date.now());
   const othersInsideRef = useRef(new Map()); // userId -> 지오펜스 안에 있는지
+  const otherMarkersRef = useRef(new Map()); // userId -> Leaflet 마커 (VISIBLE_M 안에 있는 사람만)
+  const profileCacheRef = useRef(new Map()); // userId -> 프로필 | 'loading' | null(실패)
   const proxTimerRef = useRef(null);
-  const routeAscendMRef = useRef(null); // 코스 따라가기 모드일 때 그 코스의 상승고도 — 라이딩 기록에 스냅샷으로 남긴다
 
   const [rideTime, setRideTime] = useState(0);
   const [rideDistance, setRideDistance] = useState(0);
@@ -79,7 +113,6 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
     let alive = true;
     getRouteById(route.id).then((data) => {
       if (!alive) return;
-      routeAscendMRef.current = data.ascendM ?? null;
       if (!mapRef.current || !routeLayerRef.current) return;
       if (!data.bikeRoute?.length || !data.shortestRoute?.length) return;
       const bike = data.bikeRoute.map((p) => [p.lat, p.lng]);
@@ -148,10 +181,12 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
     return () => clearInterval(timer);
   }, []);
 
-  // 내 위치를 서버에 계속 보고 + 위치공유 중인 다른 사람과의 거리로 지오펜스 감지
+  // 내 위치를 서버에 계속 보고 + 위치공유 중인 다른 사람과의 거리로 지오펜스 감지 + 근처 핀 표시
   useEffect(() => {
     let cancelled = false;
     const insideMap = othersInsideRef.current;
+    const markers = otherMarkersRef.current;
+    const profiles = profileCacheRef.current;
 
     const timer = setInterval(async () => {
       const pos = lastPosRef.current;
@@ -168,6 +203,8 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           if (o.userId === user.id) continue;
           seen.add(o.userId);
           const dist = map.distance([pos.lat, pos.lng], [o.lat, o.lng]);
+
+          // 지오펜스 진입/이탈 알림 (매칭 신청은 여기서 뜬다)
           const wasInside = insideMap.get(o.userId) || false;
           const isInside = wasInside ? dist <= GEOFENCE_EXIT_M : dist <= GEOFENCE_RADIUS_M;
           if (isInside && !wasInside) {
@@ -176,16 +213,57 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
             showProxAlert({ userId: o.userId, name: o.name, dist, entering: false });
           }
           insideMap.set(o.userId, isInside);
+
+          // 근처(VISIBLE_M 이내)면 핀을 그리고, 마우스오버/탭하면 프로필 미리보기
+          if (dist <= VISIBLE_M) {
+            let marker = markers.get(o.userId);
+            if (!marker) {
+              marker = L.marker([o.lat, o.lng], { icon: makeOtherUserIcon(), zIndexOffset: 900 })
+                .bindTooltip(profileTooltipHtml(o.name, dist, profiles.get(o.userId)), {
+                  direction: 'top', offset: [0, -14], className: 'rrProfileTooltip', opacity: 1,
+                })
+                .addTo(map);
+              marker.on('click', () => marker.openTooltip()); // 모바일은 호버가 없으니 탭으로도 열리게
+              markers.set(o.userId, marker);
+
+              profiles.set(o.userId, 'loading');
+              getProfile(o.userId).then((p) => {
+                profiles.set(o.userId, p);
+                const m = markers.get(o.userId);
+                const myPos = lastPosRef.current;
+                if (m && myPos) {
+                  const freshDist = map.distance([myPos.lat, myPos.lng], m.getLatLng());
+                  m.setTooltipContent(profileTooltipHtml(o.name, freshDist, p));
+                }
+              }).catch(() => { profiles.set(o.userId, null); });
+            } else {
+              marker.setLatLng([o.lat, o.lng]);
+              marker.setTooltipContent(profileTooltipHtml(o.name, dist, profiles.get(o.userId)));
+            }
+          } else {
+            const marker = markers.get(o.userId);
+            if (marker) { marker.remove(); markers.delete(o.userId); profiles.delete(o.userId); }
+          }
         }
+
         for (const id of insideMap.keys()) {
           if (!seen.has(id)) insideMap.delete(id);
+        }
+        for (const [id, marker] of markers) {
+          if (!seen.has(id)) { marker.remove(); markers.delete(id); profiles.delete(id); }
         }
       } catch {
         // 다음 폴링에서 재시도
       }
     }, 3000);
 
-    return () => { cancelled = true; clearInterval(timer); };
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      markers.forEach((m) => m.remove());
+      markers.clear();
+      profiles.clear();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id, user.name]);
 
@@ -236,7 +314,6 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           partyId: null,
           routeId: route?.id ?? null,
           routeName: route?.routeName ?? null,
-          ascendM: routeAscendMRef.current,
         }).catch(() => {});
       }
       setSummary({ distanceKm, durationMin, avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0 });

@@ -26,10 +26,13 @@ public class RideRecord {
     private Long partyId;
 
     // 어떤 코스를 탔는지 — 자유주행이면 둘 다 null.
-    // routeName/ascendM은 라이딩 종료 시점의 스냅샷이다(코스가 나중에 지워지거나 바뀌어도
-    // 이미 탄 기록은 그대로 남아야 하므로 routes 테이블을 매번 조인하지 않는다).
+    // routeName은 라이딩 종료 시점의 스냅샷이다(코스가 나중에 지워지거나 바뀌어도
+    // 이미 탄 기록은 그대로 남아야 하므로).
     private Long routeId;
     private String routeName;
+
+    // routes.ascend_m 을 조인해서 채운다 — ride_records 에 따로 저장하지 않는다(용량 중복 방지).
+    @Transient
     private Integer ascendM;
 
     private LocalDateTime ridedAt = LocalDateTime.now();

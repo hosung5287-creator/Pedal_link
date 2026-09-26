@@ -55,13 +55,22 @@ public class AuthController {
         return ResponseEntity.ok(UserProfileResponse.from(user));
     }
 
+    // 위치 공유 허용 설정 — 프론트(api/auth.js)가 이 주소를 쓰고 있어 경로는 유지한다.
+    // 현재 값은 GET /api/users/{id} 응답의 locationShareEnabled 로 확인한다.
     @PutMapping("/users/{id}/location-sharing")
     public ResponseEntity<?> updateLocationSharing(
             @PathVariable Long id,
             @RequestBody Map<String, Boolean> body) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
-        user.setLocationShareEnabled(body.get("enabled"));
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "사용자를 찾을 수 없습니다."));
+        }
+        // enabled 가 빠지면 boolean 으로 풀 때 NullPointerException(500)이 나서 먼저 막는다
+        Boolean enabled = body == null ? null : body.get("enabled");
+        if (enabled == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "enabled(true/false) 값이 필요합니다."));
+        }
+        user.setLocationShareEnabled(enabled);
         userRepository.save(user);
         return ResponseEntity.ok(Map.of(
             "id", user.getId(),

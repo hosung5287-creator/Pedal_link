@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Pedal Link 시스템 아키텍처",
+    "output": "pedal-link-architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [1340, 740],
+    "views": [
+      {
+        "id": "main-path",
+        "label": "기본 요청 경로",
+        "focus": ["riders", "tunnel", "spa", "api", "db"],
+        "note": "라이더의 브라우저에서 Cloudflare 터널을 거쳐 DB까지 이어지는 주 경로입니다."
+      },
+      {
+        "id": "map-stack",
+        "label": "지도 · 경로 탐색",
+        "focus": ["spa", "brouter", "kakao", "osm"],
+        "note": "지도 화면이 백엔드를 거치지 않고 직접 호출하는 외부 서비스입니다."
+      },
+      {
+        "id": "realtime",
+        "label": "실시간 기능",
+        "focus": ["spa", "stomp", "api", "livemap", "db"],
+        "note": "채팅은 STOMP로 DB에 남고, 위치 공유는 인메모리에만 머뭅니다."
+      }
+    ]
+  },
+  "components": [
+    { "id": "kakao", "type": "external", "label": "Kakao Local API", "sublabel": "장소 검색", "tag": "Vite 프록시", "pos": [180, 130], "size": [160, 60] },
+    { "id": "brouter", "type": "external", "label": "BRouter", "sublabel": "자전거 경로 탐색", "pos": [380, 130], "size": [160, 60] },
+    { "id": "osm", "type": "external", "label": "OSM 타일", "sublabel": "지도 배경", "pos": [580, 130], "size": [140, 60] },
+    { "id": "livemap", "type": "backend", "label": "실시간 위치 저장소", "sublabel": "ConcurrentHashMap", "tag": "인메모리 · 15초 TTL", "pos": [810, 130], "size": [200, 64] },
+
+    { "id": "riders", "type": "external", "label": "라이더", "sublabel": "브라우저 / 모바일 GPS", "pos": [40, 350], "size": [150, 64] },
+    { "id": "tunnel", "type": "cloud", "label": "Cloudflare Tunnel", "sublabel": "HTTPS 공개", "tag": "GPS 보안 컨텍스트", "pos": [250, 350], "size": [160, 64] },
+    { "id": "spa", "type": "frontend", "label": "React SPA", "sublabel": "React 19 + Vite :3000", "pos": [470, 350], "size": [160, 64] },
+    { "id": "api", "type": "backend", "label": "Spring Boot API", "sublabel": "REST :8080", "pos": [830, 350], "size": [160, 64] },
+    { "id": "db", "type": "database", "label": "PostgreSQL + PostGIS", "sublabel": ":5432 Pedal_link", "pos": [1090, 350], "size": [180, 64] },
+
+    { "id": "stomp", "type": "messagebus", "label": "STOMP 브로커", "sublabel": "WebSocket /ws", "pos": [470, 570], "size": [160, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "애플리케이션 서버", "wraps": ["spa", "api", "stomp", "livemap", "db"] }
+  ],
+  "connections": [
+    { "id": "riders-https", "from": "riders", "to": "tunnel", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "tunnel-spa", "from": "tunnel", "to": "spa", "variant": "emphasis" },
+    { "id": "spa-api", "from": "spa", "to": "api", "label": "REST /api/**", "variant": "emphasis" },
+    { "id": "api-db", "from": "api", "to": "db", "label": "JDBC", "variant": "emphasis" },
+
+    { "id": "spa-kakao", "from": "spa", "to": "kakao", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+    { "id": "spa-brouter", "from": "spa", "to": "brouter", "fromSide": "top", "toSide": "bottom" },
+    { "id": "spa-osm", "from": "spa", "to": "osm", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+
+    { "id": "spa-stomp", "from": "spa", "to": "stomp", "label": "WebSocket 연결", "labelDy": 24 },
+    { "id": "stomp-db", "from": "stomp", "to": "db", "label": "채팅 내역 저장" },
+    { "id": "api-livemap", "from": "api", "to": "livemap", "label": "위치 저장 · 조회", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "엣지 · 프론트엔드",
+      "items": [
+        "Cloudflare 터널 2개 — 프론트 :3000, 백엔드 :8080",
+        "HTTPS라야 브라우저가 GPS를 허용 (localhost는 예외)",
+        "Leaflet 지도에 OSM 타일 + PostGIS 자전거도로 중첩"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "백엔드",
+      "items": [
+        "Spring Boot 4.0.6 — REST와 STOMP가 한 프로세스",
+        "경로 · 파티 · 크루 · 매칭 · 채팅 · 프로필 API",
+        "파티 채팅과 크루 채팅은 테이블을 분리"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "데이터",
+      "items": [
+        "PostgreSQL 18.3 + PostGIS 3.6",
+        "routes.bike_path는 LineString(4326) 지오메트리",
+        "실시간 위치만 DB를 쓰지 않고 15초 후 소멸"
+      ]
+    }
+  ]
+}

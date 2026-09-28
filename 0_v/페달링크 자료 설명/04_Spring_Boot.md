@@ -26,7 +26,13 @@ com.example.demo
 │   ├── PartyController.java       ← 파티(링크) API
 │   ├── RideRecordController.java  ← 주행 기록 저장/조회
 │   ├── FeedController.java        ← 둘러보기 피드 / 좋아요
-│   └── LocationController.java    ← 실시간 위치 보관/중계 (DB 미사용)
+│   ├── LocationController.java    ← 실시간 위치 보관/중계 (DB 미사용)
+│   ├── ChatController.java        ← 파티 채팅 (STOMP + 내역 REST)
+│   ├── CrewChatController.java    ← 크루 채팅 (STOMP + 내역 REST)
+│   ├── CrewController.java        ← 크루(동호회) API
+│   ├── MatchController.java       ← 라이딩 매칭 API
+│   └── UserController.java        ← 프로필 조회/수정
+│                                     (컨트롤러 12개 · 엔드포인트 46종)
 ├── dto/
 │   ├── SignupRequest / LoginRequest
 │   ├── RouteRequest / RouteResponse / PointDto

@@ -1,0 +1,102 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Pedal Link 파티 라이딩 워크플로",
+    "output": "pedal-link-workflow.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "정상 진행",
+        "focus": ["saveroute", "createparty", "request", "approve", "startride", "endride"],
+        "note": "경로를 만들어 파티를 열고, 승인을 거쳐 라이딩을 마치는 기본 흐름입니다."
+      },
+      {
+        "id": "gate",
+        "label": "승인 게이트",
+        "focus": ["request", "approve", "reject"],
+        "note": "호스트만 수락하거나 거절할 수 있는 지점입니다."
+      },
+      {
+        "id": "riding",
+        "label": "라이딩 중 감시",
+        "focus": ["startride", "location", "geoalert", "record"],
+        "note": "위치 공유와 지오펜스 판정이 동작하는 구간입니다."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "host", "label": "호스트" },
+    { "id": "member", "label": "참가자" },
+    { "id": "server", "label": "서버" },
+    { "id": "exception", "label": "예외 처리", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "prep", "label": "준비", "fromCol": 0, "toCol": 1 },
+    { "id": "recruit", "label": "모집 · 승인", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "riding", "label": "라이딩", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["saveroute", "createparty", "request", "approve", "startride", "endride"],
+  "semanticChecks": {
+    "allowedRoots": ["saveroute"],
+    "allowedTerminals": ["persist", "reject", "geoalert", "record"]
+  },
+  "nodes": [
+    { "id": "saveroute", "lane": "host", "col": 0, "type": "frontend", "label": "경로 저장", "sublabel": "지도에서 코스 생성", "width": 132 },
+    { "id": "createparty", "lane": "host", "col": 1, "type": "frontend", "label": "파티 개설", "sublabel": "시각 · 최대 인원", "width": 132 },
+    { "id": "approve", "lane": "host", "col": 3, "type": "security", "label": "참가 승인", "sublabel": "수락 또는 거절", "tag": "호스트 전용", "width": 132 },
+    { "id": "startride", "lane": "host", "col": 4, "type": "backend", "label": "라이딩 시작", "sublabel": "전원 준비 후", "width": 132 },
+    { "id": "endride", "lane": "host", "col": 5, "type": "backend", "label": "라이딩 종료", "sublabel": "파티 해산", "width": 132 },
+
+    { "id": "request", "lane": "member", "col": 2, "type": "frontend", "label": "참가 신청", "sublabel": "모집 중인 파티", "width": 132 },
+
+    { "id": "persist", "lane": "server", "col": 0, "type": "database", "label": "routes 저장", "sublabel": "PostGIS 지오메트리", "width": 132 },
+    { "id": "location", "lane": "server", "col": 4, "type": "backend", "label": "위치 수집", "sublabel": "인메모리 · 15초 TTL", "width": 132 },
+    { "id": "record", "lane": "server", "col": 5, "type": "database", "label": "주행 기록", "sublabel": "ride_records", "width": 132 },
+
+    { "id": "reject", "lane": "exception", "col": 3, "type": "security", "label": "신청 거절", "sublabel": "참여 무산", "width": 132 },
+    { "id": "geoalert", "lane": "exception", "col": 4, "type": "messagebus", "label": "이탈 알림", "sublabel": "일행과 멀어짐", "width": 132 }
+  ],
+  "edges": [
+    { "id": "e-persist", "from": "saveroute", "to": "persist", "label": "LineString(4326)", "variant": "dashed", "role": "async" },
+    { "id": "e-create", "from": "saveroute", "to": "createparty", "variant": "emphasis", "role": "main" },
+    { "id": "e-open", "from": "createparty", "to": "request", "label": "모집 공개", "role": "main" },
+    { "id": "e-pending", "from": "request", "to": "approve", "label": "승인 대기", "role": "main" },
+    { "id": "e-reject", "from": "approve", "to": "reject", "label": "거절", "variant": "security", "role": "error" },
+    { "id": "e-approved", "from": "approve", "to": "startride", "label": "승인 · 준비 완료", "variant": "emphasis", "role": "main" },
+    { "id": "e-share", "from": "startride", "to": "location", "label": "3초 간격 공유", "variant": "dashed", "role": "async" },
+    { "id": "e-geo", "from": "location", "to": "geoalert", "label": "250m 초과", "role": "error" },
+    { "id": "e-end", "from": "startride", "to": "endride", "variant": "emphasis", "role": "main" },
+    { "id": "e-record", "from": "endride", "to": "record", "label": "거리 · 시간", "variant": "dashed", "role": "async" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "파티 개설",
+      "items": [
+        "지도에서 저장한 경로가 파티의 기준 코스가 됨",
+        "출발 시각과 최대 인원을 함께 지정",
+        "경로 지오메트리는 개설과 별개로 미리 저장됨"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "승인 게이트",
+      "items": [
+        "호스트만 수락하거나 거절할 수 있음",
+        "pending 상태에서는 위치 공유 대상에 포함되지 않음",
+        "joined 로 바뀐 멤버만 라이딩에 참여"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "라이딩 중",
+      "items": [
+        "위치는 3초 간격으로 갱신되고 15초 후 소멸",
+        "50m 진입 · 250m 이탈 기준으로 지오펜스 판정",
+        "종료 시 거리와 시간을 ride_records 에 남김"
+      ]
+    }
+  ]
+}

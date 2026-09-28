@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>지오펜싱 시뮬레이터</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 24px; }
+    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; color: #60a5fa; }
+    .subtitle { font-size: 0.85rem; color: #94a3b8; margin-bottom: 24px; }
+    .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: #cbd5e1; }
+    label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; }
+    input { width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+            color: #e2e8f0; font-size: 0.9rem; margin-bottom: 10px; }
+    input:focus { outline: none; border-color: #60a5fa; }
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+    button { padding: 10px 20px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+             cursor: pointer; transition: opacity .15s; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btnLoad  { background: #334155; color: #e2e8f0; width: 100%; margin-bottom: 10px; }
+    #btnStart { background: #2563eb; color: #fff; width: 100%; }
+    #btnStop  { background: #dc2626; color: #fff; width: 100%; display: none; }
+    .route-info { background: #0f172a; border-radius: 8px; padding: 12px; margin-bottom: 10px;
+                  font-size: 0.82rem; color: #94a3b8; display: none; }
+    .route-info strong { color: #60a5fa; }
+    .phase-bar { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+    .phase { padding: 6px 12px; background: #0f172a; border-radius: 6px; font-size: 0.78rem;
+             color: #64748b; border-left: 3px solid transparent; transition: all .3s; }
+    .phase.active { color: #fff; border-color: #60a5fa; background: #1e3a8a; }
+    .phase.done   { color: #86efac; border-color: #16a34a; }
+    .riders { display: flex; flex-direction: column; gap: 8px; }
+    .rider  { display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+              background: #0f172a; border-radius: 8px; font-size: 0.85rem; }
+    .rider-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .rider-name { font-weight: 600; flex: 1; }
+    .rider-dist { color: #94a3b8; font-size: 0.78rem; }
+    .badge { padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .badge.far  { background: #1e293b; color: #64748b; border: 1px solid #334155; }
+    .badge.near { background: #14532d; color: #4ade80; }
+    .badge.left { background: #450a0a; color: #f87171; }
+    .log { background: #0f172a; border-radius: 8px; padding: 12px; height: 200px; overflow-y: auto;
+           font-size: 0.78rem; font-family: monospace; }
+    .log-line { padding: 2px 0; border-bottom: 1px solid #1e293b; }
+    .log-line.info  { color: #60a5fa; }
+    .log-line.enter { color: #4ade80; }
+    .log-line.exit  { color: #f87171; }
+    .log-line.mute  { color: #64748b; }
+    .progress { height: 4px; background: #1e293b; border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+    .progress-bar { height: 100%; background: #2563eb; width: 0; transition: width .3s linear; }
+  </style>
+</head>
+<body>
+  <h1>🚴 지오펜싱 시뮬레이터 — 경로 추적</h1>
+  <p class="subtitle">MapPage에서 위치공유를 켜 두세요. 더미 라이더 3명이 저장된 경로를 따라 이동합니다.</p>
+
+  <div class="card">
+    <h2>⚙️ 설정</h2>
+    <div class="row">
+      <div>
+        <label>백엔드 주소</label>
+        <input id="inApi" value="http://localhost:8080" />
+      </div>
+      <div>
+        <label>경로 ID</label>
+        <input id="inRouteId" value="4" type="number" min="1" />
+      </div>
+    </div>
+    <button id="btnLoad">🔍 경로 불러오기</button>
+    <div class="route-info" id="routeInfo"></div>
+    <label>내 위치 위도 <span style="color:#64748b">(경로 로드 시 자동 설정)</span></label>
+    <input id="inLat" type="number" step="0.000001" placeholder="경로 중간 지점으로 자동 설정" />
+    <label>내 위치 경도</label>
+    <input id="inLng" type="number" step="0.000001" placeholder="경로 중간 지점으로 자동 설정" />
+  </div>
+
+  <div class="card">
+    <h2>🎬 시뮬레이션</h2>
+    <div class="phase-bar">
+      <div class="phase" id="ph0">대기중</div>
+      <div class="phase" id="ph1">① 출발 — 경로 시작점에서 출발</div>
+      <div class="phase" id="ph2">② 접근 — 내 위치 향해 이동 중</div>
+      <div class="phase" id="ph3">③ 통과 — 내 위치 지나 경로 끝으로</div>
+      <div class="phase" id="ph4">✓ 완료</div>
+    </div>
+    <div class="progress"><div class="progress-bar" id="progBar"></div></div>
+    <div class="riders" id="riderList"></div>
+    <br>
+    <button id="btnStart" disabled>▶ 시뮬레이션 시작</button>
+    <button id="btnStop">■ 중지</button>
+  </div>
+
+  <div class="card">
+    <h2>📋 로그</h2>
+    <div class="log" id="logBox"></div>
+  </div>
+
+<script>
+const RIDERS = [
+  { id: 9001, name: '김테스트', color: '#f87171' },
+  { id: 9002, name: '이테스트', color: '#34d399' },
+  { id: 9003, name: '박테스트', color: '#60a5fa' },
+];
+const GEOFENCE_RADIUS = 50;
+const GEOFENCE_EXIT   = 250;
+const RIDER_OFFSET_WP = 4;
+
+let routeWaypoints = [];
+let stopped = false;
+let simTimer = null;
+const riderState = {};
+RIDERS.forEach(r => { riderState[r.id] = { wpIdx: 0, dist: 9999, badge: 'far' }; });
+
+function log(msg, cls = 'mute') {
+  const box = document.getElementById('logBox');
+  const t   = new Date().toLocaleTimeString('ko-KR');
+  box.innerHTML += `<div class="log-line ${cls}">[${t}] ${msg}</div>`;
+  box.scrollTop  = box.scrollHeight;
+}
+
+function setPhase(idx) {
+  for (let i = 0; i <= 4; i++) {
+    const el = document.getElementById('ph' + i);
+    el.className = 'phase' + (i < idx ? ' done' : i === idx ? ' active' : '');
+  }
+}
+
+function haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function lerpWp(wps, t) {
+  const maxT = wps.length - 1, raw = t * maxT;
+  const i = Math.min(Math.floor(raw), maxT - 1), f = raw - i;
+  return { lat: wps[i].lat + (wps[i+1].lat - wps[i].lat)*f, lng: wps[i].lng + (wps[i+1].lng - wps[i].lng)*f };
+}
+
+function renderRiders() {
+  document.getElementById('riderList').innerHTML = RIDERS.map(r => {
+    const s = riderState[r.id];
+    const badgeLabel = s.badge === 'near' ? '● 범위 안' : s.badge === 'left' ? '× 이탈' : '○ 범위 밖';
+    const pct = routeWaypoints.length > 0 ? Math.round((s.wpIdx / routeWaypoints.length) * 100) : 0;
+    return `<div class="rider">
+      <div class="rider-dot" style="background:${r.color}"></div>
+      <span class="rider-name">${r.name}</span>
+      <span class="rider-dist">경로 ${pct}% · ${Math.round(s.dist)}m</span>
+      <span class="badge ${s.badge}">${badgeLabel}</span>
+    </div>`;
+  }).join('');
+}
+
+async function postLocation(api, userId, name, lat, lng) {
+  try {
+    await fetch(`${api}/api/locations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, name, lat, lng }),
+    });
+  } catch (e) { log(`POST 실패(${name}): ${e.message}`, 'exit'); }
+}
+
+function sleep(ms) { return new Promise(res => { simTimer = setTimeout(res, ms); }); }
+
+document.getElementById('btnLoad').onclick = async () => {
+  const api     = document.getElementById('inApi').value.trim();
+  const routeId = document.getElementById('inRouteId').value.trim();
+  log(`경로 ${routeId} 불러오는 중…`, 'info');
+  try {
+    const res  = await fetch(`${api}/api/routes/${routeId}`);
+    const data = await res.json();
+    const wps  = data.bikeRoute || data.shortestRoute || [];
+    if (!wps.length) { log('경로 좌표가 없습니다.', 'exit'); return; }
+    routeWaypoints = wps;
+
+    const mid = wps[Math.floor(wps.length / 2)];
+    document.getElementById('inLat').value = mid.lat.toFixed(6);
+    document.getElementById('inLng').value = mid.lng.toFixed(6);
+
+    const info = document.getElementById('routeInfo');
+    info.style.display = 'block';
+    info.innerHTML = `<strong>${data.routeName}</strong> · 웨이포인트 ${wps.length}개 · ${data.fromLabel} → ${data.toLabel}<br>
+      <span style="color:#64748b">내 위치(중간): ${mid.lat.toFixed(5)}, ${mid.lng.toFixed(5)}</span>`;
+
+    document.getElementById('btnStart').disabled = false;
+    log(`경로 로드 완료 — ${wps.length}개 웨이포인트, 중간 좌표를 내 위치로 설정`, 'enter');
+    renderRiders();
+  } catch (e) { log(`경로 로드 실패: ${e.message}`, 'exit'); }
+};
+
+document.getElementById('btnStart').onclick = async () => {
+  if (!routeWaypoints.length) { log('먼저 경로를 불러오세요.', 'exit'); return; }
+
+  const api   = document.getElementById('inApi').value.trim();
+  const myLat = parseFloat(document.getElementById('inLat').value);
+  const myLng = parseFloat(document.getElementById('inLng').value);
+
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display  = 'block';
+  stopped = false;
+
+  RIDERS.forEach(r => { riderState[r.id] = { wpIdx: 0, dist: 9999, badge: 'far' }; });
+
+  const totalWp    = routeWaypoints.length;
+  const totalSteps = totalWp + RIDER_OFFSET_WP * (RIDERS.length - 1);
+  const INTERVAL   = 1200;
+  const insideSet  = new Set();
+
+  setPhase(1);
+  log('시뮬레이션 시작 — 경로를 따라 이동합니다', 'info');
+  log(`내 위치: ${myLat.toFixed(5)}, ${myLng.toFixed(5)}`, 'info');
+
+  for (let step = 0; step < totalSteps && !stopped; step++) {
+    const progress = step / totalSteps;
+    document.getElementById('progBar').style.width = (progress * 100) + '%';
+    if (progress < 0.3) setPhase(1); else if (progress < 0.7) setPhase(2); else setPhase(3);
+
+    for (let i = 0; i < RIDERS.length; i++) {
+      const r   = RIDERS[i];
+      const wpI = step - RIDER_OFFSET_WP * i;
+      if (wpI < 0 || wpI >= totalWp) continue;
+
+      const t   = Math.min(wpI / (totalWp - 1), 1);
+      const pos = lerpWp(routeWaypoints, t);
+
+      riderState[r.id].wpIdx = wpI;
+      riderState[r.id].dist  = haversineM(myLat, myLng, pos.lat, pos.lng);
+
+      const dist      = riderState[r.id].dist;
+      const wasInside = insideSet.has(r.id);
+      const isInside  = wasInside ? dist <= GEOFENCE_EXIT : dist <= GEOFENCE_RADIUS;
+
+      if (isInside && !wasInside) {
+        insideSet.add(r.id);
+        riderState[r.id].badge = 'near';
+        log(`✅ ${r.name} 진입! (${Math.round(dist)}m — 반경 ${GEOFENCE_RADIUS}m 이내)`, 'enter');
+      } else if (!isInside && wasInside) {
+        insideSet.delete(r.id);
+        riderState[r.id].badge = 'left';
+        log(`❌ ${r.name} 이탈! (${Math.round(dist)}m — 이탈 기준 ${GEOFENCE_EXIT}m 초과)`, 'exit');
+      } else if (!isInside) {
+        riderState[r.id].badge = 'far';
+      }
+
+      await postLocation(api, r.id, r.name, pos.lat, pos.lng);
+    }
+
+    renderRiders();
+    await sleep(INTERVAL);
+  }
+
+  if (!stopped) {
+    setPhase(4);
+    document.getElementById('progBar').style.width = '100%';
+    log('✨ 완료 — 모든 라이더가 경로를 통과했습니다', 'info');
+  } else {
+    log('⏹ 중지됨', 'exit');
+  }
+
+  document.getElementById('btnStart').style.display = 'block';
+  document.getElementById('btnStop').style.display  = 'none';
+};
+
+document.getElementById('btnStop').onclick = () => {
+  stopped = true;
+  clearTimeout(simTimer);
+  RIDERS.forEach(r => { riderState[r.id].badge = 'far'; });
+  renderRiders();
+};
+
+renderRiders();
+</script>
+</body>
+</html>

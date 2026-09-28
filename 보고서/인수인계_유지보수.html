@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pedal Link 인수인계 · 유지보수</title>
+<style>
+  :root {
+    --bg:#f7f8fa; --surface:#fff; --border:#e2e5ea; --text:#16191d;
+    --muted:#5c636e; --faint:#8b929c; --accent:#2563eb;
+    --ok:#15803d; --okbg:#dcfce7; --warn:#b45309; --warnbg:#fef3c7;
+    --err:#b91c1c; --errbg:#fee2e2; --codebg:#f1f3f5;
+    --shadow:0 1px 2px rgba(0,0,0,.05), 0 4px 12px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#0f1115; --surface:#171a21; --border:#262b34; --text:#e6e9ee;
+      --muted:#9aa3b0; --faint:#6b7482; --accent:#60a5fa;
+      --ok:#4ade80; --okbg:#14331f; --warn:#fbbf24; --warnbg:#3a2c0a;
+      --err:#f87171; --errbg:#3b1416; --codebg:#1e222a;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1115;--surface:#171a21;--border:#262b34;--text:#e6e9ee;
+    --muted:#9aa3b0;--faint:#6b7482;--accent:#60a5fa;
+    --ok:#4ade80;--okbg:#14331f;--warn:#fbbf24;--warnbg:#3a2c0a;
+    --err:#f87171;--errbg:#3b1416;--codebg:#1e222a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);line-height:1.65;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",
+    "Apple SD Gothic Neo",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:48px 24px 90px}
+  header{margin-bottom:10px}
+  h1{font-size:1.8rem;font-weight:700;margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:.92rem;margin:0}
+  h2{font-size:1.1rem;font-weight:650;margin:46px 0 14px;display:flex;
+     align-items:baseline;gap:9px;letter-spacing:-.01em}
+  h2 .n{font-size:.73rem;font-weight:600;color:var(--faint);letter-spacing:.06em}
+  h3{font-size:.95rem;font-weight:650;margin:22px 0 8px}
+  h3:first-child{margin-top:0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+        padding:22px 24px;box-shadow:var(--shadow);margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;font-size:.89rem}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--border);
+        vertical-align:top}
+  th{font-weight:600;font-size:.77rem;color:var(--muted);letter-spacing:.03em}
+  tr:last-child td{border-bottom:none}
+  code{background:var(--codebg);padding:1.5px 5px;border-radius:4px;
+       font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em}
+  pre{background:var(--codebg);border:1px solid var(--border);border-radius:9px;
+      padding:13px 15px;overflow-x:auto;margin:8px 0;
+      font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+      font-size:.83rem;line-height:1.6}
+  pre code{background:none;padding:0}
+  .trap{border-left:3px solid var(--err);background:var(--surface);
+        border-radius:0 10px 10px 0;padding:16px 20px;margin:12px 0;
+        box-shadow:var(--shadow)}
+  .trap .sym{font-weight:650;font-size:.94rem;margin:0 0 6px;color:var(--err)}
+  .trap .why{color:var(--muted);font-size:.88rem;margin:0 0 8px}
+  .trap pre{margin-bottom:0}
+  .note{border-left:3px solid var(--warn);background:var(--surface);
+        border-radius:0 9px 9px 0;padding:13px 18px;margin:14px 0;
+        font-size:.89rem;box-shadow:var(--shadow)}
+  .good{border-left:3px solid var(--ok);background:var(--surface);
+        border-radius:0 9px 9px 0;padding:13px 18px;margin:14px 0;
+        font-size:.89rem;box-shadow:var(--shadow)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;
+        font-size:.73rem;font-weight:600;white-space:nowrap}
+  .pill.ok{background:var(--okbg);color:var(--ok)}
+  .pill.warn{background:var(--warnbg);color:var(--warn)}
+  .pill.err{background:var(--errbg);color:var(--err)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:740px){.grid2{grid-template-columns:1fr}}
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 6px}
+  .toc a{text-decoration:none;color:var(--muted);background:var(--surface);
+     border:1px solid var(--border);border-radius:20px;padding:5px 13px;
+     font-size:.82rem;transition:.12s}
+  .toc a:hover{color:var(--accent);border-color:var(--accent)}
+  .kv{display:grid;grid-template-columns:130px 1fr;gap:4px 14px;font-size:.89rem}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);
+    font-size:.8rem;color:var(--faint)}
+  ul.tight{margin:6px 0;padding-left:20px;font-size:.89rem}
+  ul.tight li{margin:3px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Pedal Link 인수인계 · 유지보수</h1>
+  <p class="sub">혼자서 실행 · 수정 · 배포하기 위한 실무 안내 · 2026-09-21 기준</p>
+</header>
+
+<nav class="toc">
+  <a href="#run">실행</a>
+  <a href="#map">코드 위치</a>
+  <a href="#recipe">자주 하는 작업</a>
+  <a href="#trap">함정 모음</a>
+  <a href="#todo">미해결</a>
+  <a href="#docs">문서 지도</a>
+</nav>
+
+<!-- ─────────── 실행 ─────────── -->
+<h2 id="run"><span class="n">01</span>실행과 종료</h2>
+
+<div class="card">
+  <h3>필요한 것</h3>
+  <dl class="kv">
+    <dt>JAVA_HOME</dt><dd><code>C:\Program Files\Java\jdk-21.0.10</code></dd>
+    <dt>PostgreSQL</dt><dd>18.3 + PostGIS 3.6 · DB명 <code>Pedal_link</code> · 계정 <code>postgres</code> / <code>pass</code></dd>
+    <dt>Node</dt><dd>v24 (npm 11)</dd>
+    <dt>cloudflared</dt><dd><code>C:\Users\kimHosung\cloudflared.exe</code></dd>
+  </dl>
+
+  <h3>백엔드 (포트 8080)</h3>
+<pre><code>cd my-app-backend
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21.0.10"
+.\gradlew bootRun</code></pre>
+
+  <h3>프론트 (포트 3000)</h3>
+<pre><code>cd my-app-front
+npm run dev</code></pre>
+
+  <h3>종료</h3>
+<pre><code>Get-Process -Name "java","node","cloudflared" -ErrorAction SilentlyContinue | Stop-Process -Force</code></pre>
+
+  <div class="note">
+    <b>포트가 3000으로 고정</b>돼 있습니다(<code>vite.config.mjs</code>의 <code>strictPort:true</code>).
+    백엔드 CORS가 <code>localhost:3000</code>만 허용하기 때문에, 포트가 밀리면 API가 전부 막힙니다.
+    이미 3000을 쓰는 프로세스가 있으면 그것부터 끄세요.
+  </div>
+</div>
+
+<!-- ─────────── 코드 위치 ─────────── -->
+<h2 id="map"><span class="n">02</span>어디에 무엇이 있나</h2>
+
+<div class="grid2">
+  <div class="card">
+    <h3>백엔드 <code>my-app-backend</code></h3>
+    <table>
+      <tr><td><code>controller/</code></td><td>REST · STOMP 진입점 (12개)</td></tr>
+      <tr><td><code>service/</code></td><td>업무 로직</td></tr>
+      <tr><td><code>entity/</code></td><td>DB 테이블 매핑 (12개)</td></tr>
+      <tr><td><code>repository/</code></td><td>쿼리 인터페이스</td></tr>
+      <tr><td><code>dto/</code></td><td>요청·응답 형태</td></tr>
+      <tr><td><code>WebConfig.java</code></td><td><b>CORS 허용 목록</b></td></tr>
+      <tr><td><code>Config/WebSocketConfig</code></td><td>STOMP 브로커</td></tr>
+      <tr><td><code>application.properties</code></td><td>DB 접속 · JPA 설정</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>프론트 <code>my-app-front</code></h3>
+    <table>
+      <tr><td><code>pages/</code></td><td>화면 10개</td></tr>
+      <tr><td><code>components/</code></td><td>재사용 UI · 모달</td></tr>
+      <tr><td><code>api/client.js</code></td><td><b>모든 API 호출의 관문</b></td></tr>
+      <tr><td><code>api/*.js</code></td><td>기능별 호출 묶음</td></tr>
+      <tr><td><code>hooks/useChat.js</code></td><td>WebSocket 연결</td></tr>
+      <tr><td><code>constants.js</code></td><td>화면 문구 · 상수</td></tr>
+      <tr><td><code>.env.local</code></td><td><b>백엔드 주소</b></td></tr>
+      <tr><td><code>vite.config.mjs</code></td><td>포트 · 프록시</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3>핵심 상수가 박혀 있는 곳</h3>
+  <table>
+    <thead><tr><th style="width:210px">값</th><th style="width:250px">위치</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><code>GEOFENCE_RADIUS_M = 50</code></td><td><code>pages/MapPage.jsx:18</code></td><td>진입 알림 반경</td></tr>
+      <tr><td><code>GEOFENCE_EXIT_M = 250</code></td><td><code>pages/MapPage.jsx:19</code></td><td>이탈 알림 반경</td></tr>
+      <tr><td>3초 폴링</td><td><code>pages/MapPage.jsx:600</code></td><td>위치 갱신 주기</td></tr>
+      <tr><td><code>STALE_MS = 15000</code></td><td><code>LocationController.java:32</code></td><td>위치 소멸 시간</td></tr>
+      <tr><td><code>EXPIRE_MINUTES = 5</code></td><td><code>MatchService.java:19</code></td><td>매칭 신청 만료</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ─────────── 레시피 ─────────── -->
+<h2 id="recipe"><span class="n">03</span>자주 하는 작업</h2>
+
+<div class="card">
+  <h3>① 브랜치 머지</h3>
+  <p style="color:var(--muted);font-size:.88rem;margin:0 0 8px">
+    이 프로젝트는 <b>항상 <code>--no-ff</code></b>로 머지해 이력을 남깁니다.</p>
+<pre><code>git fetch origin
+git log --oneline main..origin/sjw        # 가져올 게 있는지 먼저 확인
+git merge origin/sjw --no-ff -m "Merge branch 'sjw' into main"
+git push origin main</code></pre>
+  <div class="note">
+    <b>미커밋 변경이 있으면 머지가 거부됩니다.</b> 먼저 커밋하거나
+    <code>git stash</code>로 빼두세요. 같은 파일을 양쪽에서 고쳤다면 stash보다
+    <b>커밋이 안전</b>합니다 — 충돌 시 <code>git merge --abort</code>로 되돌릴 수 있습니다.
+  </div>
+</div>
+
+<div class="card">
+  <h3>② DB 스키마를 바꿀 때</h3>
+  <p style="color:var(--muted);font-size:.88rem;margin:0 0 8px">
+    엔티티에 필드를 추가하면 <code>ddl-auto=update</code>가 컬럼을 자동 생성합니다.
+    다만 <b>조건이 있습니다.</b></p>
+  <table>
+    <thead><tr><th style="width:190px">추가하는 타입</th><th style="width:110px">결과</th><th>이유</th></tr></thead>
+    <tbody>
+      <tr><td><code>String</code> <code>Integer</code> <code>Long</code></td>
+          <td><span class="pill ok">안전</span></td><td>nullable이라 기존 행에 NULL이 들어감</td></tr>
+      <tr><td><code>boolean</code> <code>int</code> (원시타입)</td>
+          <td><span class="pill err">실패</span></td><td>NOT NULL인데 기본값이 없어 기존 행을 채울 수 없음</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.88rem;margin:10px 0 6px">원시타입을 넣어야 하면 <b>마이그레이션 SQL을 직접 쓰세요.</b></p>
+<pre><code>-- DB/migrations/00N_설명.sql
+ALTER TABLE party_members
+    ADD COLUMN IF NOT EXISTS ready BOOLEAN NOT NULL DEFAULT FALSE;</code></pre>
+</div>
+
+<div class="card">
+  <h3>③ 터널로 외부 공개 (휴대폰 시연)</h3>
+<pre><code># 터널 2개를 각각 다른 창에서
+C:\Users\kimHosung\cloudflared.exe tunnel --url http://localhost:8080   # 백엔드
+C:\Users\kimHosung\cloudflared.exe tunnel --url http://localhost:3000   # 프론트</code></pre>
+  <p style="font-size:.88rem;margin:10px 0 4px">백엔드 터널 주소를 <code>.env.local</code>에 넣고 <b>Vite를 재시작</b>합니다.</p>
+<pre><code>VITE_API_BASE=https://받은주소.trycloudflare.com</code></pre>
+  <div class="note">
+    주소는 <b>터널을 열 때마다 바뀝니다.</b> 미리 링크를 배포하거나 보고서에 적을 수 없습니다.
+    발표 직전에 열고 끝날 때까지 끄지 마세요.
+  </div>
+</div>
+
+<div class="card">
+  <h3>④ 새 DB 덤프 만들기</h3>
+<pre><code>cd DB
+$env:PGPASSWORD = "pass"
+pg_dump -U postgres -d Pedal_link -F p --no-owner --no-privileges -f dump-new.sql</code></pre>
+  <p style="font-size:.88rem;margin:8px 0 0;color:var(--muted)">
+    <code>--no-owner --no-privileges</code>는 다른 서버에 복원할 때 소유권 구문이
+    에러를 내지 않게 합니다.</p>
+</div>
+
+<!-- ─────────── 함정 ─────────── -->
+<h2 id="trap"><span class="n">04</span>실제로 겪은 함정</h2>
+<p style="color:var(--muted);font-size:.9rem;margin:-6px 0 16px">
+  모두 이번 작업 중 실제로 막혔던 것들입니다. 증상만 보면 원인을 짐작하기 어려운 순서로 정리했습니다.</p>
+
+<div class="trap">
+  <p class="sym">화면은 뜨는데 로그인·조회가 전부 실패한다</p>
+  <p class="why"><code>.env.local</code>이 죽은 터널 주소를 가리키고 있거나,
+    수정 후 <b>Vite를 재시작하지 않은</b> 경우입니다. <code>.env.local</code>은
+    Vite 시작 시점에만 읽히므로 새로고침으로는 반영되지 않습니다.</p>
+<pre><code>VITE_API_BASE=http://localhost:8080   # 로컬 개발이면 이 값
+# 저장 후 Vite 종료 → npm run dev 다시</code></pre>
+</div>
+
+<div class="trap">
+  <p class="sym">백엔드는 "Started"인데 특정 기능만 깨진다</p>
+  <p class="why"><code>ddl-auto=update</code>가 컬럼 생성에 실패했는데
+    <b>WARN만 남기고 정상 기동</b>한 경우입니다. 로그를 끝까지 읽지 않으면 놓칩니다.</p>
+<pre><code>Select-String backend.log -Pattern "Error executing DDL"</code></pre>
+</div>
+
+<div class="trap">
+  <p class="sym">비로그인 상태에서 버튼을 누르면 화면이 하얘진다</p>
+  <p class="why"><code>onMoveLogin</code>은 <code>e.preventDefault()</code>를 호출하므로
+    <b>이벤트 객체를 넘겨야</b> 합니다. <code>?.</code>는 함수 없음만 막아주지
+    인자 누락은 막지 못합니다.</p>
+<pre><code>onClick={() => onMoveLogin?.()}        // ✗ e가 undefined
+onClick={(e) => onMoveLogin(e)}        // ✓</code></pre>
+</div>
+
+<div class="trap">
+  <p class="sym">다른 PC에서 접속하면 화면만 뜨고 아무것도 안 된다</p>
+  <p class="why"><code>localhost</code>는 <b>그 코드를 실행하는 기계 자신</b>을 뜻합니다.
+    브라우저에서 실행되므로, 다른 PC에서는 그 PC의 8080을 찾다가 실패합니다.
+    CORS 허용 목록에도 그 주소를 추가하고 백엔드를 다시 띄워야 합니다.</p>
+</div>
+
+<div class="trap">
+  <p class="sym">휴대폰에서 위치 공유·지오펜싱만 동작하지 않는다</p>
+  <p class="why">브라우저는 <b>HTTP에서 GPS를 차단</b>합니다. <code>localhost</code>만 예외입니다.
+    휴대폰 시연에는 터널(HTTPS)이 필수입니다. 이때 프론트만 HTTPS로 열면
+    <b>혼합 콘텐츠</b>로 API가 막히므로 <b>백엔드 터널도 함께</b> 필요합니다.</p>
+</div>
+
+<div class="trap">
+  <p class="sym">경로를 저장했는데 목록에 안 나온다</p>
+  <p class="why">저장 후 목록 state를 갱신하지 않으면 낡은 값이 남습니다.
+    현재는 <code>confirmSaveRoute</code>에서 <code>getRoutes</code>를 다시 호출하도록 고쳐져 있습니다.
+    비슷한 화면을 새로 만들 때 같은 실수를 하기 쉽습니다.</p>
+</div>
+
+<h3 style="margin-top:32px">리눅스 서버 작업에서</h3>
+
+<div class="trap">
+  <p class="sym"><code>dnf</code> 명령이 응답 없이 멈춘 것처럼 보인다</p>
+  <p class="why"><code>| grep</code>으로 넘기면 dnf가 묻는 질문이 grep에 걸러져
+    <b>화면에 안 보입니다.</b> 답을 기다리며 멈춰 있는 상태입니다.</p>
+<pre><code>dnf list available | grep "postgresql18"   # ✗ 질문이 안 보임
+dnf list available postgresql18-server     # ✓ dnf 자체 필터</code></pre>
+</div>
+
+<div class="trap">
+  <p class="sym"><code>scp</code>가 성공했다는데 서버에 파일이 없다</p>
+  <p class="why"><b>콜론을 빠뜨리면</b> 로컬 복사가 됩니다.
+    <code>1 file(s) copied</code>가 떠서 성공처럼 보입니다.
+    <b>비밀번호를 물어보면 원격 전송</b>, 안 물어보면 로컬 복사입니다.</p>
+<pre><code>scp dump.sql user1@192.168.0.5          # ✗ 이 이름의 파일로 복사됨
+scp dump.sql user1@192.168.0.5:~/       # ✓</code></pre>
+</div>
+
+<div class="trap">
+  <p class="sym"><code>psql: peer 인증을 실패했습니다</code></p>
+  <p class="why">PostgreSQL 기본값은 <b>리눅스 계정명과 DB 계정명이 같아야</b> 통과시킵니다.
+    비밀번호는 보지도 않습니다.</p>
+<pre><code>psql -U postgres -d Pedal_link          # ✗ user1이 postgres 행세
+sudo -u postgres psql -d Pedal_link     # ✓ 계정 자체를 바꿈</code></pre>
+</div>
+
+<div class="trap">
+  <p class="sym">덤프 복원이 <code>type "geometry" does not exist</code>로 실패</p>
+  <p class="why"><code>CREATE EXTENSION postgis</code>를 <b>해당 DB 안에서</b> 실행하지 않은 경우입니다.
+    <code>\c Pedal_link</code>로 이동한 뒤 실행해야 합니다. DB를 만들었다고 그 안에 있는 게 아닙니다.</p>
+</div>
+
+<div class="good">
+  <b>버전 규칙 하나만 기억하세요.</b>
+  PostgreSQL 덤프는 <b>낮은 버전 → 높은 버전만</b> 복원됩니다.
+  현재 18.3이므로 16이 깔린 서버에는 들어가지 않습니다.
+  서버에도 18 계열을 설치해야 합니다.
+</div>
+
+<!-- ─────────── 미해결 ─────────── -->
+<h2 id="todo"><span class="n">05</span>미해결 · 정리할 것</h2>
+
+<div class="card">
+  <h3>지금 당장 판단이 필요한 것</h3>
+  <table>
+    <thead><tr><th style="width:230px">항목</th><th style="width:90px">상태</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>푸시 안 된 커밋</td><td><span class="pill warn">대기</span></td>
+          <td><code>9dce4db</code> 머지 커밋이 <code>origin/main</code>보다 앞서 있음</td></tr>
+      <tr><td><code>sjw</code> 미머지</td><td><span class="pill warn">대기</span></td>
+          <td><code>e604492</code> — 머지하면 DB 컬럼 4개가 추가됨</td></tr>
+      <tr><td><code>lightningcss</code> 의존성</td><td><span class="pill warn">확인</span></td>
+          <td>빌드 테스트 중 설치한 것. 원래 의존성이 아니므로 뺄지 판단 필요</td></tr>
+      <tr><td><code>UserRepository.java</code></td><td><span class="pill warn">확인</span></td>
+          <td>빈 줄 하나만 추가됨 — 되돌리는 편이 깔끔</td></tr>
+      <tr><td><code>DB/user1@192.168...</code></td><td><span class="pill err">삭제</span></td>
+          <td><code>scp</code> 콜론 누락으로 생긴 찌꺼기 파일</td></tr>
+      <tr><td>로그 파일 4종</td><td><span class="pill err">제외</span></td>
+          <td><code>backend.log</code> 등 — <code>.gitignore</code>에 넣는 게 좋음</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>알려진 보안 · 설계 이슈</h3>
+  <table>
+    <thead><tr><th style="width:250px">이슈</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td>경로 삭제에 소유자 검사 없음</td>
+          <td><code>POST /api/routes/delete</code>가 <code>userId</code>를 받지 않아
+              routeId만 알면 남의 경로를 지울 수 있음</td></tr>
+      <tr><td>파티 승인에 호스트 검사 없음</td>
+          <td><code>approve</code>·<code>reject</code>에 권한 검사가 없음
+              (매칭 쪽은 <code>SecurityException</code>으로 막혀 있음)</td></tr>
+      <tr><td>피드가 미공개 경로도 노출</td>
+          <td><code>FeedService</code>가 조건 없이 전체를 조회</td></tr>
+      <tr><td>DB 비밀번호가 <code>pass</code></td>
+          <td>로컬은 괜찮지만 서버로 옮길 때 반드시 변경</td></tr>
+      <tr><td><code>build.gradle</code> 중복 선언</td>
+          <td><code>starter-web</code>·<code>data-jpa</code>·<code>lombok</code>이 두 번씩</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note">
+  <b>가장 큰 구조적 리스크는 스키마 관리 방식입니다.</b>
+  현재 <code>ddl-auto=update</code> + 손으로 실행하는 SQL 조합이라,
+  코드와 DB가 어긋나도 즉시 드러나지 않습니다.
+  서버 운영을 이어갈 계획이면 Flyway 도입과 <code>ddl-auto=validate</code> 전환을 권합니다.
+</div>
+
+<!-- ─────────── 문서 지도 ─────────── -->
+<h2 id="docs"><span class="n">06</span>문서 지도</h2>
+
+<div class="card">
+  <table>
+    <thead><tr><th style="width:300px">무엇이 궁금할 때</th><th>어느 문서</th></tr></thead>
+    <tbody>
+      <tr><td>기술 스택 · 기능별 구현 해설</td>
+          <td><code>0_v/페달링크 자료 설명/</code> (01~16번)</td></tr>
+      <tr><td>리눅스 서버 구축 절차</td>
+          <td><code>0_v/페달링크 자료 설명/17_로키_VM_서버_구축.md</code></td></tr>
+      <tr><td>전체 API 목록</td>
+          <td><code>09_REST_API_설계.md</code></td></tr>
+      <tr><td>지오펜싱 동작 원리</td>
+          <td><code>10_실시간_위치공유_지오펜싱.md</code> · <code>11_지오펜싱_테스트_구현코드.md</code></td></tr>
+      <tr><td>시스템 구조 그림</td>
+          <td><code>보고서/pedal-link-architecture.html</code></td></tr>
+      <tr><td>데이터 흐름 그림</td>
+          <td><code>보고서/pedal-link-dataflow.html</code></td></tr>
+      <tr><td>사용자 흐름 그림</td>
+          <td><code>보고서/pedal-link-workflow.html</code></td></tr>
+      <tr><td>브랜치 현황</td>
+          <td><code>보고서/git-flow.html</code></td></tr>
+      <tr><td>개발계획서 (제출용)</td>
+          <td><code>보고서/페달링크_개발계획서.docx</code></td></tr>
+      <tr><td>과거 작업 기록</td>
+          <td><code>09-04.md</code> · <code>페달링크_현재상항_기록/</code></td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.86rem;color:var(--muted);margin:14px 0 0">
+    다이어그램 3종은 <code>보고서/*.json</code> 명세를 고쳐 다시 만들 수 있습니다.
+<br><code>node ~/.claude/skills/archify/bin/archify.mjs deliver architecture &lt;명세&gt; &lt;출력&gt; --quality showcase</code>
+  </p>
+</div>
+
+<div class="card">
+  <h3>지오펜싱을 혼자 테스트하려면</h3>
+  <p style="font-size:.89rem;margin:0 0 8px">
+    더미 라이더 3명이 저장된 경로를 따라 움직이게 하는 시뮬레이터가 있습니다.</p>
+<pre><code>http://localhost:3000/geofence-test.html</code></pre>
+  <ul class="tight">
+    <li>경로 ID를 입력하고 <b>경로 불러오기</b> → <b>시뮬레이션 시작</b></li>
+    <li>내 위치는 경로 중간 지점으로 자동 설정됨</li>
+    <li>MapPage를 다른 탭에 띄워 두면 마커가 움직이는 것을 볼 수 있음</li>
+  </ul>
+</div>
+
+<footer>
+  2026-09-21 작성 · 실제 저장소 코드와 작업 기록을 근거로 정리
+</footer>
+
+</div>
+</body>
+</html>

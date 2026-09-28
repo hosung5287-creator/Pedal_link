@@ -1,9 +1,13 @@
 // 백엔드 API 호출을 한 곳으로 모으는 공통 클라이언트.
 // 컴포넌트는 fetch 를 직접 부르지 말고 항상 이 client 를 통해 호출한다.
 //
-// base URL 은 환경변수로 관리한다. (.env.local 의 VITE_API_BASE)
-// 로컬 개발 기본값은 Spring Boot 서버 주소.
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080';
+// base URL 은 환경변수로 관리한다. (.env.local / .env.production 의 VITE_API_BASE)
+//
+// 빈 문자열("")도 의미 있는 값이다 — Nginx 뒤에 배포할 때 쓰는 "같은 출처" 설정으로,
+// /api/... 를 자기 주소로 호출해 CORS 자체가 생기지 않는다.
+// 그래서 `||` 대신 undefined 여부로 판단한다(`||` 는 빈 문자열도 기본값으로 밀어낸다).
+const envBase = import.meta.env.VITE_API_BASE;
+export const API_BASE = envBase === undefined ? 'http://localhost:8080' : envBase;
 
 // 서버가 에러 상태코드를 주면 이 에러로 던진다.
 // 컴포넌트에서 err.status 로 분기 처리할 수 있다.

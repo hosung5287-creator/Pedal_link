@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Pedal Link 데이터 흐름",
+    "output": "pedal-link-dataflow.html",
+    "quality_profile": "showcase",
+    "viewBox": [1080, 720],
+    "views": [
+      {
+        "id": "route-path",
+        "label": "경로 데이터",
+        "focus": ["mapinput", "brouter", "api", "routestbl", "mapview", "feed"],
+        "note": "지도 입력이 BRouter를 거쳐 PostGIS 지오메트리로 남고, 지도와 피드가 함께 읽습니다."
+      },
+      {
+        "id": "location-path",
+        "label": "실시간 위치",
+        "focus": ["gps", "api", "livemap", "geofence"],
+        "note": "DB를 거치지 않고 인메모리에만 머무는 유일한 데이터입니다."
+      },
+      {
+        "id": "chat-path",
+        "label": "채팅",
+        "focus": ["chatinput", "stomp", "chattbl"],
+        "note": "STOMP가 브로드캐스트와 동시에 DB에 적재합니다."
+      }
+    ]
+  },
+  "stages": [
+    { "label": "수집" },
+    { "label": "계산" },
+    { "label": "처리" },
+    { "label": "저장" },
+    { "label": "소비" }
+  ],
+  "nodes": [
+    { "id": "mapinput", "type": "frontend", "label": "지도 입력", "sublabel": "출발 · 도착 선택", "stage": 0, "row": 0 },
+    { "id": "gps", "type": "frontend", "label": "브라우저 GPS", "sublabel": "watchPosition", "stage": 0, "row": 2, "tag": "HTTPS 필요" },
+    { "id": "chatinput", "type": "frontend", "label": "채팅 입력", "sublabel": "파티 · 크루", "stage": 0, "row": 4 },
+
+    { "id": "brouter", "type": "external", "label": "BRouter", "sublabel": "자전거 경로 탐색", "stage": 1, "row": 0 },
+
+    { "id": "api", "type": "backend", "label": "Spring Boot API", "sublabel": "검증 · 변환", "stage": 2, "row": 1 },
+    { "id": "stomp", "type": "messagebus", "label": "STOMP 브로커", "sublabel": "구독자 브로드캐스트", "stage": 2, "row": 4 },
+
+    { "id": "routestbl", "type": "database", "label": "routes", "sublabel": "PostGIS 지오메트리", "stage": 3, "row": 0, "tag": "영속" },
+    { "id": "livemap", "type": "backend", "label": "위치 저장소", "sublabel": "ConcurrentHashMap", "stage": 3, "row": 2, "tag": "휘발 · 15초" },
+    { "id": "chattbl", "type": "database", "label": "chat_messages", "sublabel": "파티 · 크루 분리", "stage": 3, "row": 4, "tag": "영속" },
+
+    { "id": "mapview", "type": "frontend", "label": "지도 렌더링", "sublabel": "저장 경로 복원", "stage": 4, "row": 0 },
+    { "id": "feed", "type": "frontend", "label": "둘러보기 피드", "sublabel": "경로 썸네일", "stage": 4, "row": 1 },
+    { "id": "geofence", "type": "frontend", "label": "지오펜스 판정", "sublabel": "50m 진입 · 250m 이탈", "stage": 4, "row": 3 }
+  ],
+  "flows": [
+    { "id": "f-coords", "from": "mapinput", "to": "brouter", "label": "출발 · 도착 좌표", "variant": "emphasis" },
+    { "id": "f-route", "from": "brouter", "to": "api", "label": "경로 좌표 · 거리 · 고도", "classification": "계산 결과", "variant": "emphasis" },
+    { "id": "f-persist", "from": "api", "to": "routestbl", "label": "LineString(4326)", "classification": "영속 저장", "variant": "emphasis" },
+
+    { "id": "f-gps", "from": "gps", "to": "api", "label": "위도 · 경도 3초 간격" },
+    { "id": "f-mem", "from": "api", "to": "livemap", "label": "userId 키로 덮어쓰기", "classification": "DB 미사용", "variant": "dashed" },
+
+    { "id": "f-chat", "from": "chatinput", "to": "stomp", "label": "메시지 발행" },
+    { "id": "f-chatsave", "from": "stomp", "to": "chattbl", "label": "발신자 · 내용 · 시각", "labelDy": -23 },
+
+    { "id": "f-mapread", "from": "routestbl", "to": "mapview", "label": "저장 경로 조회", "route": "straight" },
+    { "id": "f-feedread", "from": "routestbl", "to": "feed", "label": "좌표 → 폴리라인", "variant": "dashed" },
+    { "id": "f-geo", "from": "livemap", "to": "geofence", "label": "파티원 위치 · 거리 계산", "classification": "15초 내 기록만" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "경로 데이터",
+      "items": [
+        "지도 입력 → BRouter 계산 → PostGIS LineString(4326)",
+        "자전거 경로와 최단 경로를 각각 따로 저장",
+        "저장된 경로는 지도 복원과 피드 썸네일이 함께 읽음"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "실시간 위치",
+      "items": [
+        "DB를 거치지 않는 유일한 데이터 — 인메모리에만 존재",
+        "3초 간격으로 덮어쓰고 15초가 지나면 자동 소멸",
+        "파티 참여가 확정된 멤버에게만 조회를 허용"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "채팅",
+      "items": [
+        "브로드캐스트와 DB 적재가 같은 시점에 일어남",
+        "파티 채팅과 크루 채팅은 테이블을 분리",
+        "chat_messages.room_id가 parties(id)를 참조하기 때문"
+      ]
+    }
+  ]
+}

@@ -785,6 +785,13 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       await saveRouteApi(body);
       setSaveModalOpen(false);
       showToast('경로가 저장되었습니다');
+      // 저장 직후 목록을 다시 받아둔다. 이게 없으면 목록 패널이 열려 있을 때
+      // 방금 저장한 경로가 안 보이고, 닫았다 열어도 낡은 state 가 그대로 남는다.
+      if (user?.id) {
+        try {
+          setRouteList(await getRoutes(user.id));
+        } catch { /* 목록 갱신 실패는 저장 성공을 가리지 않는다 */ }
+      }
     } catch (e) {
       showToast('저장 실패: ' + e.message, 'error');
     }
@@ -832,20 +839,26 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
 
   // 특정 경로 선택해서 지도에 표시
  const loadRouteById = async (id) => {
-    const data = await getRouteById(id);
+    // try/catch 가 없으면 조회 실패 시 unhandled rejection 으로 조용히 끝나서
+    // 사용자는 "클릭해도 아무 일도 안 일어난다"고만 느끼게 된다.
+    try {
+      const data = await getRouteById(id);
 
-    if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
-        showToast('경로 데이터가 없습니다', 'error');
-        return;
+      if (!data.bikeRoute?.length || !data.shortestRoute?.length) {
+          showToast('경로 데이터가 없습니다', 'error');
+          return;
+      }
+
+      const bike = data.bikeRoute.map(p => [p.lat, p.lng]);
+      const shortest = data.shortestRoute.map(p => [p.lat, p.lng]);
+
+      setStartPoint({ lat: data.fromLat, lng: data.fromLng, label: data.fromLabel });
+      setEndPoint({ lat: data.toLat, lng: data.toLng, label: data.toLabel });
+      drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
+      setShowRouteList(false);
+    } catch (e) {
+      showToast('경로를 불러오지 못했습니다: ' + e.message, 'error');
     }
-
-    const bike = data.bikeRoute.map(p => [p.lat, p.lng]);
-    const shortest = data.shortestRoute.map(p => [p.lat, p.lng]);
-
-    setStartPoint({ lat: data.fromLat, lng: data.fromLng, label: data.fromLabel });
-    setEndPoint({ lat: data.toLat, lng: data.toLng, label: data.toLabel });
-    drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
-    setShowRouteList(false);
 };
 
   const findRoutes = useCallback(async (from, to) => {

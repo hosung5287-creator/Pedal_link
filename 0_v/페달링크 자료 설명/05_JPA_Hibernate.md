@@ -12,7 +12,11 @@ User.java    →  자동 SQL 생성       →  users 테이블
 ---
 
 ## 이 프로젝트에서 쓰인 곳
-- `User`, `Route`, `Party`, `PartyMember`, `RideRecord`, `RouteLike` 엔티티를 DB 테이블과 연결
+- 엔티티 12개를 DB 테이블과 연결
+  - 기본: `User`, `Route`, `Party`, `PartyMember`, `RideRecord`, `RouteLike`
+  - 채팅: `ChatMessageEntity`, `CrewChatMessageEntity`
+  - 크루: `Crew`, `CrewMember`, `CrewEvent`
+  - 매칭: `MatchRequest`
 - `ddl-auto=update` 로 엔티티 변경 시 DB 스키마 자동 반영
 - Repository로 SQL 없이 DB 조회/저장/삭제
 - Hibernate Spatial 로 PostGIS `LineString` 을 자바 객체로 다룸

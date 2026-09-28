@@ -1,6 +1,6 @@
 # PedalLink 기술 스택 공부 가이드
 
-> 최종 현행화: 2026-08-21 (기준 커밋 `a985c38`)
+> 최종 현행화: 2026-09-25 (기준 커밋 `670b8eb`)
 > 이 폴더의 문서는 **실제 저장소 코드 기준**으로 작성돼 있다. 코드를 고치면 관련 문서도 같이 고칠 것.
 
 ## 파일 목록
@@ -29,6 +29,21 @@
 | [15_둘러보기_피드.md](15_둘러보기_피드.md) | 피드 카드, 좌표→SVG 썸네일, 좋아요, 게시물 작성, N+1 회피 |
 | [16_파티_라이딩_구현.md](16_파티_라이딩_구현.md) | 파티 함께 달리기 — 멤버 위치 필터, 팔로우/heading-up, 기록 저장, 터널 공개 |
 
+### 배포 · 운영
+| 파일 | 내용 |
+|------|------|
+| [17_로키_VM_서버_구축.md](17_로키_VM_서버_구축.md) | Rocky Linux 10 VM에 전체 스택(DB+백엔드+Nginx) 올리기 — 구축 절차 |
+| [22_서버_운영_가이드.md](22_서버_운영_가이드.md) | **켜고·끄고·문제해결** — 구축 후 매일 쓰는 명령 모음 |
+| [23_배포_업데이트_가이드.md](23_배포_업데이트_가이드.md) | **고친 코드를 서버에 올리기** — 프론트/백엔드/스키마별 절차·롤백 |
+
+### 실시간 · 커뮤니티 (신규)
+| 파일 | 내용 |
+|------|------|
+| [18_WebSocket_채팅.md](18_WebSocket_채팅.md) | STOMP 구독/발행, 파티·크루 채팅이 테이블을 나눈 이유, SockJS 우회 |
+| [19_크루_동호회.md](19_크루_동호회.md) | 크루 생성·가입 정책(open/approval), myState 를 프론트가 계산하는 이유 |
+| [20_라이딩_매칭.md](20_라이딩_매칭.md) | 즉석 동행 신청 → 수락 시 파티 자동 생성, 5분 만료, 403 권한 검사 |
+| [21_프로필_주행통계.md](21_프로필_주행통계.md) | 부분 업데이트(PATCH 방식), 스냅샷 vs 조인, @Transient |
+
 ## 추천 공부 순서
 
 ```
@@ -49,6 +64,10 @@ Spring Security (07)
 외부 API 연동 (08)  ←→  경로 분석 (14)
     ↓
 실시간 위치공유·지오펜싱 (10 → 11)
+    ↓
+WebSocket 채팅 (18)  ←→  크루 (19) · 매칭 (20)
+    ↓
+배포 — 리눅스 VM (17)
 ```
 
 ## 현재 구현된 기능 한눈에
@@ -67,6 +86,14 @@ Spring Security (07)
 | 파티 함께 달리기 | MapPage 파티모드 | `/api/locations?partyId=` | ✅ |
 | 팔로우 모드 / heading-up | MapPage | — (프론트) | ✅ |
 | 파티 종료 · 삭제 | PartyPage | `/end`, `DELETE /api/parties/{id}` | ✅ (호스트만) |
+| **WebSocket 채팅 (파티)** | ChatPage, PartyDock | ChatController (STOMP) | ✅ |
+| **크루(동호회)** | CrewPage | CrewController + CrewService | ✅ |
+| **크루 채팅** | CrewPage | CrewChatController | ✅ |
+| **라이딩 매칭** | PartyDock 근처 라이더 | MatchController + MatchService | ✅ |
+| **프로필 설정** | ProfilePage | UserController | ✅ |
+| **누적 주행 통계** | ProfilePage | `/api/ride-records/stats` | ✅ |
+| **개인 라이딩** | PersonalRidingRoom | `/api/ride-records` | ✅ |
+| **코스 지역 구분** | MapPage, BrowsePage | `routes.region` | ✅ |
 | 둘러보기 피드 | BrowsePage | FeedController + FeedService | ✅ |
 | 피드 좋아요 | BrowsePage | `route_likes` | ✅ |
 | 게시물 올리기(문구·태그) | ComposePostModal | `routes.description / tags` | ✅ |

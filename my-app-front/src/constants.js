@@ -265,6 +265,7 @@ export const crew = {
   soon: '곧',
   soonHint: '준비 중이에요.',
   noCrew: '아직 만들어진 크루가 없어요.',
+  noCrewToFind: '참여할 수 있는 새 크루가 없어요. 내 크루에서 확인해보세요.',
   noMyCrewLong: '아직 가입한 크루가 없어요. 크루 찾기에서 참여해보세요.',
   loadFailed: '크루 목록을 불러오지 못했습니다.',
   joinFailed: '가입 신청에 실패했습니다.',

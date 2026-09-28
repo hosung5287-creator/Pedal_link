@@ -296,12 +296,17 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
   }, [user?.id]);
 
   const myCrews = crews.filter((c) => c.myState === 'joined');
-  const shown = view === 'mine' ? myCrews : crews;
+  // "크루 찾기"는 아직 안 들어간 크루만 — 내가 만들었거나 가입한 크루는 "내 크루"에서만 본다.
+  // 승인 대기중(pending)은 신청한 자리에서 상태를 확인할 수 있게 찾기에 남겨둔다.
+  const findCrews = crews.filter((c) => c.myState !== 'joined');
+  const shown = view === 'mine' ? myCrews : findCrews;
   const openCrew = crews.find((c) => c.id === openId) || null;
 
   const replace = (updated) =>
     setCrews((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
 
+  // 만든 크루는 목록 맨 앞에 붙이고 바로 "내 크루"로 넘겨준다.
+  // 리더는 백엔드에서 joined 로 들어오므로 withMyState 가 알아서 'joined' 로 계산한다.
   const handleJoin = async (id) => {
     setError('');
     try {
@@ -391,7 +396,11 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
             {loading ? (
               <p className="crewEmpty">{text.browseLoading}</p>
             ) : shown.length === 0 ? (
-              <p className="crewEmpty">{view === 'mine' ? t.noMyCrewLong : t.noCrew}</p>
+              <p className="crewEmpty">
+                {view === 'mine'
+                  ? t.noMyCrewLong
+                  : crews.length === 0 ? t.noCrew : t.noCrewToFind}
+              </p>
             ) : (
               <div className="crewGrid">
                 {shown.map((c) => (

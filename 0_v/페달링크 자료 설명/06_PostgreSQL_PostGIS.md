@@ -35,13 +35,21 @@ provider_id             VARCHAR(255)
 location_share_enabled  BOOLEAN            -- 위치 공유 동의 (엔티티 추가 후 자동 생성)
 created_at              TIMESTAMP NOT NULL DEFAULT now()
 
--- ⚠️ 옛 스키마 잔재 (User 엔티티에 없어서 아무도 안 씀)
-login_id                VARCHAR(50)
-password_hash           VARCHAR(255)
+-- 프로필 (2026-09 추가, 전부 nullable)
+profile_image_url       VARCHAR(255)
+bio                     VARCHAR(255)
+bike_info               VARCHAR(255)
+gender                  VARCHAR(255)       -- male | female | none
+age                     INTEGER
+region                  VARCHAR(255)
 ```
-> `login_id`, `password_hash` 는 초기 설계 때 만든 컬럼인데 지금 엔티티에는 없다.
-> `ddl-auto=update` 는 **컬럼을 지우지 않기 때문에** 계속 남아있다. 정리하려면 직접
-> `ALTER TABLE users DROP COLUMN login_id, DROP COLUMN password_hash;` 를 실행해야 한다.
+> **`login_id`·`password_hash` 는 제거됐다.** 초기 설계 잔재였는데 전원 NULL 이라
+> `DB/migrations/003_cleanup_dead_schema.sql` 로 지웠다.
+> `ddl-auto=update` 는 컬럼을 **지우지 않으므로** 이런 정리는 직접 SQL 을 써야 한다.
+>
+> 프로필 컬럼이 전부 nullable 인 이유는 기존 행이 있는 상태에서 추가했기 때문이다.
+> `NOT NULL` 컬럼을 기본값 없이 추가하면 `ddl-auto=update` 가 실패하는데,
+> **WARN 만 남기고 정상 기동**해서 발견이 늦어진다.
 
 ### routes
 ```sql
@@ -243,7 +251,19 @@ pg_dumpall -U postgres > cluster_dump.sql
 # 이 프로젝트에서 덤프를 갱신할 때
 pg_dump -U postgres --encoding=UTF8 Pedal_link > DB/dump-Pedal_link-$(Get-Date -Format yyyyMMddHHmm).sql
 ```
-덤프에는 **8개 테이블 + cycleways 2673행**이 들어 있다. 새 PC에서는
+덤프에는 **20개 테이블 + cycleways 2673행**이 들어 있다.
+(users, routes, parties, party_members, ride_records, route_likes, cycleways,
+ chat_messages, crews, crew_members, crew_events, crew_chat_messages,
+ match_requests, spatial_ref_sys 외)
+
+### 마이그레이션 이력
+| 파일 | 내용 |
+|------|------|
+| `001_chat_messages.sql` | 채팅 테이블 + users/parties PK 보강 |
+| `002_party_ready_status.sql` | `party_members.ready` (DEFAULT FALSE 필수) |
+| `003_cleanup_dead_schema.sql` | 죽은 컬럼·테이블 정리 |
+| `004_drop_ride_records_ascend_m.sql` | `@Transient` 전환에 따른 컬럼 제거 |
+ 새 PC에서는
 `CREATE DATABASE "Pedal_link"` → `CREATE EXTENSION postgis` → 덤프 복원으로
 `SETUP.md` 의 Step 8~9(테이블 생성 + ogr2ogr 임포트)를 건너뛸 수 있다.
 

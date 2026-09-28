@@ -158,7 +158,8 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
     return () => { alive = false; };
   }, [user?.id]);
 
-  const openCompose = () => (isLoggedIn ? setComposeOpen(true) : onMoveLogin());
+  // onMoveLogin 은 App 의 moveLogin — e.preventDefault() 를 쓰므로 이벤트를 그대로 넘겨야 한다
+  const openCompose = (e) => (isLoggedIn ? setComposeOpen(true) : onMoveLogin(e));
 
   // 올린 게시물을 목록 맨 앞으로 (이미 있던 카드면 교체)
   const handlePublished = (card) => {

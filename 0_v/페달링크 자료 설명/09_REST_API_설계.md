@@ -290,6 +290,51 @@ public record LiveLocation(Long userId, String name, double lat, double lng, lon
 
 ---
 
+## 신규 API (2026-09 추가)
+
+### 채팅 — ChatController · CrewChatController
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| STOMP | `/app/chat/{roomId}/send` | 파티 채팅 발행 → `/topic/chat/{roomId}` |
+| GET | `/api/chat/{roomId}/history` | 파티 채팅 내역 |
+| STOMP | `/app/crew-chat/{crewId}/send` | 크루 채팅 발행 → `/topic/crew-chat/{crewId}` |
+| GET | `/api/crew-chat/{crewId}/history` | 크루 채팅 내역 |
+
+→ 자세한 내용은 [18_WebSocket_채팅.md](18_WebSocket_채팅.md)
+
+### 크루 — CrewController (`/api/crews`)
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/crews` | 목록 |
+| GET | `/api/crews/{id}` | 상세 |
+| POST | `/api/crews` | 생성 (리더 자동 가입) |
+| POST | `/api/crews/{id}/join` | 가입 신청 |
+| POST | `/api/crews/{id}/leave` | 탈퇴 |
+| POST | `/api/crews/{id}/requests/{userId}/approve` | 승인 |
+| POST | `/api/crews/{id}/requests/{userId}/reject` | 거절 |
+
+### 매칭 — MatchController (`/api/matches`)
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| POST | `/api/matches` | 동행 신청 |
+| GET | `/api/matches/incoming?userId=` | 받은 신청 |
+| GET | `/api/matches/outgoing?userId=` | 보낸 신청 (pending + accepted) |
+| POST | `/api/matches/{id}/accept` | 수락 → **파티 자동 생성** |
+| POST | `/api/matches/{id}/reject` | 거절 |
+
+> 본인에게 온 신청이 아니면 **403** 을 준다. 상태 오류(400)와 권한 오류(403)를 구분한 사례다.
+
+### 프로필 — UserController (`/api/users`)
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/users/{id}` | 프로필 조회 |
+| PUT | `/api/users/{id}/profile` | 수정 (보낸 필드만 반영) |
+| GET | `/api/ride-records/stats?userId=` | 누적 주행 통계 |
+
+**현재 컨트롤러 12개 · 엔드포인트 46종**
+
+---
+
 ## 공부 리소스
 - REST API 이해: https://restfulapi.net
 - HTTP 상태 코드: https://developer.mozilla.org/ko/docs/Web/HTTP/Status

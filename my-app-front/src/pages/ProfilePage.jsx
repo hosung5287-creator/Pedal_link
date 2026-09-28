@@ -4,9 +4,36 @@ import { useEffect, useState } from 'react';
 import BrandLogo from '../components/BrandLogo';
 import { text, account } from '../constants';
 import { getProfile, updateProfile } from '../api/users';
-import { getRideStats } from '../api/rides';
+import { getRideStats, getRideHistory } from '../api/rides';
 
 const GENDER_LABEL = { male: '남성', female: '여성', none: '선택 안 함' };
+const EVEREST_M = 8849; // 총 상승고도를 재미로 비교할 기준
+
+// 라이더 역량 — 각 항목을 "만렙 기준값" 대비 퍼센트로 계산한 다음,
+// 그 중 제일 높은 항목을 100%(가장 긴 막대)로 놓고 나머지는 그에 비례해서 보여준다.
+// (절대적인 달성률이 아니라 "이 라이더는 상대적으로 뭐가 강한지"를 보여주는 그래프)
+const ABILITY_DEFS = [
+  { key: 'endurance', label: '지구력', unit: 'km', max: 500, value: (s) => s.totalDistanceKm, display: (v) => v.toFixed(1) },
+  { key: 'climbing', label: '등반력', unit: 'm', max: 5000, value: (s) => s.totalAscendM, display: (v) => Math.round(v).toLocaleString() },
+  { key: 'speed', label: '스피드', unit: 'km/h', max: 30, value: (s) => (s.totalDurationMin > 0 ? s.totalDistanceKm / (s.totalDurationMin / 60) : 0), display: (v) => v.toFixed(1) },
+  { key: 'consistency', label: '꾸준함', unit: '회', max: 50, value: (s) => s.rideCount, display: (v) => Math.round(v) },
+];
+
+function buildAbilities(stats) {
+  if (!stats) return [];
+  const raw = ABILITY_DEFS.map((def) => {
+    const value = def.value(stats) || 0;
+    return { ...def, value, rawPct: Math.min(value / def.max, 1) * 100 };
+  });
+  const maxRawPct = Math.max(...raw.map((r) => r.rawPct), 0);
+  return raw.map((r) => ({ ...r, barPct: maxRawPct > 0 ? (r.rawPct / maxRawPct) * 100 : 0 }));
+}
+
+function fmtRideDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+}
 
 const formOf = (p) => ({
   bio: p?.bio || '',
@@ -21,24 +48,39 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
   const letter = (user?.name || '?').trim().charAt(0);
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);
+  const [history, setHistory] = useState(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(formOf(null));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [barsReady, setBarsReady] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
     let alive = true;
-    Promise.all([getProfile(user.id), getRideStats(user.id)])
-      .then(([p, s]) => {
+    Promise.all([getProfile(user.id), getRideStats(user.id), getRideHistory(user.id)])
+      .then(([p, s, h]) => {
         if (!alive) return;
         setProfile(p);
         setStats(s);
+        setHistory(h || []);
         setForm(formOf(p));
       })
       .catch(() => {});
     return () => { alive = false; };
   }, [user?.id]);
+
+  // 막대를 0%로 한 번 그린 다음 다음 프레임에 실제 값으로 바꿔서 "처음부터 쭉 차오르는" 효과를 낸다.
+  // stats가 로드된 직후 바로 목표값으로 그리면 트랜지션이 안 먹어서 rAF 두 번으로 한 프레임 쉬어준다.
+  useEffect(() => {
+    if (!stats) return;
+    setBarsReady(false);
+    let raf2;
+    const raf1 = requestAnimationFrame(() => { raf2 = requestAnimationFrame(() => setBarsReady(true)); });
+    return () => { cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
+  }, [stats]);
+
+  const abilities = buildAbilities(stats);
 
   const startEdit = () => { setError(''); setEditing(true); };
   const cancelEdit = () => { setEditing(false); setError(''); setForm(formOf(profile)); };
@@ -92,7 +134,68 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
             <div className="accountStat"><strong>{stats ? stats.rideCount : '-'}</strong><span>라이딩 횟수</span></div>
             <div className="accountStat"><strong>{stats ? stats.totalDistanceKm.toFixed(1) : '-'}</strong><span>총 거리(km)</span></div>
             <div className="accountStat"><strong>{stats ? stats.totalDurationMin : '-'}</strong><span>총 시간(분)</span></div>
+            <div className="accountStat"><strong>{stats ? stats.totalAscendM : '-'}</strong><span>총 상승고도(m)</span></div>
+            <div className="accountStat"><strong>{stats ? stats.mountainRideCount : '-'}</strong><span>산악 코스 완주</span></div>
           </div>
+          {stats?.totalAscendM > 0 && (
+            <p className="accountAchieve">
+              🏔️ 지금까지 오른 높이는 에베레스트산의 {((stats.totalAscendM / EVEREST_M) * 100).toFixed(1)}%예요
+            </p>
+          )}
+          {stats?.mountainRideCount > 0 && (
+            <p className="accountAchieve">
+              🚵 상승고도 {stats.mountainThresholdM}m 이상 코스를 {stats.mountainRideCount}번 완주한 산악 라이더예요
+            </p>
+          )}
+        </section>
+
+        {abilities.length > 0 && (
+          <section className="accountCard">
+            <h2>라이더 역량</h2>
+            <ul className="accountAbilityList">
+              {abilities.map((a, i) => (
+                <li key={a.key} className="accountAbilityRow">
+                  <span className="accountAbilityLabel">{a.label}</span>
+                  <span className="accountAbilityBarTrack">
+                    <span
+                      className="accountAbilityBarFill"
+                      style={{ width: barsReady ? `${a.barPct}%` : '0%', transitionDelay: `${i * 0.1}s` }}
+                    />
+                  </span>
+                  <span className="accountAbilityValue">{a.display(a.value)}{a.unit}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className="accountCard">
+          <h2>라이딩 기록</h2>
+          {!history ? (
+            <p className="accountEmptyHint">불러오는 중…</p>
+          ) : history.length === 0 ? (
+            <p className="accountEmptyHint">아직 라이딩 기록이 없어요. 라이딩을 시작해보세요!</p>
+          ) : (
+            <ul className="accountRideList">
+              {history.map((r) => {
+                const isMountain = stats?.mountainThresholdM != null && r.ascendM >= stats.mountainThresholdM;
+                return (
+                  <li key={r.id} className="accountRideRow">
+                    <div className="accountRideMain">
+                      <strong>{r.routeName || '자유주행'}</strong>
+                      {isMountain && <span className="accountMountainBadge">🏔️ 산악</span>}
+                    </div>
+                    <div className="accountRideMeta">
+                      <span className="accountRideMetaDate">{fmtRideDate(r.ridedAt)}</span>
+                      <span className="accountRideMetaDist">{r.distanceKm.toFixed(1)}km</span>
+                      <span className="accountRideMetaDur">{r.durationMin}분</span>
+                      <span className="accountRideMetaAscend">{r.ascendM != null ? `↑${r.ascendM}m` : ''}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
 
         <section className="accountCard">

@@ -64,7 +64,8 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     if (!party.routeId) return;
     let alive = true;
     getRouteById(party.routeId).then((data) => {
-      if (!alive || !mapRef.current || !routeLayerRef.current) return;
+      if (!alive) return;
+      if (!mapRef.current || !routeLayerRef.current) return;
       if (!data.bikeRoute?.length || !data.shortestRoute?.length) return;
       const bike = data.bikeRoute.map((p) => [p.lat, p.lng]);
       const shortest = data.shortestRoute.map((p) => [p.lat, p.lng]);
@@ -219,6 +220,8 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
               distance: distanceKm,
               duration: durationMin,
               partyId: party.id,
+              routeId: party.routeId ?? null,
+              routeName: party.routeName ?? null,
             }).catch(() => {});
           }
           setSummary({
@@ -258,6 +261,8 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
           distance: distanceKm,
           duration: durationMin,
           partyId: party.id,
+          routeId: party.routeId ?? null,
+          routeName: party.routeName ?? null,
         }).catch(() => {});
       }
       // 파티(대기방)는 그대로 열어두고, rideStartedAt 만 지운다.

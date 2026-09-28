@@ -997,6 +997,20 @@
   color: #999;
 }
 
+.routeListMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.routeListRegion {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--mint-dark);
+  font-size: 10px;
+  font-weight: 800;
+}
+
 /* 파티 라이딩 모드 배너 (지도 상단) */
 .partyRideBanner {
   margin: 4px 0 0;

@@ -134,6 +134,48 @@
 .rrProxMatchBtn:hover:not(:disabled) { background: var(--mint-dark); }
 .rrProxMatchBtn:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
 
+/* 근처 라이더 핀에 마우스를 올리거나(PC) 탭하면(모바일) 뜨는 프로필 미리보기 */
+.leaflet-tooltip.rrProfileTooltip {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(12, 27, 39, 0.22);
+  color: var(--ink);
+  font: inherit;
+  white-space: normal;
+  max-width: 220px;
+}
+.leaflet-tooltip-top.rrProfileTooltip::before { border-top-color: #ffffff; }
+
+.rrProfileCard { display: flex; flex-direction: column; gap: 6px; }
+.rrProfileHead { display: flex; align-items: center; gap: 8px; }
+.rrProfileAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 0.82rem;
+}
+.rrProfileHeadText { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.rrProfileHeadText strong {
+  font-size: 0.88rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rrProfileDist { font-size: 0.72rem; font-weight: 700; color: var(--mint-dark); }
+.rrProfileMeta { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
+.rrProfileBio { margin: 0; font-size: 0.78rem; color: var(--ink); line-height: 1.4; }
+.rrProfileLoading { margin: 0; font-size: 0.78rem; color: var(--muted); }
+
 .rrGeoError {
   position: absolute;
   top: 76px;

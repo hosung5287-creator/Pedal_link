@@ -32,7 +32,7 @@ public class FeedController {
         }
         try {
             return ResponseEntity.ok(feedService.publish(
-                    routeId, Long.valueOf(rawUserId), body.get("description"), body.get("tags")));
+                    routeId, Long.valueOf(rawUserId), body.get("description"), body.get("tags"), body.get("region")));
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
         } catch (IllegalArgumentException e) {

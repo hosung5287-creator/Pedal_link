@@ -13,6 +13,7 @@ public class RouteRequest {
     private Double toLat;
     private Double toLng;
     private String toLabel;
+    private String region;
     private Double distanceKm;
     private Integer ascendM;
     private Integer timeMin;

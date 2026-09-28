@@ -28,6 +28,12 @@ public class Route {
     private Double toLng;
     private String toLabel;
 
+    // 출발지 좌표 기준 행정구역(구/시) — 카카오 coord2regioncode로 저장 시점에 채운다.
+    // fromLabel(장소명)은 구 이름이 안 들어있는 경우가 많아 좌표 기반으로 따로 둔다.
+    // 게시물 올릴 때 여러 지역을 콤마로 이어 붙여 저장할 수도 있다 (tags 필드와 같은 방식).
+    @Column(length = 300)
+    private String region;
+
     // 경로 분석값 — 저장 시점에 BRouter 결과를 함께 보관
     private Double distanceKm;   // 거리 (km)
 

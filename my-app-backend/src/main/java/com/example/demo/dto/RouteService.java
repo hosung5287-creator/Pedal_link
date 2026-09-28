@@ -56,6 +56,7 @@ public class RouteService {
         route.setToLat(req.getToLat());
         route.setToLng(req.getToLng());
         route.setToLabel(req.getToLabel());
+        route.setRegion(req.getRegion());
         route.setDistanceKm(req.getDistanceKm());
         route.setAscendM(req.getAscendM());
         route.setTimeMin(req.getTimeMin());
@@ -75,6 +76,7 @@ public class RouteService {
                 m.put("routeName", r.getRouteName() != null ? r.getRouteName() : "이름없음");
                 m.put("fromLabel", r.getFromLabel());
                 m.put("toLabel", r.getToLabel());
+                m.put("region", r.getRegion());
                 m.put("distanceKm", r.getDistanceKm());
                 m.put("createdAt", r.getCreatedAt().toString());
                 return m;
@@ -97,7 +99,9 @@ public class RouteService {
             route.getRouteName(),
             route.getFromLat(), route.getFromLng(), route.getFromLabel(),
             route.getToLat(),   route.getToLng(),   route.getToLabel(),
+            route.getRegion(),
             route.getDistanceKm(),
+            route.getAscendM(),
             fromLineString(route.getBikePath()),
             fromLineString(route.getShortestPath()),
             route.getCreatedAt()

@@ -73,6 +73,35 @@
   color: var(--muted);
 }
 
+.browseHeroActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.browseRegionFilter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.browseRegionFilter span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.browseRegionFilter select {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.86rem;
+  color: var(--ink);
+  background: var(--surface);
+}
+.browseRegionFilter select:focus { outline: none; border-color: var(--mint); }
+
 /* 2단 레이아웃의 왼쪽 열을 그대로 채운다 (폭은 .feedLayout 이 정한다) */
 .feedList {
   width: 100%;
@@ -262,6 +291,52 @@
   color: var(--crit);
   font-size: 0.88rem;
   font-weight: 700;
+}
+
+/* 지역 다중 선택 — 동그라미 표시가 붙은 토글 칩 */
+.composeChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.composeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 8px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.composeChip:hover { background: var(--wash); }
+
+.composeChipDot {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+}
+
+.composeChip.isActive {
+  border-color: var(--mint);
+  color: var(--mint-dark);
+  background: var(--accent-soft);
+}
+.composeChip.isActive .composeChipDot {
+  border-color: var(--mint);
+  background: var(--mint);
 }
 
 .composeActions {
@@ -571,6 +646,7 @@
   font-size: 0.86rem;
 }
 .feedMeta strong { color: var(--ink); font-weight: 800; }
+.feedMetaRegion,
 .feedMetaPlace,
 .feedMetaTime {
   color: var(--muted);
@@ -580,6 +656,7 @@
   text-overflow: ellipsis;
 }
 /* 앞 항목과 가운뎃점으로 구분 — 마크업에 점을 넣지 않는다 */
+.feedMetaRegion::before,
 .feedMetaPlace::before,
 .feedMetaTime::before { content: '· '; }
 

@@ -565,8 +565,24 @@ export const account = {
   profileActivityTitle: '내 활동',
   profileActivity: ['내 코스', '참여한 파티'],
   settingsAccountTitle: '계정',
-  settingsRows: ['이메일 변경', '비밀번호 변경', '위치 공유', '알림 설정'],
   soon: '준비 중',
+  // 설정 — 이메일/비밀번호 변경 · 위치 공유 (형식 오류 문구는 회원가입 text.signup* 를 같이 쓴다)
+  settingsEmail: '이메일',
+  settingsEmailChange: '이메일 변경',
+  settingsPasswordChange: '비밀번호 변경',
+  settingsNotify: '알림 설정',
+  settingsChangeBtn: '변경',
+  settingsNewEmail: '새 이메일',
+  settingsCurrentPassword: '현재 비밀번호',
+  settingsNewPassword: '새 비밀번호 (8자 이상)',
+  settingsNewPasswordCheck: '새 비밀번호 확인',
+  settingsNeedCurrentPassword: '현재 비밀번호를 입력해주세요.',
+  settingsCancel: '취소',
+  settingsSave: '저장',
+  settingsSaving: '저장 중…',
+  settingsEmailDone: '이메일이 변경되었어요.',
+  settingsPasswordDone: '비밀번호가 변경되었어요.',
+  settingsFailed: '변경하지 못했어요. 다시 시도해주세요.',
 };
 
 // ── 파티 플로팅 도크 (모집중/소속 시 우측 하단) ──────

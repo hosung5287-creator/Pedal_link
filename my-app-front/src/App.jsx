@@ -77,6 +77,15 @@ function App() {
     setUser(null);
     moveTo('/');
   };
+  // 설정에서 이메일 등을 바꾸면 로그인 정보에도 반영한다 — 다시 로그인하지 않아도 화면에 바로 보이게
+  const handleUserUpdate = (patch) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // 로그인 상태에서 로그인/회원가입 페이지 접근 시 홈으로
   if (user && (currentPath === '/login' || currentPath === '/signup')) moveTo('/');
@@ -103,7 +112,7 @@ function App() {
   } else if (currentPath === '/profile') {
     page = <ProfilePage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
   } else if (currentPath === '/settings') {
-    page = <SettingsPage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
+    page = <SettingsPage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />;
   } else {
     page = (
       <HomePage onMoveCrew={moveCrew}

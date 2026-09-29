@@ -45,8 +45,8 @@ public class RideRecordController {
         return ResponseEntity.ok(Map.of("id", saved.getId(), "message", "주행 기록 저장 완료"));
     }
 
-    // routes.ascend_m 을 조인해서 각 기록의 ascendM(전이 필드)을 채운다.
-    // 코스가 지워졌거나 자유주행(routeId 없음)이면 null로 남는다.
+    // routes.ascend_m 을 조인해서 각 기록의 ascendM(전이 필드) = "이번 라이딩에서 인정된 상승고도"를 채운다.
+    // 코스가 지워졌거나, 자유주행(routeId 없음)이거나, 코스의 상승고도를 모르면 null로 남는다.
     private void fillAscendM(List<RideRecord> records) {
         List<Long> routeIds = records.stream()
                 .map(RideRecord::getRouteId)
@@ -55,9 +55,26 @@ public class RideRecordController {
                 .collect(Collectors.toList());
         if (routeIds.isEmpty()) return;
 
-        Map<Long, Integer> ascendByRouteId = routeRepository.findAllById(routeIds).stream()
-                .collect(Collectors.toMap(Route::getId, Route::getAscendM));
-        records.forEach(r -> r.setAscendM(r.getRouteId() != null ? ascendByRouteId.get(r.getRouteId()) : null));
+        // 값(ascendM)이 아니라 Route 를 담는다 — toMap 은 값이 null 이면 NPE 를 내서,
+        // 상승고도 기능 이전에 저장된 코스(ascend_m = null)를 탄 사용자는 목록·통계가 500 이 났다.
+        Map<Long, Route> routeById = routeRepository.findAllById(routeIds).stream()
+                .collect(Collectors.toMap(Route::getId, route -> route));
+        records.forEach(r -> {
+            Route route = r.getRouteId() != null ? routeById.get(r.getRouteId()) : null;
+            r.setAscendM(route == null ? null : creditedAscendM(route, r.getDistanceKm()));
+        });
+    }
+
+    // 코스를 끝까지 안 타도 코스 전체 상승고도를 주면 과장되므로, 탄 거리 비율만큼만 인정한다(최대 100%).
+    // 상승고도는 코스를 만들 때 BRouter 가 지형 고도로 계산한 예상값이다(GPS 로 잰 값이 아님).
+    // 코스 거리를 모르면 비율을 낼 수 없어 코스 값을 그대로 쓴다.
+    private static Integer creditedAscendM(Route route, Double rideDistanceKm) {
+        Integer routeAscendM = route.getAscendM();
+        if (routeAscendM == null) return null;
+        Double routeDistanceKm = route.getDistanceKm();
+        if (routeDistanceKm == null || routeDistanceKm <= 0 || rideDistanceKm == null) return routeAscendM;
+        double ratio = Math.min(1.0, rideDistanceKm / routeDistanceKm);
+        return (int) Math.round(routeAscendM * ratio);
     }
 
     // 내 주행 기록 목록 (최신순) — 라이딩 기록 리스트 화면이 그대로 쓴다
@@ -80,6 +97,14 @@ public class RideRecordController {
                 .filter(r -> r.getAscendM() != null && r.getAscendM() >= MOUNTAIN_ASCEND_M)
                 .count();
 
+        // km당 상승고도(m/km) — 얼마나 가파른 길을 타는지. 상승고도를 아는 기록(코스 라이딩)만 대상이다.
+        // 자유주행은 오르막이 0이 아니라 "모름"이라 분모에 넣으면 평균이 부당하게 낮아진다.
+        double ascendKnownKm = records.stream()
+                .filter(r -> r.getAscendM() != null)
+                .mapToDouble(RideRecord::getDistanceKm)
+                .sum();
+        Double ascendPerKm = ascendKnownKm > 0 ? Math.round(totalAscendM / ascendKnownKm * 10) / 10.0 : null;
+
         Map<String, Object> result = new HashMap<>();
         result.put("rideCount", records.size());
         result.put("totalDistanceKm", totalDistanceKm);
@@ -87,6 +112,7 @@ public class RideRecordController {
         result.put("totalAscendM", totalAscendM);
         result.put("mountainRideCount", mountainRideCount);
         result.put("mountainThresholdM", MOUNTAIN_ASCEND_M);
+        result.put("ascendPerKm", ascendPerKm); // 코스 라이딩 기록이 없으면 null
         return result;
     }
 }

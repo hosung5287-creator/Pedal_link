@@ -10,7 +10,6 @@ import { text, seoulCenter, KAKAO_API_KEY, GU_LIST } from '../constants';
 import { makeTileLayer, drawMarkers, drawRoutes, requestBrouterRoute, routeHasCycleways, makeCurrentLocationIcon, makeOtherUserIcon, makeHeadingIcon, bearingBetween } from '../utils/leaflet';
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 import { reportLocation, getOtherLocations } from '../api/locations';
-import { updateLocationSharing } from '../api/auth';
 import { useLocationShare } from '../hooks/useLocationShare';
 import { getParty, endParty, startPartyRide } from '../api/parties';
 import { api } from '../api/client';
@@ -117,6 +116,9 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const selectedRegionRef = useRef(selectedRegion);
   const bikeRouteRef = useRef([]);
   const shortestRouteRef = useRef([]);
+  // 지금 지도에 올린 경로가 "저장된 코스"면 그 정보 — 라이딩 기록에 코스를 붙여야 상승고도가 계산된다.
+  // { id, routeName, fromLat, fromLng, toLat, toLng }. 출발·도착점을 직접 바꾸면 아래 effect 가 비운다.
+  const loadedCourseRef = useRef(null);
   const currentLocMarkerRef = useRef(null);
   const geoWatchIdRef = useRef(null);
   const geofenceCircleRef = useRef(null);
@@ -476,11 +478,18 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
     if (user?.id && rideDistance > 0) {
       try {
         const duration = Math.floor(rideTime / 60); // 분 단위
+        // 탄 코스 — 파티 라이딩이면 파티 코스, 아니면 지도에 불러온 저장 코스. 없으면 자유주행.
+        // 코스가 붙어야 백엔드가 상승고도(탄 거리 비율만큼)를 계산한다.
+        const course = party?.routeId
+          ? { id: party.routeId, routeName: party.routeName }
+          : loadedCourseRef.current;
         await api.post('/api/ride-records', {
           userId: user.id,
           distance: rideDistance / 1000, // km로 변환
           duration,
           partyId: party ? party.id : null,   // 파티 라이딩이면 함께 묶어 저장
+          routeId: course?.id ?? null,
+          routeName: course?.routeName ?? null,
         });
         showToast(`주행 기록 저장됨! ${(rideDistance / 1000).toFixed(2)}km · ${duration}분`);
       } catch (error) {
@@ -624,21 +633,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
     }
   }, [locationShareEnabled]);
 
-  // 온라인 복귀 시 localStorage의 설정을 DB와 동기화
-  useEffect(() => {
-    const handleOnline = async () => {
-      if (!user?.id) return;
-      const localValue = JSON.parse(localStorage.getItem('locationShareEnabled') || 'false');
-      try {
-        await updateLocationSharing(user.id, localValue);
-      } catch (error) {
-        console.warn('동기화 실패', error);
-      }
-    };
-
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, [user]);
+  // 온라인 복귀 시 못 보낸 위치 공유 설정을 서버로 다시 보내는 건 useLocationShare 가 맡는다
 
   useEffect(() => {
     const map = mapRef.current;
@@ -689,6 +684,13 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   }, []);
 
   useEffect(() => {
+    // 출발·도착점이 불러온 코스와 달라졌으면(지도 클릭·검색·초기화) 더 이상 그 코스가 아니다
+    const course = loadedCourseRef.current;
+    const onCourse = course
+      && startPoint?.lat === course.fromLat && startPoint?.lng === course.fromLng
+      && endPoint?.lat === course.toLat && endPoint?.lng === course.toLng;
+    if (!onCourse) loadedCourseRef.current = null;
+
     drawMarkers(startPoint, endPoint, markerLayerRef.current);
     if (startPoint && endPoint) {
       findRoutes(startPoint, endPoint);
@@ -808,7 +810,14 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       shortestRoute: shortestRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
     };
     try {
-      await saveRouteApi(body);
+      const saved = await saveRouteApi(body);
+      // 방금 저장한 경로로 바로 달려도 코스 라이딩으로 기록되게 한다
+      if (saved?.id) {
+        loadedCourseRef.current = {
+          id: saved.id, routeName: body.routeName,
+          fromLat: body.fromLat, fromLng: body.fromLng, toLat: body.toLat, toLng: body.toLng,
+        };
+      }
       setSaveModalOpen(false);
       showToast('경로가 저장되었습니다');
       // 저장 직후 목록을 다시 받아둔다. 이게 없으면 목록 패널이 열려 있을 때
@@ -878,6 +887,11 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       const bike = data.bikeRoute.map(p => [p.lat, p.lng]);
       const shortest = data.shortestRoute.map(p => [p.lat, p.lng]);
 
+      // 출발·도착점을 바꾸기 전에 기록해야 위 effect 가 "같은 코스"로 알아본다
+      loadedCourseRef.current = {
+        id, routeName: data.routeName,
+        fromLat: data.fromLat, fromLng: data.fromLng, toLat: data.toLat, toLng: data.toLng,
+      };
       setStartPoint({ lat: data.fromLat, lng: data.fromLng, label: data.fromLabel });
       setEndPoint({ lat: data.toLat, lng: data.toLng, label: data.toLabel });
       drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);

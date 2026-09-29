@@ -135,6 +135,7 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
             <div className="accountStat"><strong>{stats ? stats.totalDistanceKm.toFixed(1) : '-'}</strong><span>총 거리(km)</span></div>
             <div className="accountStat"><strong>{stats ? stats.totalDurationMin : '-'}</strong><span>총 시간(분)</span></div>
             <div className="accountStat"><strong>{stats ? stats.totalAscendM : '-'}</strong><span>총 상승고도(m)</span></div>
+            <div className="accountStat"><strong>{stats?.ascendPerKm != null ? stats.ascendPerKm.toFixed(1) : '-'}</strong><span>km당 상승(m)</span></div>
             <div className="accountStat"><strong>{stats ? stats.mountainRideCount : '-'}</strong><span>산악 코스 완주</span></div>
           </div>
           {stats?.totalAscendM > 0 && (

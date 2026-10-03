@@ -13,7 +13,7 @@ import { reportLocation, getOtherLocations } from '../api/locations';
 import { updateLocationSharing } from '../api/auth';
 import { useLocationShare } from '../hooks/useLocationShare';
 import { getParty, endParty, startPartyRide } from '../api/parties';
-import { api } from '../api/client';
+import { useMapRide } from '../hooks/useMapRide';
 
 const GEOFENCE_RADIUS_M = 50;
 const GEOFENCE_EXIT_M = 250;
@@ -96,9 +96,9 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const [locationShareEnabled, setLocationShare] = useLocationShare(user?.id);
 
   // 라이딩 관련 상태
-  const [isRiding, setIsRiding] = useState(false);
-  const [rideTime, setRideTime] = useState(0);
-  const [rideDistance, setRideDistance] = useState(0);
+  // 라이딩(시간·거리·기록 저장) — 페이지를 떠나면 GPS·타이머 정리와 기록 저장까지 훅이 맡는다
+  const ride = useMapRide({ userId: user?.id, partyId: party?.id ?? null });
+  const { isRiding, rideTime, rideDistance } = ride;
   // 함께 타는 사람 HUD — 파티 라이딩 중일 때만 채워진다
   const [otherRiders, setOtherRiders] = useState([]);
   const [mySpeedKmh, setMySpeedKmh] = useState(0);
@@ -117,6 +117,10 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const selectedRegionRef = useRef(selectedRegion);
   const bikeRouteRef = useRef([]);
   const shortestRouteRef = useRef([]);
+  // 경로 계산 세대 — 새 계산·초기화·저장 경로 불러오기·언마운트 때 올려서 늦게 온 이전 응답을 버린다
+  const routeReqIdRef = useRef(0);
+  // 저장된 경로를 불러와 세팅한 출발/도착 객체 — 이 쌍이면 BRouter 로 다시 계산하지 않는다
+  const loadedPairRef = useRef(null);
   const currentLocMarkerRef = useRef(null);
   const geoWatchIdRef = useRef(null);
   const geofenceCircleRef = useRef(null);
@@ -129,10 +133,6 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   const otherSpeedRef = useRef(new Map()); // userId -> { lat, lng, time, speedKmh } — HUD 속도 계산용
 
   // 라이딩 관련 ref
-  const rideTimerRef = useRef(null);
-  const rideWatchIdRef = useRef(null);
-  const rideStartPosRef = useRef(null);
-  const rideStartTimeRef = useRef(null);
 
   useEffect(() => { followingRef.current = following; }, [following]);
   useEffect(() => { startPointRef.current = startPoint; }, [startPoint]);
@@ -172,15 +172,13 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   }, [partyId, party?.hostId, party?.rideStartedAt, isRiding, user?.id]);
 
   // ── 파티 라이딩 모드 ─────────────────────────────
-  // /map?partyId=N 으로 들어오면 (1) 위치공유를 자동으로 켜고
-  // (2) 파티에 걸린 코스를 지도에 그린다.
+  // /map?partyId=N 으로 들어오면 파티에 걸린 코스를 지도에 그린다.
   useEffect(() => {
     if (!partyId) return;
     let alive = true;
 
-    // 서로 보이지 않으면 파티 라이딩이 성립하지 않으므로 자동으로 켠다.
-    // (사용자가 원하면 패널의 체크박스로 끌 수 있다)
-    setLocationShare(true);
+    // 위치 공유는 사용자 설정을 그대로 따른다(자동으로 켜지 않는다).
+    // 꺼져 있으면 파티 배너 아래 안내의 [켜기]로 켤 수 있다.
 
     (async () => {
       try {
@@ -192,13 +190,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
           const route = await getRouteById(p.routeId);
           if (!alive || !mapRef.current) return;
           if (route.bikeRoute?.length && route.shortestRoute?.length) {
-            const bike = route.bikeRoute.map(pt => [pt.lat, pt.lng]);
-            const shortest = route.shortestRoute.map(pt => [pt.lat, pt.lng]);
-            bikeRouteRef.current = bike;
-            shortestRouteRef.current = shortest;
-            setStartPoint({ lat: route.fromLat, lng: route.fromLng, label: route.fromLabel });
-            setEndPoint({ lat: route.toLat, lng: route.toLng, label: route.toLabel });
-            drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
+            applySavedRoute(route);
           }
         }
         setStatus(`${p.title} — 파티 멤버 ${p.participants.length}명과 라이딩 중`);
@@ -408,7 +400,6 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   }, []);
 
   const handleRideStart = useCallback(() => {
-    setIsRiding(true);
     setFollowing(true);   // 라이딩 중에는 지도가 내 위치를 따라간다
     // 파티 라이딩이면 경로 설정 패널을 접어서 지도+HUD 위주 화면으로 바꾼다
     if (party) setPanelOpen(false);
@@ -419,78 +410,31 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
         .then(setParty)
         .catch(() => {});
     }
-    setRideTime(0);
-    setRideDistance(0);
-    rideStartTimeRef.current = Date.now();
-
-    if (!navigator.geolocation) return;
-
-    rideWatchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-
-        if (!rideStartPosRef.current) {
-          rideStartPosRef.current = { lat: latitude, lng: longitude };
-        } else {
-          const dist = calculateDistance(
-            rideStartPosRef.current.lat, rideStartPosRef.current.lng,
-            latitude, longitude
-          );
-          if (dist > 5) { // 5m 이상만 거리 계산
-            setRideDistance(prev => prev + dist);
-            rideStartPosRef.current = { lat: latitude, lng: longitude };
-          }
-        }
-      }
-    );
-
-    // 타이머 시작
-    rideTimerRef.current = setInterval(() => {
-      setRideTime(prev => prev + 1);
-    }, 1000);
+    ride.start();
     // party/user 는 라이딩 시작 시점의 최신 값을 봐야 해서 의존성에 넣는다
     // (예전엔 []였는데, 그러면 party 가 항상 첫 렌더의 null 로 고정돼
     //  호스트가 지도에서 직접 시작해도 서버에 알림이 안 갔다)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [party, user?.id]);
 
   // 라이딩 종료
   const handleRideStop = useCallback(async () => {
-    setIsRiding(false);
     setFollowing(false);
     // 방향 화살표를 원래의 현재위치 아이콘으로 되돌린다
     currentLocMarkerRef.current?.setIcon(makeCurrentLocationIcon());
 
-    // GPS 감시 중지
-    if (rideWatchIdRef.current) {
-      navigator.geolocation.clearWatch(rideWatchIdRef.current);
-      rideWatchIdRef.current = null;
+    // GPS·타이머를 멈추고 주행 기록을 저장한다(실패하면 보류 큐에 남아 자동 재시도)
+    const stopped = await ride.stop();
+    const result = stopped?.result;
+    if (result?.kind === 'saved') {
+      showToast(`주행 기록 저장됨! ${(stopped.distanceM / 1000).toFixed(2)}km · ${stopped.durationMin}분`);
+    } else if (result?.kind === 'queued') {
+      showToast(text.rideSaveQueued, 'error');
+    } else if (result) {
+      showToast(text.rideSaveFailed, 'error');
     }
 
-    // 타이머 중지
-    if (rideTimerRef.current) {
-      clearInterval(rideTimerRef.current);
-      rideTimerRef.current = null;
-    }
-
-    // 주행 기록 저장
-    if (user?.id && rideDistance > 0) {
-      try {
-        const duration = Math.floor(rideTime / 60); // 분 단위
-        await api.post('/api/ride-records', {
-          userId: user.id,
-          distance: rideDistance / 1000, // km로 변환
-          duration,
-          partyId: party ? party.id : null,   // 파티 라이딩이면 함께 묶어 저장
-        });
-        showToast(`주행 기록 저장됨! ${(rideDistance / 1000).toFixed(2)}km · ${duration}분`);
-      } catch (error) {
-        console.error('주행 기록 저장 실패:', error);
-        showToast('주행 기록 저장에 실패했습니다.', 'error');
-      }
-    }
-
-    // 위치 공유 해제 — 라이딩이 끝나면 내 위치를 계속 뿌릴 이유가 없다
-    setLocationShare(false);
+    // 위치 공유는 사용자 설정을 그대로 둔다(자동으로 끄지 않는다)
 
     // 파티 라이딩이었고 내가 호스트면 파티도 종료한다.
     // 참가자는 본인 라이딩만 끝나고 파티 상태는 건드리지 않는다 (호스트 권한).
@@ -506,12 +450,9 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       showToast(text.rideEndedSolo);
     }
 
-    // 리셋
-    rideStartPosRef.current = null;
-    rideStartTimeRef.current = null;
-    // party 는 라이딩 종료 시점의 값만 필요해 의존성에서 뺀다 (매번 콜백 재생성 방지)
+  // party 는 라이딩 종료 시점의 값만 필요해 의존성에서 뺀다 (매번 콜백 재생성 방지)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, rideTime, rideDistance, party]);
+  }, [user?.id, party]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -690,13 +631,22 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
 
   useEffect(() => {
     drawMarkers(startPoint, endPoint, markerLayerRef.current);
+    const loaded = loadedPairRef.current;
+    // 저장된 경로를 불러온 직후라면 저장 좌표를 그대로 쓰고 다시 계산하지 않는다
+    if (loaded && loaded.start === startPoint && loaded.end === endPoint) return;
+    loadedPairRef.current = null;
     if (startPoint && endPoint) {
       findRoutes(startPoint, endPoint);
     } else {
+      invalidateRouting();
+      clearRouteData();
       routeLayerRef.current?.clearLayers();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startPoint, endPoint]);
+
+  // 페이지를 떠나면 진행 중인 경로 계산 응답을 버린다
+  useEffect(() => () => { routeReqIdRef.current += 1; }, []);
 
   const openSearch = (type) => {
     setSearchMode(type);
@@ -790,22 +740,33 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
   // 모달 확인 → 실제 저장
   const confirmSaveRoute = async () => {
     if (!saveRouteName.trim()) return;
-    const region = await fetchRegion(startPoint.lat, startPoint.lng);
+    // 계산 중이거나 경로가 없으면 저장하지 않는다(이전 경로 좌표가 섞여 저장되는 것 방지)
+    if (isRouting || !bikeRouteRef.current.length || !startPoint || !endPoint) {
+      showToast(text.routeSaveNotReady, 'error');
+      return;
+    }
+    // 지역 조회(await) 동안 경로가 바뀌어도 같은 시점의 좌표·통계로 저장되게 먼저 떠 둔다
+    const from = startPoint;
+    const to = endPoint;
+    const stats = routeStats;
+    const bikeSnap = bikeRouteRef.current.map(p => ({ lat: p[0], lng: p[1] }));
+    const shortestSnap = shortestRouteRef.current.map(p => ({ lat: p[0], lng: p[1] }));
+    const region = await fetchRegion(from.lat, from.lng);
     const body = {
       userId: user?.id ?? null,
       routeName: saveRouteName.trim(),
-      fromLat: startPoint.lat,
-      fromLng: startPoint.lng,
-      fromLabel: startPoint.label,
-      toLat: endPoint.lat,
-      toLng: endPoint.lng,
-      toLabel: endPoint.label,
+      fromLat: from.lat,
+      fromLng: from.lng,
+      fromLabel: from.label,
+      toLat: to.lat,
+      toLng: to.lng,
+      toLabel: to.label,
       region,
-      distanceKm: routeStats?.distanceKm ?? null,
-      ascendM: routeStats?.ascendM ?? null,
-      timeMin: routeStats?.timeMin ?? null,
-      bikeRoute: bikeRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
-      shortestRoute: shortestRouteRef.current.map(p => ({ lat: p[0], lng: p[1] })),
+      distanceKm: stats?.distanceKm ?? null,
+      ascendM: stats?.ascendM ?? null,
+      timeMin: stats?.timeMin ?? null,
+      bikeRoute: bikeSnap,
+      shortestRoute: shortestSnap,
     };
     try {
       await saveRouteApi(body);
@@ -875,19 +836,47 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
           return;
       }
 
-      const bike = data.bikeRoute.map(p => [p.lat, p.lng]);
-      const shortest = data.shortestRoute.map(p => [p.lat, p.lng]);
-
-      setStartPoint({ lat: data.fromLat, lng: data.fromLng, label: data.fromLabel });
-      setEndPoint({ lat: data.toLat, lng: data.toLng, label: data.toLabel });
-      drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
+      applySavedRoute(data);
       setShowRouteList(false);
     } catch (e) {
       showToast('경로를 불러오지 못했습니다: ' + e.message, 'error');
     }
 };
 
+  // 진행 중인 경로 계산을 무효화한다(늦게 온 응답은 무시됨)
+  const invalidateRouting = () => {
+    routeReqIdRef.current += 1;
+    setIsRouting(false);
+  };
+
+  // 계산된 경로 좌표·통계를 비운다 — 실패·초기화 뒤 이전 경로가 저장되지 않게
+  const clearRouteData = () => {
+    bikeRouteRef.current = [];
+    shortestRouteRef.current = [];
+    setRouteStats(null);
+  };
+
+  // 저장된 경로(목록 불러오기·파티 코스)를 재계산 없이 그대로 표시한다
+  const applySavedRoute = (route) => {
+    invalidateRouting();
+    const bike = route.bikeRoute.map(p => [p.lat, p.lng]);
+    const shortest = route.shortestRoute.map(p => [p.lat, p.lng]);
+    bikeRouteRef.current = bike;
+    shortestRouteRef.current = shortest;
+    setRouteStats(route.distanceKm != null
+      ? { distanceKm: route.distanceKm, ascendM: route.ascendM ?? null, timeMin: route.timeMin ?? null, roadMix: [] }
+      : null);
+    const start = { lat: route.fromLat, lng: route.fromLng, label: route.fromLabel };
+    const end = { lat: route.toLat, lng: route.toLng, label: route.toLabel };
+    loadedPairRef.current = { start, end };
+    setStartPoint(start);
+    setEndPoint(end);
+    drawRoutes(bike, shortest, routeLayerRef.current, mapRef.current);
+  };
+
   const findRoutes = useCallback(async (from, to) => {
+    const reqId = ++routeReqIdRef.current;
+    const isCurrent = () => reqId === routeReqIdRef.current;
     setIsRouting(true);
     setStatus(text.searching);
     try {
@@ -895,6 +884,7 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
         requestBrouterRoute(from, to, 'trekking'),
         requestBrouterRoute(from, to, 'shortest'),
       ]);
+      if (!isCurrent()) return; // 그사이 지점이 바뀌었거나 초기화됨 — 이 응답은 버린다
       const bikeRoute = bike.coords;
       const shortestRoute = short.coords;
       setRouteStats(bike.stats);
@@ -909,14 +899,22 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
       setStatus(routeHasCycleways(bikeRoute, features) ? text.routeReady : text.noCycleways);
 
     } catch {
+      if (!isCurrent()) return;
       setStatus(text.routeFailed);
+      bikeRouteRef.current = [];
+      shortestRouteRef.current = [];
+      setRouteStats(null);
       routeLayerRef.current?.clearLayers();
     } finally {
-      setIsRouting(false);
+      if (isCurrent()) setIsRouting(false);
     }
   }, []);
 
   const resetPlanner = useCallback(() => {
+    invalidateRouting();
+    loadedPairRef.current = null;
+    bikeRouteRef.current = [];
+    shortestRouteRef.current = [];
     setStartPoint(null);
     setEndPoint(null);
     setStartQuery('');
@@ -949,6 +947,12 @@ export default function MapPage({ user: userProp, partyId, onBackHome, onMovePar
             <div className="mapPartyBanner">
               <strong>{party.title}</strong>
               <span>{text.partyRideBanner} · {party.participants.map(m => m.name).join(', ')}</span>
+              {!locationShareEnabled && (
+                <span className="mapPartyShareOff" role="status">
+                  {text.rideLocShareOff}
+                  <button type="button" onClick={() => setLocationShare(true)}>{text.rideLocShareTurnOn}</button>
+                </span>
+              )}
             </div>
           )}
           {searchMode ? (

@@ -6,9 +6,20 @@ import { makeTileLayer, makeCurrentLocationIcon, makeOtherUserIcon, makeHeadingI
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { getRouteById } from '../api/routes';
 import { stopPartyRide, getParty } from '../api/parties';
-import { api } from '../api/client';
+import { useLocationShare } from '../hooks/useLocationShare';
+import {
+  rideSessionKey, beginRideSession, storeRideDistance, finalizePartySession, endRideAsHost,
+} from '../utils/rideRecords';
+import { text } from '../constants';
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
+
+// 기록 저장 결과 → 요약 팝업 안내 문구
+const SAVE_NOTE = {
+  queued: text.rideSaveQueued,
+  rejected: text.rideSaveFailed,
+  lost: text.rideSaveFailed,
+};
 
 function fmtTime(sec) {
   const m = Math.floor(sec / 60);
@@ -36,13 +47,28 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
 
   const isHost = party.hostId === user.id;
 
+  // 이번 라이딩의 세션 키 — 방을 연 시점의 rideStartedAt 으로 고정한다.
+  // (종료 후 party.rideStartedAt 이 null 로 바뀌어도 같은 세션을 가리켜야 한다)
+  const sessionKeyRef = useRef(rideSessionKey(user.id, party.id, party.rideStartedAt ?? 'local'));
+  const stoppedRef = useRef(false); // 확정 후에는 GPS·타이머·폴링이 상태를 바꾸지 않게 한다
+
+  const [shareOn, setShare] = useLocationShare(user.id);
+  const shareOnRef = useRef(shareOn);
+  useEffect(() => { shareOnRef.current = shareOn; }, [shareOn]);
+
   const [rideTime, setRideTime] = useState(() => Math.max(0, Math.floor((Date.now() - rideStartMsRef.current) / 1000)));
-  const [rideDistance, setRideDistance] = useState(0);
+  // 방을 닫았다 다시 열어도 이어지도록 세션에 저장된 거리로 시작한다
+  const [rideDistance, setRideDistance] = useState(() => {
+    const d = beginRideSession(sessionKeyRef.current).distanceM || 0;
+    rideDistanceRef.current = d;
+    return d;
+  });
   const [mySpeedKmh, setMySpeedKmh] = useState(0);
   const [otherRiders, setOtherRiders] = useState([]);
   const [ending, setEnding] = useState(false);
   const [geoError, setGeoError] = useState('');
   const [summary, setSummary] = useState(null); // 종료 후 기록 팝업
+  const [endError, setEndError] = useState('');
 
   // 지도 초기화
   useEffect(() => {
@@ -84,7 +110,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        if (cancelled || !mapRef.current) return;
+        if (cancelled || stoppedRef.current || !mapRef.current) return;
         const map = mapRef.current;
         const { latitude, longitude } = pos.coords;
         const prev = lastPosRef.current;
@@ -101,7 +127,12 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
           if (dt >= 1) {
             const moved = map.distance([prev.lat, prev.lng], [latitude, longitude]);
             setMySpeedKmh((moved / dt) * 3.6);
-            if (moved > 5) setRideDistance((d) => { const next = d + moved; rideDistanceRef.current = next; return next; });
+            if (moved > 5) {
+              const next = rideDistanceRef.current + moved;
+              rideDistanceRef.current = next;
+              setRideDistance(next);
+              storeRideDistance(sessionKeyRef.current, next);
+            }
           }
         }
         lastPosRef.current = { lat: latitude, lng: longitude, time: pos.timestamp };
@@ -128,6 +159,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
   // 라이딩 시간 타이머 — party.rideStartedAt 기준으로 계산해서 모두 같은 값을 본다
   useEffect(() => {
     const timer = setInterval(() => {
+      if (stoppedRef.current) return;
       setRideTime(Math.max(0, Math.floor((Date.now() - rideStartMsRef.current) / 1000)));
     }, 1000);
     return () => clearInterval(timer);
@@ -141,10 +173,13 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     const timer = setInterval(async () => {
       const pos = lastPosRef.current;
       const map = mapRef.current;
-      if (!pos || !map) return;
+      if (!pos || !map || stoppedRef.current) return;
 
       try {
-        await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        // 위치 공유가 꺼져 있으면 내 위치는 보내지 않는다(남의 위치 조회는 유지)
+        if (shareOnRef.current) {
+          await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        }
         const others = (await getOtherLocations(user.id, party.id)) || [];
         if (cancelled || !mapRef.current) return;
 
@@ -198,6 +233,41 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     };
   }, [party.id, user.id, user.name]);
 
+  // 기록 확정 — 방장 종료·참가자 종료 감지 공통.
+  // 세션을 먼저 차지(claim)한 쪽만 저장하므로, 도크와 겹쳐도 한 번만 저장된다.
+  const finalizeRide = async ({ endedByHost = false } = {}) => {
+    stoppedRef.current = true;
+    if (watchIdRef.current) {
+      navigator.geolocation?.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    const durationMin = Math.floor((Date.now() - rideStartMsRef.current) / 60000);
+    let distanceM = rideDistanceRef.current;
+    const result = await finalizePartySession({
+      key: sessionKeyRef.current,
+      buildRecord: (session) => {
+        distanceM = Math.max(session?.distanceM || 0, rideDistanceRef.current);
+        if (distanceM <= 0) return null;
+        return {
+          userId: user.id,
+          distance: distanceM / 1000,
+          duration: durationMin,
+          partyId: party.id,
+          routeId: party.routeId ?? null,
+          routeName: party.routeName ?? null,
+        };
+      },
+    });
+    const distanceKm = distanceM / 1000;
+    setSummary({
+      distanceKm,
+      durationMin,
+      avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0,
+      endedByHost,
+      saveNote: (result && SAVE_NOTE[result.kind]) || '',
+    });
+  };
+
   // 참가자(비호스트) 전용 — 방장이 라이딩을 끝내면(rideStartedAt이 null이 됨) 감지해서
   // 내 기록을 저장하고 "라이딩이 종료되었습니다" 팝업을 띄운다.
   useEffect(() => {
@@ -205,31 +275,14 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     let cancelled = false;
 
     const timer = setInterval(async () => {
+      if (stoppedRef.current) return;
       try {
         const fresh = await getParty(party.id);
-        if (cancelled || !fresh) return;
+        if (cancelled || !fresh || stoppedRef.current) return;
         if (!fresh.rideStartedAt) {
           clearInterval(timer);
           onPartyChange?.(fresh);
-
-          const distanceKm = rideDistanceRef.current / 1000;
-          const durationMin = Math.floor((Date.now() - rideStartMsRef.current) / 60000);
-          if (rideDistanceRef.current > 0) {
-            await api.post('/api/ride-records', {
-              userId: user.id,
-              distance: distanceKm,
-              duration: durationMin,
-              partyId: party.id,
-              routeId: party.routeId ?? null,
-              routeName: party.routeName ?? null,
-            }).catch(() => {});
-          }
-          setSummary({
-            distanceKm,
-            durationMin,
-            avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0,
-            endedByHost: true,
-          });
+          await finalizeRide({ endedByHost: true });
         }
       } catch {
         // 다음 폴링에서 재시도
@@ -240,6 +293,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
       cancelled = true;
       clearInterval(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [party.id, isHost, user.id]);
 
   const recenter = () => {
@@ -248,30 +302,25 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     if (pos) mapRef.current?.panTo([pos.lat, pos.lng], { animate: true });
   };
 
-  // 라이딩 종료는 호스트만 — 그룹 라이딩이 언제 끝나는지는 방장이 정한다
+  // 라이딩 종료는 호스트만 — 그룹 라이딩이 언제 끝나는지는 방장이 정한다.
+  // 파티 종료(stopPartyRide)가 성공한 뒤에만 기록을 확정한다. 실패하면 다시 누를 수 있다.
   const handleEnd = async () => {
     if (!isHost || ending) return;
     setEnding(true);
+    setEndError('');
     try {
-      const distanceKm = rideDistance / 1000;
-      const durationMin = Math.floor(rideTime / 60);
-      if (rideDistance > 0) {
-        await api.post('/api/ride-records', {
-          userId: user.id,
-          distance: distanceKm,
-          duration: durationMin,
-          partyId: party.id,
-          routeId: party.routeId ?? null,
-          routeName: party.routeName ?? null,
-        }).catch(() => {});
-      }
-      // 파티(대기방)는 그대로 열어두고, rideStartedAt 만 지운다.
-      // 파티 자체를 끝내려면 방장 제어판의 "파티 삭제"를 쓴다.
-      const updated = await stopPartyRide(party.id, user.id).catch(() => null);
-      // 도크의 로컬 상태를 바로 갱신 — 15초 폴링을 기다리지 않아도
-      // 파티 룸에서 "라이딩 화면으로 이동" 버튼이 즉시 사라진다.
-      if (updated) onPartyChange?.(updated);
-      setSummary({ distanceKm, durationMin, avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0 });
+      await endRideAsHost({
+        stopRide: async () => {
+          // 파티(대기방)는 그대로 열어두고, rideStartedAt 만 지운다.
+          const updated = await stopPartyRide(party.id, user.id);
+          // 도크의 로컬 상태를 바로 갱신 — 파티 룸의 "라이딩 화면으로 이동" 버튼이 즉시 사라진다.
+          if (updated) onPartyChange?.(updated);
+          return updated;
+        },
+        finalize: () => finalizeRide(),
+      });
+    } catch {
+      setEndError(text.rideEndFailed);
     } finally {
       setEnding(false);
     }
@@ -293,12 +342,18 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
             <div className="rrStat"><strong>{(rideDistance / 1000).toFixed(2)}</strong><span>km</span></div>
             <div className="rrStat"><strong>{fmtTime(rideTime)}</strong><span>경과</span></div>
           </div>
-          <button type="button" className="rrClose" onClick={onClose} aria-label="파티창으로" title="파티창으로 돌아가기">
+          <button type="button" className="rrClose" onClick={onClose} disabled={ending} aria-label="파티창으로" title="파티창으로 돌아가기">
             ‹
           </button>
         </header>
 
         {geoError && <p className="rrGeoError">{geoError}</p>}
+        {!shareOn && (
+          <div className="rrShareOff" role="status">
+            <span>{text.rideLocShareOff}</span>
+            <button type="button" onClick={() => setShare(true)}>{text.rideLocShareTurnOn}</button>
+          </div>
+        )}
 
         <div className="rrRiders">
           <div className="rrRiderRow isMe">
@@ -319,6 +374,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
 
         {isHost && (
           <div className="rrEndBar">
+            {endError && <p className="rrEndError" role="alert">{endError}</p>}
             <button type="button" className="rrEndBtn" onClick={handleEnd} disabled={ending}>
               {ending ? '종료 중…' : '라이딩 종료'}
             </button>
@@ -330,6 +386,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
             <div className="rrSummaryCard">
               <h3>{summary.endedByHost ? '라이딩이 종료되었습니다' : '라이딩 기록'}</h3>
               {summary.endedByHost && <p className="rrSummarySub">방장이 라이딩을 종료했어요</p>}
+              {summary.saveNote && <p className="rrSummaryNote" role="alert">{summary.saveNote}</p>}
               <div className="rrSummaryStats">
                 <div className="rrSummaryStat"><strong>{summary.distanceKm.toFixed(2)}</strong><span>km</span></div>
                 <div className="rrSummaryStat"><strong>{summary.durationMin}</strong><span>분</span></div>

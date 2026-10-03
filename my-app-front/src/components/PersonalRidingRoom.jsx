@@ -7,7 +7,9 @@ import { reportLocation, getOtherLocations } from '../api/locations';
 import { getRouteById } from '../api/routes';
 import { sendMatchRequest, getOutgoingMatches } from '../api/matches';
 import { getProfile } from '../api/users';
-import { api } from '../api/client';
+import { useLocationShare } from '../hooks/useLocationShare';
+import { submitRideRecord } from '../utils/rideRecords';
+import { text } from '../constants';
 
 // MapPage의 지오펜스와 같은 값 — 50m 안에 들어오면 알림, 250m 밖으로 나가야 이탈로 친다(끊김 방지용 여유)
 const GEOFENCE_RADIUS_M = 50;
@@ -29,6 +31,13 @@ function fmtProxDist(d) {
 }
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
+
+// 기록 저장 결과 → 요약 팝업 안내 문구
+const SAVE_NOTE = {
+  queued: text.rideSaveQueued,
+  rejected: text.rideSaveFailed,
+  lost: text.rideSaveFailed,
+};
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -75,6 +84,13 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   const otherMarkersRef = useRef(new Map()); // userId -> Leaflet 마커 (VISIBLE_M 안에 있는 사람만)
   const profileCacheRef = useRef(new Map()); // userId -> 프로필 | 'loading' | null(실패)
   const proxTimerRef = useRef(null);
+  const rideDistanceRef = useRef(0); // 언마운트 시 저장용 최신 거리 미러
+  const finalizedRef = useRef(false); // 기록 확정은 종료 버튼·언마운트 중 한 번만
+  const stoppedRef = useRef(false);
+
+  const [shareOn, setShare] = useLocationShare(user.id);
+  const shareOnRef = useRef(shareOn);
+  useEffect(() => { shareOnRef.current = shareOn; }, [shareOn]);
 
   const [rideTime, setRideTime] = useState(0);
   const [rideDistance, setRideDistance] = useState(0);
@@ -132,7 +148,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        if (cancelled || !mapRef.current) return;
+        if (cancelled || stoppedRef.current || !mapRef.current) return;
         const map = mapRef.current;
         const { latitude, longitude } = pos.coords;
         const prev = lastPosRef.current;
@@ -149,7 +165,10 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           if (dt >= 1) {
             const moved = map.distance([prev.lat, prev.lng], [latitude, longitude]);
             setMySpeedKmh((moved / dt) * 3.6);
-            if (moved > 5) setRideDistance((d) => d + moved);
+            if (moved > 5) {
+              rideDistanceRef.current += moved;
+              setRideDistance(rideDistanceRef.current);
+            }
           }
         }
         lastPosRef.current = { lat: latitude, lng: longitude, time: pos.timestamp };
@@ -176,6 +195,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   // 라이딩 시간 타이머
   useEffect(() => {
     const timer = setInterval(() => {
+      if (stoppedRef.current) return;
       setRideTime(Math.floor((Date.now() - rideStartMsRef.current) / 1000));
     }, 1000);
     return () => clearInterval(timer);
@@ -191,10 +211,13 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
     const timer = setInterval(async () => {
       const pos = lastPosRef.current;
       const map = mapRef.current;
-      if (!pos || !map) return;
+      if (!pos || !map || stoppedRef.current) return;
 
       try {
-        await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        // 위치 공유가 꺼져 있으면 내 위치는 보내지 않는다(남의 위치 조회는 유지)
+        if (shareOnRef.current) {
+          await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        }
         const others = (await getOtherLocations(user.id)) || [];
         if (cancelled || !mapRef.current) return;
 
@@ -300,23 +323,52 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
     if (pos) mapRef.current?.panTo([pos.lat, pos.lng], { animate: true });
   };
 
+  // 기록 확정 — 종료 버튼과 언마운트(닫기·파티 전환) 공통. 한 번만 실행된다.
+  const buildRecord = () => {
+    const distanceM = rideDistanceRef.current;
+    if (distanceM <= 0) return null;
+    return {
+      userId: user.id,
+      distance: distanceM / 1000,
+      duration: Math.floor((Date.now() - rideStartMsRef.current) / 60000),
+      partyId: null,
+      routeId: route?.id ?? null,
+      routeName: route?.routeName ?? null,
+    };
+  };
+
+  // 종료 없이 화면이 닫히면(닫기·파티로 전환) 쌓인 기록을 버리지 않고 저장한다.
+  // 저장할 기록이 있을 때만 확정 표시를 한다 — 개발 모드(StrictMode)의 가짜 정리(거리 0)가
+  // 확정으로 굳어 이후 종료 버튼·실제 언마운트 저장을 막지 않게 하기 위해서다.
+  useEffect(() => () => {
+    if (finalizedRef.current) return;
+    const record = buildRecord();
+    if (!record) return;
+    finalizedRef.current = true;
+    submitRideRecord(record);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleEnd = async () => {
-    if (ending) return;
+    if (ending || finalizedRef.current) return;
+    finalizedRef.current = true;
+    stoppedRef.current = true;
+    if (watchIdRef.current) {
+      navigator.geolocation?.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     setEnding(true);
     try {
-      const distanceKm = rideDistance / 1000;
-      const durationMin = Math.floor(rideTime / 60);
-      if (rideDistance > 0) {
-        await api.post('/api/ride-records', {
-          userId: user.id,
-          distance: distanceKm,
-          duration: durationMin,
-          partyId: null,
-          routeId: route?.id ?? null,
-          routeName: route?.routeName ?? null,
-        }).catch(() => {});
-      }
-      setSummary({ distanceKm, durationMin, avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0 });
+      const record = buildRecord();
+      const distanceKm = rideDistanceRef.current / 1000;
+      const durationMin = Math.floor((Date.now() - rideStartMsRef.current) / 60000);
+      const result = record ? await submitRideRecord(record) : null;
+      setSummary({
+        distanceKm,
+        durationMin,
+        avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0,
+        saveNote: (result && SAVE_NOTE[result.kind]) || '',
+      });
     } finally {
       setEnding(false);
     }
@@ -348,6 +400,12 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
         <p className="rrModeTag">{route ? `코스: ${title}` : '자유주행'}</p>
 
         {geoError && <p className="rrGeoError">{geoError}</p>}
+        {!shareOn && (
+          <div className="rrShareOff" role="status">
+            <span>{text.rideLocShareOff}</span>
+            <button type="button" onClick={() => setShare(true)}>{text.rideLocShareTurnOn}</button>
+          </div>
+        )}
 
         {proxAlert && (
           <div className={`rrProxToast${proxAlert.entering ? '' : ' isLeaving'}`} role="status">
@@ -381,6 +439,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           <div className="rrSummaryBackdrop">
             <div className="rrSummaryCard">
               <h3>라이딩 기록</h3>
+              {summary.saveNote && <p className="rrSummaryNote" role="alert">{summary.saveNote}</p>}
               <div className="rrSummaryStats">
                 <div className="rrSummaryStat"><strong>{summary.distanceKm.toFixed(2)}</strong><span>km</span></div>
                 <div className="rrSummaryStat"><strong>{summary.durationMin}</strong><span>분</span></div>

@@ -2,13 +2,17 @@ import '../styles/partydock.css';
 
 import { useEffect, useRef, useState } from 'react';
 import { partyDock as t, text } from '../constants';
-import { getParties, applyToParty } from '../api/parties';
+import { getParties, getParty, applyToParty } from '../api/parties';
 import { getOtherLocations } from '../api/locations';
 import { useLocationShare } from '../hooks/useLocationShare';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
 import { markRead } from '../utils/chatUnread';
 import { OPEN_RIDING_EVENT } from '../utils/riding';
+import {
+  flushPendingRides, pruneRideSessions, findEndedSessions, unknownSessionPartyIds, finalizePartySession,
+  retryPendingSessionWrites,
+} from '../utils/rideRecords';
 import { getMyRoutesForParty } from '../api/parties';
 import { sendMatchRequest, getIncomingMatches, getOutgoingMatches, acceptMatch, rejectMatch } from '../api/matches';
 import BrandLogo from './BrandLogo';
@@ -18,6 +22,43 @@ import PersonalRidingRoom from './PersonalRidingRoom';
 
 const NEAR_M = 220;   // 이 거리 안이면 "접근 중"
 const MATCH_M = 50;   // 이 거리 안이어야 매칭 신청 버튼이 뜬다 (지오펜스와 같은 기준)
+
+// 라이딩 방이 닫혀 있는 사이 끝난 파티 라이딩의 기록을 대신 확정한다.
+// list 는 방금 성공한 파티 목록 조회 결과. 목록에 없는 파티는 단건 조회로 404 가 확인될 때만 종료로 본다.
+async function reconcileRideSessions(userId, list, openRidingPartyId) {
+  retryPendingSessionWrites(); // 저장소에 못 쓴 확정 결과부터 다시 쓴다
+  const rooms = [...list];
+  const goneIds = new Set();
+  for (const id of unknownSessionPartyIds({ userId, rooms })) {
+    try {
+      const p = await getParty(id);
+      if (p) rooms.push(p);
+    } catch (e) {
+      if (e?.status === 404) goneIds.add(id);
+    }
+  }
+  const ended = findEndedSessions({ userId, rooms, openRidingPartyId, goneIds });
+  for (const { key, partyId, rideStartedAt } of ended) {
+    const room = rooms.find((r) => r.id === partyId);
+    const startedMs = new Date(rideStartedAt).getTime();
+    await finalizePartySession({
+      key,
+      buildRecord: (session) => {
+        if (!session || !(session.distanceM > 0)) return null;
+        return {
+          userId,
+          distance: session.distanceM / 1000,
+          // 종료 시각을 모르니 감지한 지금까지로 친다
+          duration: Number.isFinite(startedMs) ? Math.max(0, Math.floor((Date.now() - startedMs) / 60000)) : 0,
+          partyId,
+          routeId: room?.routeId ?? null,
+          routeName: room?.routeName ?? null,
+        };
+      },
+    });
+  }
+  await flushPendingRides();
+}
 
 function distanceM(a, b) {
   const R = 6371000;
@@ -66,6 +107,17 @@ export default function PartyDock({ user, onMoveParty }) {
   const [soloRoutes, setSoloRoutes] = useState([]);
   const [soloRoutesLoading, setSoloRoutesLoading] = useState(false);
   const [soloConfig, setSoloConfig] = useState(null); // { route } | null
+
+  // 폴링 콜백에서 "지금 실제로 떠 있는 라이딩 방"을 알기 위한 미러
+  const ridingIdRef = useRef(null);
+  useEffect(() => { ridingIdRef.current = ridingId; }, [ridingId]);
+
+  // 오래된 라이딩 세션 정리 + 못 보낸 기록 재전송 (로그인 사용자 기준, 도크가 뜰 때 한 번)
+  useEffect(() => {
+    if (!user?.id) return;
+    pruneRideSessions(user.id);
+    flushPendingRides();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!soloPicker || !user?.id) return;
@@ -245,6 +297,14 @@ export default function PartyDock({ user, onMoveParty }) {
           p.status !== 'ended'
           && (p.hostId === user.id || (p.participants || []).some((m) => m.userId === user.id)));
         setParty(mine || null);
+
+        // RidingRoom 은 내 파티이고 아직 끝나지 않았을 때만 렌더된다 — 같은 기준으로 판정
+        const rid = ridingIdRef.current;
+        const ridParty = (list || []).find((p) => p.id === rid);
+        const openRidingPartyId = ridParty && ridParty.status !== 'ended'
+          && (ridParty.hostId === user.id || (ridParty.participants || []).some((m) => m.userId === user.id))
+          ? rid : null;
+        reconcileRideSessions(user.id, list || [], openRidingPartyId).catch(() => {});
       } catch { /* 재시도 */ }
     };
     load();

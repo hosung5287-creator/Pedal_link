@@ -69,17 +69,25 @@ export function makeOtherUserIcon() {
   });
 }
 
+// 라벨은 사용자가 저장한 값이라 HTML 로 넣으면 안 된다(저장형 XSS).
+// Leaflet 팝업에 문자열을 주면 innerHTML 로 들어가므로, 텍스트 노드로 만든 요소를 넘긴다.
+function textPopup(content) {
+  const el = document.createElement('span');
+  el.textContent = content;
+  return el;
+}
+
 export function drawMarkers(startPoint, endPoint, layer) {
   if (!layer) return;
   layer.clearLayers();
   if (startPoint) {
     L.marker([startPoint.lat, startPoint.lng], { icon: makeBikeIcon('#2563eb') })
-      .bindPopup(`${text.startPlace}: ${startPoint.label}`)
+      .bindPopup(textPopup(`${text.startPlace}: ${startPoint.label ?? ''}`))
       .addTo(layer);
   }
   if (endPoint) {
     L.marker([endPoint.lat, endPoint.lng], { icon: makeBikeIcon('#16a34a') })
-      .bindPopup(`${text.endPlace}: ${endPoint.label}`)
+      .bindPopup(textPopup(`${text.endPlace}: ${endPoint.label ?? ''}`))
       .addTo(layer);
   }
 }

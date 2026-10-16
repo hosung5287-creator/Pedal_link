@@ -1,0 +1,71 @@
+/* 함께 달리기 — 폴더 탭(파티 | 크루) + 아래 큰 판. 선택된 탭이 판과 이어져 보인다 */
+.tgFolder { display: flex; flex-direction: column; }
+
+.tgTabs { display: flex; gap: 4px; }
+.tgTab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 180px;
+  margin-bottom: -1px; /* 판 테두리 위에 겹쳐 선택 탭이 판과 이어지게 */
+  padding: 14px 26px 12px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.tgTab strong { font-size: 1.1rem; font-weight: 800; }
+.tgTab span { font-size: 0.8rem; }
+.tgTab:hover { color: var(--ink); }
+.tgTab.isActive { z-index: 1; background: var(--surface); color: var(--ink); }
+.tgTab.isActive strong { color: var(--mint-dark); }
+.tgTab.isActive::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 16px;
+  right: 16px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--mint);
+}
+.tgTab:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+
+.tgPanel {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  /* 왼쪽 위 모서리를 각지게 — 첫 탭이 판과 한 덩어리로 이어진다 */
+  border-radius: 0 24px 24px 24px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(20, 51, 75, 0.06);
+}
+
+/* 화면 캡처 자리 (16:9) — 채우기 전까지 빗금 자리표시 */
+.tgSlot {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 14px, var(--surface) 14px 28px);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.tgSlot > span { padding: 8px 14px; border-radius: 999px; background: var(--surface); }
+
+
+@media (max-width: 767px) {
+  .tgTab { flex: 1; min-width: 0; padding: 12px 14px 10px; }
+  .tgTab span { display: none; }
+  .tgPanel { border-radius: 0 16px 16px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tgTab { transition: none; }
+}

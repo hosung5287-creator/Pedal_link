@@ -146,6 +146,28 @@ describe('파티 라이딩 세션', () => {
     expect(claimRideSession(key, now + 3 * 60 * 1000)).toBe('claimed');
   });
 
+  test('A 지연 → 2분 뒤 B 성공 → A 가 늦게 lost 로 끝나도 완료가 되돌려지지 않고 추가 전송이 없다', async () => {
+    const t0 = Date.now();
+    beginRideSession(key);
+    storeRideDistance(key, 1000);
+    let failA;
+    const submitA = vi.fn(() => new Promise((resolve) => { failA = () => resolve({ ok: false, kind: 'lost' }); }));
+    const pA = finalizePartySession({ key, buildRecord: () => record, submit: submitA, now: t0 });
+
+    const submitB = vi.fn().mockResolvedValue({ ok: true, kind: 'saved' });
+    const rB = await finalizePartySession({ key, buildRecord: () => record, submit: submitB, now: t0 + 3 * 60 * 1000 });
+    expect(rB.kind).toBe('saved');
+    expect(loadRideSession(key).state).toBe('done');
+
+    failA();
+    await pA;
+    expect(loadRideSession(key).state).toBe('done');
+    const submitC = vi.fn().mockResolvedValue({ ok: true, kind: 'saved' });
+    const rC = await finalizePartySession({ key, buildRecord: () => record, submit: submitC, now: t0 + 10 * 60 * 1000 });
+    expect(rC.kind).toBe('busy');
+    expect(submitC).not.toHaveBeenCalled();
+  });
+
   test('finalizePartySession 은 방·도크가 동시에 불러도 한 번만 저장한다', async () => {
     beginRideSession(key);
     storeRideDistance(key, 2000);

@@ -1,0 +1,59 @@
+/* 영상 단독 섹션 (Meta Muse 'in action' 구성) — 위: 왼쪽 제목·설명 + 오른쪽 버튼, 아래: 같은 폭의 큰 영상 */
+.homeShowcase.isVideo .homeShowcaseInner { gap: clamp(28px, 3vw, 44px); }
+
+/* 섹션 시연 영상 — 제목 아래 단독 배치. 카드 = 16:9 영상 + (있으면) 단계 표시 */
+.cvd {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(20, 51, 75, 0.07);
+  isolation: isolate;
+}
+.cvdFrame { position: relative; aspect-ratio: 16 / 9; background: #06121b; }
+
+.cvdVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cvdToggle {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(60, 70, 80, 0.72);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.cvdToggle:hover { background: rgba(40, 48, 56, 0.9); }
+.cvdToggle:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+
+/* 단계 표시 — 지금 단계 막대가 영상 진행에 맞춰 차오르고, 누르면 그 단계로 이동 */
+.cvdSteps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 28px); padding: 18px clamp(16px, 2.4vw, 32px) 22px; border-top: 1px solid var(--line); }
+.cvdStep { display: flex; flex-direction: column; gap: 10px; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; text-align: left; cursor: pointer; }
+.cvdStep:hover, .cvdStep.isActive { color: var(--ink); }
+.cvdStep:focus-visible { outline: 2px solid var(--mint); outline-offset: 4px; border-radius: 6px; }
+.cvdStepBar { position: relative; display: block; height: 3px; overflow: hidden; border-radius: 3px; background: var(--line); }
+.cvdStepBar i { position: absolute; inset: 0; border-radius: 3px; background: var(--mint); transform: scaleX(0); transform-origin: 0 50%; }
+.cvdStepText { display: flex; gap: 8px; font-size: 0.95rem; font-weight: 700; }
+.cvdStepText b { color: var(--mint-dark); font-weight: 800; }
+
+@media (max-width: 767px) {
+  .cvd { border-radius: 14px; }
+  .cvdToggle { right: 12px; bottom: 12px; width: 34px; height: 34px; }
+  .cvdSteps { gap: 10px; padding: 14px 14px 16px; }
+  .cvdStepText { flex-direction: column; gap: 2px; font-size: 0.8rem; }
+}

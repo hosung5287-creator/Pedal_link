@@ -130,8 +130,9 @@ function isClaimable(s, now) {
 }
 
 // 이 페이지에서 차지했거나 확정한 세션 — localStorage 쓰기가 실패해도 중복 확정을 막는다.
-// key -> { state: 'finalizing' | 'done', at }. finalizing 은 2분이 지나면 만료(멈춘 요청 복구).
+// key -> { state: 'finalizing' | 'done', at, token }. finalizing 은 2분이 지나면 만료(멈춘 요청 복구).
 const memClaims = new Map();
+let claimSeq = 0; // claim 마다 새 번호 — 늦게 끝난 이전 요청이 최신 결과를 덮지 못하게 한다
 // 확정 결과(done/active)를 저장소에 못 쓴 세션 — 다음 폴링에서 쓰기만 다시 시도한다
 const pendingWrites = new Map(); // key -> 써야 할 세션 값
 
@@ -157,14 +158,21 @@ export function claimRideSession(key, now = Date.now()) {
   const cur = loadRideSession(key);
   // 내 페이지의 finalizing 이 만료돼 다시 잡는 경우도 isClaimable 이 2분 기준으로 허용한다
   if (cur && !isClaimable(cur, now)) return 'busy';
-  memClaims.set(key, { state: 'finalizing', at: now });
+  claimSeq += 1;
+  memClaims.set(key, { state: 'finalizing', at: now, token: claimSeq });
   if (cur) writeJson(key, { ...cur, state: 'finalizing', owner: PAGE_LOAD_ID, finalizingAt: now, updatedAt: now });
   return 'claimed';
 }
 
+export const currentClaimToken = (key) => memClaims.get(key)?.token;
+
 // 저장 결과에 따라 세션을 정리한다. 보존 실패(lost)만 active 로 되돌려 다음에 다시 잡히게 한다.
 // 저장소 쓰기가 실패하면 pendingWrites 에 남겨 다음 폴링에서 다시 쓴다.
-export function settleRideSession(key, result, now = Date.now()) {
+// token 을 주면 그 claim 이 최신일 때만 반영하고, 이미 done 이면 어떤 결과도 되돌리지 않는다.
+export function settleRideSession(key, result, now = Date.now(), token) {
+  const m = memClaims.get(key);
+  if (m?.state === 'done') return;                          // 완료는 되돌리지 않는다
+  if (token !== undefined && m?.token !== token) return;    // 늦게 끝난 이전 요청 — 무시
   const state = result.kind === 'lost' ? 'active' : 'done';
   if (state === 'active') memClaims.delete(key);
   else memClaims.set(key, { state: 'done', at: now });
@@ -190,15 +198,16 @@ export function isRideSessionDone(key) {
 export async function finalizePartySession({ key, buildRecord, submit = submitRideRecord, now = Date.now() }) {
   // 이미 다른 쪽(방·도크)이 확정했거나 확정 중 — 여기서는 저장하지 않는다
   if (claimRideSession(key, now) !== 'claimed') return { ok: true, kind: 'busy' };
+  const token = currentClaimToken(key);
   const session = loadRideSession(key);
   const record = buildRecord(session);
   // 거리가 0이면 저장할 기록이 없다 — 세션만 닫는다
   if (!record) {
-    settleRideSession(key, { kind: 'saved' }, now);
+    settleRideSession(key, { kind: 'saved' }, now, token);
     return { ok: true, kind: 'empty' };
   }
   const result = await submit(record);
-  settleRideSession(key, result);
+  settleRideSession(key, result, Date.now(), token);
   return result;
 }
 

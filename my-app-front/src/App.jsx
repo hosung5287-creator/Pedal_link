@@ -8,6 +8,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import HomePage from './pages/HomePage';
+import HomeDraftPage from './pages/HomeDraftPage';
 import MapPage from './pages/MapPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
@@ -102,9 +103,8 @@ function App() {
     page = <ChatPage onMoveCrew={moveCrew} user={user} partyId={partyId} onMoveHome={moveHome} onMoveParty={moveParty} onOpenMap={openMap} onMoveBrowse={moveBrowse} />;
   } else if (currentPath === '/profile') {
     page = <ProfilePage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} />;
-  } else if (currentPath === '/settings') {
-    page = <SettingsPage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
-  } else {
+  } else if (currentPath === '/home-old') {
+    // 이전 홈(코스·매칭·파티 시연 섹션) — 개편 홈으로 옮길 때 참고용
     page = (
       <HomePage onMoveCrew={moveCrew}
         user={user}
@@ -114,6 +114,25 @@ function App() {
         onMoveLogin={moveLogin}
         onMoveParty={moveParty}
         onMoveBrowse={moveBrowse}
+        onMoveProfile={moveProfile}
+        onMoveSettings={moveSettings}
+        onLogout={handleLogout}
+      />
+    );
+  } else if (currentPath === '/settings') {
+    page = <SettingsPage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveBrowse={moveBrowse} onMoveParty={moveParty} onOpenMap={openMap} onLogout={handleLogout} />;
+  } else {
+    // 메인 홈 — 개편 뼈대 (/home-draft 로 들어와도 같은 화면)
+    page = (
+      <HomeDraftPage
+        user={user}
+        onMoveHome={moveHome}
+        onMoveParty={moveParty}
+        onOpenMap={openMap}
+        onMoveBrowse={moveBrowse}
+        onMoveCrew={moveCrew}
+        onMoveLogin={moveLogin}
+        onMoveSignup={moveSignup}
         onMoveProfile={moveProfile}
         onMoveSettings={moveSettings}
         onLogout={handleLogout}

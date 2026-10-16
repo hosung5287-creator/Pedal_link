@@ -455,14 +455,79 @@ export const homeCourse = {
   id: 'instant',            // 히어로 하단 화살표(#instant)가 이 섹션으로 스크롤
   variant: 'wash',
   eyebrow: '코스 만들기',
+  demo: 'video',            // 아코디언 없이 시연 영상(SectionVideo)만 전체 폭으로
+  cta: '코스 만들러 가기',   // 제목 오른쪽 버튼 → 지도(코스 만들기) 화면
+  accordionLabel: '코스 만들기 기능',
   title: '지도 위에서 바로 코스를 그리세요',
   sub: '출발지와 도착지를 찍으면 거리·고도·예상 시간이 자동으로 계산됩니다.',
   imageLabel: '이미지 자리 — 지도/경로 편집 화면',
+  // 시연 영상(SectionVideo) 파일·문구
+  video: {
+    src: '/videos/course-demo.mp4',
+    poster: '/videos/course-demo-poster.jpg',
+    duration: 12,
+    // 영상 장면 시작 시각(초) — 아래 단계 표시와 맞물린다
+    steps: [{ title: '코스 그리기', at: 0 }, { title: '자동 계산', at: 4.2 }, { title: '저장', at: 8.2 }],
+    copy: {
+      aria: '코스 만들기 시연 영상: 지도에 도착지를 찍으면 경로가 그려지고, 거리·고도·시간이 계산된 뒤 코스가 저장됩니다.',
+      play: '코스 시연 영상 재생',
+      pause: '코스 시연 영상 일시정지',
+    },
+  },
   features: [
     { title: '코스 그리기', desc: '지도 위에 출발지와 도착지를 찍어 보세요.', image: '/images/course/draw.png', alt: '한강 지도에서 출발 지점을 지정한 실제 코스 편집 화면' },
     { title: '실시간 계산', desc: '거리·고도·예상 시간을 바로 확인하세요.', image: '/images/course/calculate.png', alt: '거리 0.4km, 상승 3m, 예상 시간 1분이 표시된 실제 계산 결과' },
     { title: '저장한 코스', desc: '마음에 든 코스를 저장해 다시 꺼내 쓰세요.', image: '/images/course/saved.png', alt: '한강 코스와 경로가 저장되었습니다 알림이 표시된 실제 저장 완료 화면' },
   ],
+};
+
+// 함께 달리기 — 폴더 탭(파티 | 크루). 탭마다 아코디언 + 시연이 바뀐다 (TogetherSection)
+export const homeTogether = {
+  eyebrow: '함께 달리기',
+  title: '즉석으로 파티, 꾸준히 크루',
+  sub: '오늘 바로 모이는 파티와 정기적으로 함께 달리는 크루, 두 가지 방법으로 같이 달려요.',
+  tabsLabel: '함께 달리기 방식',
+  tabs: [
+    { id: 'party', label: '파티', hint: '즉석으로 모여 달리기', slotLabel: '파티 탭 화면 자리 — 실제 화면 캡처 예정' },
+    { id: 'crew', label: '크루', hint: '정기적으로 함께 달리기', slotLabel: '크루 탭 화면 자리 — 실제 화면 캡처 예정' },
+  ],
+};
+
+// 크루 탭 — 아코디언 문구 + 시연(CrewLiveDemo) 고정 예시. API 호출 없음.
+// 흐름은 실제 크루 화면(CrewPage, constants.crew)과 같다: 찾기 → 가입 신청·승인 → 정기 라이딩
+export const homeCrew = {
+  tabsLabel: '크루 기능',
+  features: [
+    { title: '크루 찾기', desc: '지역·요일로 나와 맞는 크루를 찾아보세요.' },
+    { title: '가입 신청', desc: '가입을 신청하면 크루 리더가 승인해요.' },
+    { title: '정기 라이딩', desc: '매주 라이딩 일정에 참석을 체크하고 함께 달려요.' },
+  ],
+  demoText: {
+    aria: '크루 시연',
+    appTitles: ['크루 찾기', '크루 상세 정보', '한강 새벽 크루'], // 단계별 앱 헤더 (2·3단계는 뒤로 가기 표시)
+    live: '모집 중',
+    filters: ['서울 · 용산', '토요일'],
+    crews: [
+      { name: '한강 새벽 크루', region: '서울 · 이촌', schedule: '매주 토 06:30', members: 12, tag: '초보 환영' },
+      { name: '남산 업힐 크루', region: '서울 · 중구', schedule: '매주 일 07:00', members: 8, tag: '업힐' },
+      { name: '한남 로드 크루', region: '서울 · 한남', schedule: '격주 토 08:00', members: 15, tag: '로드' },
+    ],
+    memberUnit: '명',
+    join: '가입 신청',
+    pending: '승인 대기중',
+    joined: '가입됨',
+    approvedNote: '리더가 가입을 승인했어요',
+    upcomingTitle: '예정된 라이딩',
+    ride: { when: '이번 주 토 06:30', where: '이촌한강공원 출발 · 18km' },
+    attendYes: '이번 주 참석',
+    attendCountBefore: '8명 참석',
+    attendCount: '9명 참석',
+    members: ['정우', '민재', '소연', '세훈'],
+    meetPoint: '모임 장소',
+    replay: '다시 보기',
+    replayAria: '크루 시연 다시 재생',
+    credit: '© OpenStreetMap contributors',
+  },
 };
 
 // S3 · 실시간 매칭 (좌우 분할)
@@ -472,6 +537,26 @@ export const homeMatch = {
   sub: '위치를 공유하면 반경 안의 라이더가 지도에 실시간으로 표시됩니다.',
   imageLabel: '이미지 자리 — 실시간 매칭 지도',
   points: ['반경 안 라이더 자동 감지', '접근·이탈 알림', '파티 멤버와 위치 공유'],
+  pointIcons: ['radar', 'bell', 'pin'], // SplitSection 미니 아이콘 (레이더·알림 벨·위치 핀)
+  // 이미지 자리 대신 들어가는 모션 시연(MatchLiveDemo) 문구 — 고정 예시, API 호출 없음
+  demo: {
+    aria: '실시간 매칭 시연: 근처 라이더가 다가오면 알림이 뜨고 함께 타기로 연결됩니다.',
+    me: '나',
+    radius: '반경 50m',
+    panelTitle: '주변 라이더',
+    panelBadge: '위치 공유 중',
+    riders: [
+      { name: '민재', far: '420m', near: '40m' },
+      { name: '소연', far: '650m' },
+      { name: '세훈', far: '900m' },
+    ],
+    nearAlert: '민재님이 근처에 있어요',
+    joinBtn: '함께 타기',
+    matched: '매칭 완료 — 같이 출발해요',
+    replay: '다시 보기',
+    replayAria: '매칭 시연 다시 재생',
+    credit: '© OpenStreetMap contributors',
+  },
 };
 
 // S4 · 함께 달리기 (쇼케이스)
@@ -486,6 +571,34 @@ export const homeParty = {
     { title: '승인·참여', desc: '호스트가 참가 신청을 확인하고 함께 달릴 멤버를 확정해요.' },
     { title: '같이 출발', desc: '호스트가 시작하면 모든 멤버 화면이 동시에 출발합니다.' },
   ],
+  // 이미지 자리 대신 탭 + 모션 시연(PartyLiveDemo) 사용 — 고정 예시, API 호출 없음
+  demo: 'party',
+  tabsLabel: '함께 달리기 기능',
+  demoText: {
+    aria: '함께 달리기 시연',
+    appTitle: '실시간 모집 중인 파티', // 시연 패널 상단 — 실제 앱 화면 헤더처럼
+    live: '실시간',
+    partyTitle: '한강 야간 라이딩',
+    course: '이촌 → 반포대교 · 4.2km',
+    time: '오늘 20:00 출발',
+    capacityLabel: '모집 인원',
+    openBtn: '파티 열기',
+    opened: '파티가 열렸어요',
+    requestTitle: '참가 신청',
+    requester: '소연',
+    requestMsg: '소연님이 참가를 신청했어요',
+    approve: '승인',
+    approved: '소연님이 합류했어요',
+    membersLabel: '멤버',
+    members: ['정우', '민재', '소연'],
+    countdown: ['3', '2', '1', '출발!'],
+    riding: '함께 라이딩 중',
+    rideNote: '호스트가 시작하면 모든 멤버가 동시에 출발해요',
+    mapStart: '출발',
+    replay: '다시 보기',
+    replayAria: '함께 달리기 시연 다시 재생',
+    credit: '© OpenStreetMap contributors',
+  },
 };
 
 // S5 · 둘러보기 (좌우 분할 · 반전)
@@ -671,3 +784,62 @@ export const partyRoom = {
   memberOnlyPanel: '참가자 메뉴',
   actionFailed: '처리하지 못했어요. 다시 시도해주세요.',
 };
+
+// ── 홈 개편 뼈대 (/home-draft) ──────────────────────
+// Meta Muse 페이지의 섹션 '구조'만 참고한 임시 뼈대. 문구·영상·이미지는 모두 자리표시(나중에 교체).
+export const homeDraft = {
+  hero: {
+    eyebrow: '즉석 라이딩 파티',
+    title: '함께 달릴 사람, 지금 찾기',
+    primary: '파티 찾기',
+    secondary: '코스 만들기',
+    mediaLabel: '히어로 영상 자리 — 풀스크린 16:9 (반복 재생·음소거)',
+  },
+
+  action: {
+    eyebrow: '라이딩 장면',
+    title: 'PedalLink 로 달리는 하루',
+    cta: '시작하기',
+    // 하루 사용 흐름 시연(DayLiveDemo) — 고정 예시, API 호출 없음
+    demo: {
+      aria: 'PedalLink 하루 사용 흐름 시연',
+      stepsLabel: '시연 단계',
+      pause: '자동 재생 일시정지',
+      play: '자동 재생',
+      playDisabled: '움직임 줄이기 설정으로 자동 재생이 꺼져 있어요',
+      brand: 'PedalLink',
+      steps: [
+        { time: '19:30', title: '알림', desc: '근처에 새 파티가 열리면 바로 알려줘요', ms: 3000,
+          notice: '근처에 파티 2개가 열렸어요', noticeSub: '한강 야간 라이딩 외 1개' },
+        { time: '19:31', title: '파티 고르기', desc: '지도에서 코스와 인원을 보고 참가해요', ms: 3200,
+          party: '한강 야간 라이딩', partyMeta: '20:00 출발 · 6.2km · 2/4', join: '참가하기' },
+        { time: '19:40', title: '승인·합류', desc: '방장이 승인하면 멤버로 합류해요', ms: 3000,
+          approved: '방장이 승인했어요', members: ['정우', '민재', '나'], count: '3/4' },
+        { time: '20:00', title: '함께 출발', desc: '모두 동시에 출발해 서로 위치를 보며 달려요', ms: 4400,
+          countdown: ['3', '2', '1'], speedUnit: 'km/h', distUnit: 'km' },
+        { time: '20:42', title: '기록 저장', desc: '도착하면 오늘 라이딩이 자동으로 기록돼요', ms: 3200,
+          saved: '기록 저장됨', stats: [{ v: '12.4', u: 'km' }, { v: '42', u: '분' }, { v: '17.7', u: '평균 km/h' }] },
+      ],
+    },
+  },
+  // 플로팅 버튼(파티 도크) 소개 — 크루 자리였던 섹션
+  dock: {
+    eyebrow: '플로팅 버튼',
+    title: '어느 화면에서든 버튼 하나로',
+    sub: '오른쪽 아래 버튼으로 근처 라이더 찾기, 매칭, 라이딩까지 바로 이어집니다.',
+    cta: '파티 찾기',
+    video: {
+      src: '/videos/dock-demo.mp4',
+      poster: '/videos/dock-demo-poster.jpg',
+      duration: 12,
+      steps: [{ title: '근처 라이더', at: 0 }, { title: '매칭 · 즉석 파티', at: 4 }, { title: '라이딩', at: 8 }],
+      copy: {
+        aria: '플로팅 버튼 시연 영상: 버튼을 누르면 근처 라이더가 보이고, 매칭을 수락하면 즉석 파티가 만들어지며, 라이딩 중에는 초록 버튼으로 바뀝니다.',
+        play: '플로팅 버튼 시연 영상 재생',
+        pause: '플로팅 버튼 시연 영상 일시정지',
+      },
+    },
+  },
+
+};
+

@@ -1,0 +1,47 @@
+/* 홈 개편 뼈대 (/home-draft) — 자리표시 위주의 와이어프레임. 나중에 실제 디자인으로 교체한다. */
+.homeDraft { background: var(--surface); color: var(--ink); }
+
+.hdInner { width: min(1320px, calc(100% - var(--home-gutter, 20px) * 2)); margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+.hdSection { padding: clamp(64px, 7vw, 120px) 0; }
+.hdSection.isWash { background: var(--wash); }
+
+/* 자리표시 박스 */
+.hdSlot {
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--line);
+  border-radius: 24px;
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 14px, var(--surface) 14px 28px);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+}
+.hdSlot > span { padding: 8px 14px; border-radius: 999px; background: var(--surface); }
+
+/* 1. 히어로 */
+.hdHero { position: relative; min-height: 100svh; display: flex; flex-direction: column; }
+/* 네비 — 이전 홈(.heroFull .navbar)과 같은 폭·위치. 히어로가 .hero 가 아니라 로고 흰색만 따로 */
+.hdHero .navbar { width: min(1560px, calc(100% - var(--home-gutter, 20px) * 2)); max-width: none; margin-inline: auto; }
+.hdHero .brandLogo { color: #ffffff; }
+.hdHeroMedia { position: absolute; inset: 0; border-radius: 0; border: 0; background: linear-gradient(180deg, var(--ink), #1c3446); color: rgba(255, 255, 255, 0.6); }
+.hdHeroMedia { place-items: end start; padding: 24px; }
+.hdHeroMedia > span { background: rgba(255, 255, 255, 0.08); }
+.hdHeroText { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 0 20px 12vh; text-align: center; color: var(--surface); }
+.hdHeroText h1 { margin: 0; font-size: clamp(2.4rem, 6vw, 4.8rem); line-height: 1.1; letter-spacing: -0.02em; word-break: keep-all; }
+.hdHeroText .hdEyebrow { color: rgba(255, 255, 255, 0.8); }
+.hdHeroBtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* 공통 머리글 */
+.hdHead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.hdHead h2 { margin: 6px 0 0; font-size: clamp(1.8rem, 3.6vw, 2.8rem); line-height: 1.15; letter-spacing: -0.02em; word-break: keep-all; }
+.hdHead p { margin: 12px 0 0; max-width: 620px; color: var(--muted); line-height: 1.6; }
+.hdEyebrow { color: var(--mint-dark); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.hdCta { flex-shrink: 0; padding: 12px 22px; border: 0; border-radius: 999px; background: var(--mint); color: var(--surface); font: inherit; font-weight: 800; cursor: pointer; }
+.hdCta.isGhost { background: rgba(255, 255, 255, 0.14); color: var(--surface); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4); }
+.hdCta:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+
+@media (max-width: 767px) {
+  .hdHead { flex-direction: column; align-items: flex-start; }
+}

@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="113.7mm" height="74mm" viewBox="0 0 113.7 74"><defs><marker id="arr" viewBox="0 0 6 6" refX="5.4" refY="3" markerWidth="2.1" markerHeight="2.1" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5B7180"/></marker><marker id="arrS" viewBox="0 0 6 6" refX="5.4" refY="3" markerWidth="2.4" markerHeight="2.4" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#0284C7"/></marker></defs><polyline points="56.85,37 22,13" fill="none" stroke="#9FB1BE" stroke-width="0.45" stroke-linejoin="round"/>
+<polyline points="56.85,37 91.7,13" fill="none" stroke="#9FB1BE" stroke-width="0.45" stroke-linejoin="round"/>
+<polyline points="56.85,37 22,61" fill="none" stroke="#9FB1BE" stroke-width="0.45" stroke-linejoin="round"/>
+<polyline points="56.85,37 91.7,61" fill="none" stroke="#9FB1BE" stroke-width="0.45" stroke-linejoin="round"/>
+<polyline points="17.8,30.6 17.8,25.4" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="21.74" y="26.96" width="7.73" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="25.6" y="28.1" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">구 판정</text>
+<polyline points="70.5,9.6 43.6,9.6" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="50.79" y="5.96" width="12.42" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="57" y="7.1" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">탄 코스 연결</text>
+<polyline points="70.5,65.5 43.6,65.5" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="48.95" y="61.76" width="16.09" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="57" y="62.9" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">크루 라이딩 시작</text>
+<rect x="51.19" y="67.06" width="11.62" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="57" y="68.2" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">= 파티 생성</text>
+<polyline points="95.9,43.6 95.9,48.4" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" stroke-dasharray="0.8 0.6" marker-end="url(#arr)"/>
+<rect x="0.8" y="1" width="42.4" height="24.4" rx="1.8" fill="#E6F4FD" stroke="#0EA5E9" stroke-width="0.35"/>
+<text x="3.0" y="4.6" font-size="2.469" font-weight="700" fill="#0369A1" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">코스 · 게시물</text>
+<rect x="3.0" y="8.2" width="38.0" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0EA5E9" stroke-width="0.25"/>
+<text x="4.4" y="10.469999999999999" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">routes</text>
+<rect x="3.0" y="13.7" width="38.0" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0EA5E9" stroke-width="0.25"/>
+<text x="4.4" y="15.969999999999999" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">route_likes</text>
+<rect x="3.0" y="19.2" width="38.0" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0EA5E9" stroke-width="0.25"/>
+<text x="4.4" y="21.47" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">route_bookmarks</text>
+<rect x="70.5" y="1" width="42.4" height="24.4" rx="1.8" fill="#E6F7F0" stroke="#10B981" stroke-width="0.35"/>
+<text x="72.7" y="4.6" font-size="2.469" font-weight="700" fill="#047857" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">라이딩 기록 · AI 분석</text>
+<rect x="72.7" y="8.2" width="38.0" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#10B981" stroke-width="0.25"/>
+<text x="74.10000000000001" y="10.469999999999999" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">ride_records</text>
+<rect x="72.7" y="13.7" width="38.0" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#10B981" stroke-width="0.25"/>
+<text x="74.10000000000001" y="15.969999999999999" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">ride_insights</text>
+<rect x="72.7" y="19.2" width="38.0" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#10B981" stroke-width="0.25"/>
+<text x="74.10000000000001" y="21.47" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">ride_tips</text>
+<rect x="0.8" y="48.6" width="42.4" height="24.4" rx="1.8" fill="#FFF6D9" stroke="#E5A800" stroke-width="0.35"/>
+<text x="3.0" y="52.2" font-size="2.469" font-weight="700" fill="#8A6100" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">파티 · 매칭</text>
+<rect x="3.0" y="55.800000000000004" width="16.4" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#E5A800" stroke-width="0.25"/>
+<text x="4.4" y="58.07000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">parties</text>
+<rect x="20.599999999999998" y="55.800000000000004" width="20.4" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#E5A800" stroke-width="0.25"/>
+<text x="21.999999999999996" y="58.07000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">party_members</text>
+<rect x="3.0" y="61.300000000000004" width="16.4" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#E5A800" stroke-width="0.25"/>
+<text x="4.4" y="63.57000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">chat_messages</text>
+<rect x="20.599999999999998" y="61.300000000000004" width="20.4" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#E5A800" stroke-width="0.25"/>
+<text x="21.999999999999996" y="63.57000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">match_requests</text>
+<rect x="70.5" y="48.6" width="42.4" height="24.4" rx="1.8" fill="#E8EFF7" stroke="#0369A1" stroke-width="0.35"/>
+<text x="72.7" y="52.2" font-size="2.469" font-weight="700" fill="#0369A1" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">크루</text>
+<rect x="72.7" y="55.800000000000004" width="15" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0369A1" stroke-width="0.25"/>
+<text x="74.10000000000001" y="58.07000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">crews</text>
+<rect x="88.9" y="55.800000000000004" width="21.8" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0369A1" stroke-width="0.25"/>
+<text x="90.30000000000001" y="58.07000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">crew_event_members</text>
+<rect x="72.7" y="61.300000000000004" width="15" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0369A1" stroke-width="0.25"/>
+<text x="74.10000000000001" y="63.57000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">crew_members</text>
+<rect x="88.9" y="61.300000000000004" width="21.8" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0369A1" stroke-width="0.25"/>
+<text x="90.30000000000001" y="63.57000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">crew_chat_messages</text>
+<rect x="72.7" y="66.80000000000001" width="15" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#0369A1" stroke-width="0.25"/>
+<text x="74.10000000000001" y="69.07000000000001" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">crew_events</text>
+<rect x="0.8" y="30.6" width="34" height="12.8" rx="1.6" fill="#F4F9FC" stroke="#9FB1BE" stroke-width="0.35"/>
+<text x="3" y="34" font-size="2.469" font-weight="700" fill="#334A5A" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">지도 데이터</text>
+<rect x="3.0" y="36.8" width="14.4" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#9FB1BE" stroke-width="0.25"/>
+<text x="4.3" y="39.07" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">cycleways</text>
+<rect x="18.4" y="36.8" width="13" height="4.5" rx="0.9" fill="#FFFFFF" stroke="#9FB1BE" stroke-width="0.25"/>
+<text x="19.7" y="39.07" font-size="1.94" font-weight="600" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">seoul_gu</text>
+<rect x="78.9" y="30.6" width="34" height="12.8" rx="1.6" fill="#FFFFFF" stroke="#9FB1BE" stroke-width="0.35" stroke-dasharray="1 0.7"/>
+<text x="81" y="34" font-size="2.469" font-weight="700" fill="#334A5A" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">실시간 위치</text>
+<text x="81" y="38.6" font-size="1.976" font-weight="400" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">DB 아님 · 서버 메모리 15초</text>
+<text x="81" y="41.4" font-size="1.976" font-weight="400" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">220m 판정에 사용</text>
+<rect x="44.6" y="30.6" width="24.5" height="12.8" rx="1.8" fill="#FFFFFF" stroke="#0C1B27" stroke-width="0.45"/>
+<text x="56.85" y="35" font-size="2.822" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">users</text>
+<text x="56.85" y="39.6" font-size="2.046" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">회원 · 프로필</text></svg>

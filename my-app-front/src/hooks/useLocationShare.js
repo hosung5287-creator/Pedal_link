@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { updateLocationSharing } from '../api/auth';
 import { getProfile } from '../api/users';
+import { removeLocation } from '../api/locations';
 
 // 위치 공유 on/off 상태를 여러 화면(지도 · 파티 도크 · 설정)이 공유하는 훅.
 // 기준은 서버(users.location_share_enabled)이고, localStorage 는 첫 화면을 바로 그리기 위한 사본이다.
@@ -120,6 +121,8 @@ export function useLocationShare(userId) {
     writeLocal(userId, val);
     broadcast(userId, val);
     pushToServer(userId, val);
+    // 끄면 서버에 남은 마지막 위치도 바로 지운다 — 지도·라이딩 화면은 꺼진 동안 위치를 보내지 않는다
+    if (!val) removeLocation(userId).catch(() => {});
   }, [userId]);
 
   return [enabled, setShare];

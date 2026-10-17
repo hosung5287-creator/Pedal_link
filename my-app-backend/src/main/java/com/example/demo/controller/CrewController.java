@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.CrewRequest;
 import com.example.demo.dto.CrewResponse;
+import com.example.demo.dto.CrewSettingsRequest;
 import com.example.demo.service.CrewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +34,11 @@ public class CrewController {
         return handle(() -> crewService.createCrew(req));
     }
 
+    @PutMapping("/{id}/settings")
+    public ResponseEntity<?> updateSettings(@PathVariable Long id, @RequestBody CrewSettingsRequest req) {
+        return handle(() -> crewService.updateSettings(id, req));
+    }
+
     @PostMapping("/{id}/join")
     public ResponseEntity<?> join(@PathVariable Long id, @RequestBody Map<String, Long> body) {
         return handle(() -> crewService.join(id, body.get("userId")));
@@ -43,14 +49,17 @@ public class CrewController {
         return handle(() -> crewService.leave(id, body.get("userId")));
     }
 
+    // body: { leaderId } — 처리하는 사람이 리더인지 서버에서 확인한다
     @PostMapping("/{id}/requests/{userId}/approve")
-    public ResponseEntity<?> approve(@PathVariable Long id, @PathVariable Long userId) {
-        return handle(() -> crewService.approve(id, userId));
+    public ResponseEntity<?> approve(@PathVariable Long id, @PathVariable Long userId,
+                                     @RequestBody(required = false) Map<String, Long> body) {
+        return handle(() -> crewService.approve(id, userId, body == null ? null : body.get("leaderId")));
     }
 
     @PostMapping("/{id}/requests/{userId}/reject")
-    public ResponseEntity<?> reject(@PathVariable Long id, @PathVariable Long userId) {
-        return handle(() -> crewService.reject(id, userId));
+    public ResponseEntity<?> reject(@PathVariable Long id, @PathVariable Long userId,
+                                    @RequestBody(required = false) Map<String, Long> body) {
+        return handle(() -> crewService.reject(id, userId, body == null ? null : body.get("leaderId")));
     }
 
     private ResponseEntity<?> handle(Supplier<CrewResponse> action) {

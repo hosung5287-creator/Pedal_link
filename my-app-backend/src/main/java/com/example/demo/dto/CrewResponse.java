@@ -93,7 +93,9 @@ public class CrewResponse {
         d.id = e.getId();
         d.title = e.getTitle();
         d.startAt = e.getStartAt();
-        d.joined = 0;
+        // 참여 확정·체크된 인원 + 팀장
+        d.joined = (int) e.getMembers().stream()
+                .filter(m -> "accepted".equals(m.getStatus()) || "checked".equals(m.getStatus())).count() + 1;
         d.maxMembers = e.getMaxMembers();
         return d;
     }

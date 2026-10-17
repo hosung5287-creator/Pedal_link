@@ -1,0 +1,44 @@
+/* 페이지 번호 버튼 — components/Pagination.jsx */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.pagerList {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pagerBtn {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pagerBtn:hover:not(:disabled):not(.isCurrent) { background: var(--wash); border-color: var(--mint); }
+.pagerBtn:focus-visible { outline: 2px solid var(--mint-dark); outline-offset: 2px; }
+.pagerBtn:disabled { color: var(--muted); opacity: 0.5; cursor: not-allowed; }
+.pagerBtn.isCurrent { border-color: var(--mint-dark); background: var(--mint-dark); color: #ffffff; cursor: default; }
+
+.pagerStep { color: var(--muted); }
+
+/* 좁은 화면 — 번호 5개가 한 줄에 들어가게 [이전]/[다음]은 화살표만 (읽기 프로그램은 aria-label 로 읽는다) */
+@media (max-width: 639px) {
+  .pager { gap: 4px; }
+  .pagerBtn { min-width: 32px; padding: 0 8px; }
+  .pagerStepText { display: none; }
+}

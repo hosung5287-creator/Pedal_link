@@ -66,6 +66,8 @@ function App() {
   const moveSettings = (e) => { e.preventDefault(); moveTo('/settings'); };
   // 파티에서 "라이딩 시작" → 지도를 파티 모드로 연다
   const movePartyRide = (partyId) => moveTo(`/map?partyId=${partyId}`);
+  // 피드 "지도로 보기" → 코스 만들기 화면에 그 코스를 바로 연다
+  const openRoute = (routeId) => moveTo(`/map?route=${routeId}`);
 
   const handleLogin = (userData) => {
     localStorage.setItem('user', JSON.stringify(userData));
@@ -94,8 +96,10 @@ function App() {
 
   let page;
   if (currentPath === '/map') {
-    const partyId = new URLSearchParams(search).get('partyId');
-    page = <MapPage onMoveCrew={moveCrew} user={user} partyId={partyId} onBackHome={moveHome} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+    const params = new URLSearchParams(search);
+    const partyId = params.get('partyId');
+    const routeId = params.get('route'); // 피드 "지도로 보기" 로 들어오면 그 코스를 바로 연다
+    page = <MapPage onMoveCrew={moveCrew} user={user} partyId={partyId} routeId={routeId} onBackHome={moveHome} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
   } else if (currentPath === '/signup') {
     page = <SignupPage onMoveHome={moveHome} onMoveLogin={moveLogin} />;
   } else if (currentPath === '/login') {
@@ -105,7 +109,7 @@ function App() {
   } else if (currentPath === '/crew') {
     page = <CrewPage user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveBrowse={moveBrowse} onMoveParty={moveParty} />;
   } else if (currentPath === '/browse') {
-    page = <BrowsePage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
+    page = <BrowsePage onMoveCrew={moveCrew} user={user} onMoveHome={moveHome} onMoveLogin={moveLogin} onOpenMap={openMap} onOpenRoute={openRoute} onMoveParty={moveParty} onMoveBrowse={moveBrowse} />;
   } else if (currentPath === '/chat') {
     const partyId = new URLSearchParams(search).get('partyId');
     page = <ChatPage onMoveCrew={moveCrew} user={user} partyId={partyId} onMoveHome={moveHome} onMoveParty={moveParty} onOpenMap={openMap} onMoveBrowse={moveBrowse} />;

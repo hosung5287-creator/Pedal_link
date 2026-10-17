@@ -33,6 +33,8 @@ public class PartyResponse {
     private List<MemberDto> pendingRequests;
     private LocalDateTime rideStartedAt;
     private LocalDateTime createdAt;
+    // 목록을 요청한 사람 ↔ 호스트 거리(m). 둘 다 위치 공유 중일 때만 채운다 (근처 모집 중 파티 표시용)
+    private Integer hostDistanceM;
 
     public static PartyResponse from(Party party) {
         PartyResponse r = new PartyResponse();

@@ -33,6 +33,7 @@ public class FeedResponse {
 
     private long likeCount;
     private boolean liked;           // 요청한 유저가 좋아요를 눌렀는지
+    private boolean bookmarked;      // 요청한 유저가 내 저장 목록에 담았는지
 
     private LocalDateTime createdAt;
 }

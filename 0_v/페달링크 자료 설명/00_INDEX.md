@@ -1,6 +1,6 @@
 # PedalLink 기술 스택 공부 가이드
 
-> 최종 현행화: 2026-09-25 (기준 커밋 `670b8eb`)
+> 최종 현행화: 2026-10-07 (기준: khs 브랜치 `b68985f` + 미커밋 작업 — 09-26 이후 변경은 [24](24_최근_업데이트_0926_1003.md), 10-07 변경은 [25](25_최근_업데이트_1007.md)에 정리)
 > 이 폴더의 문서는 **실제 저장소 코드 기준**으로 작성돼 있다. 코드를 고치면 관련 문서도 같이 고칠 것.
 
 ## 파일 목록
@@ -44,6 +44,12 @@
 | [20_라이딩_매칭.md](20_라이딩_매칭.md) | 즉석 동행 신청 → 수락 시 파티 자동 생성, 5분 만료, 403 권한 검사 |
 | [21_프로필_주행통계.md](21_프로필_주행통계.md) | 부분 업데이트(PATCH 방식), 스냅샷 vs 조인, @Transient |
 
+### 최근 업데이트
+| 파일 | 내용 |
+|------|------|
+| [24_최근_업데이트_0926_1003.md](24_최근_업데이트_0926_1003.md) | **09-26~10-03 변경 전체** — 설정, 상승고도, 구 경계 지역, 공개 프로필, 위치 공유 일관화, 근처 모집 링크, 경유지, 크루 라이딩, 성능 최적화 · 마이그레이션 005~008 |
+| [25_최근_업데이트_1007.md](25_최근_업데이트_1007.md) | **10-07 변경 전체** — 자전거 검색 링크, 크루 설정·나가기, AI 라이딩 리포트·한마디 조언(Claude), 기록 페이지, 피드 20개씩·북마크·게시물 공개, 미사용 정리, 파티 강퇴·경로 수정, 크루 라이딩 종료 · 마이그레이션 009~014 |
+
 ## 추천 공부 순서
 
 ```
@@ -81,22 +87,32 @@ WebSocket 채팅 (18)  ←→  크루 (19) · 매칭 (20)
 | 자전거도로 표시 | MapPage | CyclewayController | ✅ |
 | 경로 분석 (노면/도로종류) | MapPage AnalysisBar | — (프론트 계산) | ✅ |
 | 실시간 위치공유 + 지오펜싱 | MapPage | LocationController (메모리) | ✅ |
-| 위치 공유 on/off 저장 | MapPage 체크박스 | AuthController PUT | ✅ |
-| 파티(링크) 모집/신청/승인 | PartyPage | PartyController + PartyService | ✅ |
+| 위치 공유 on/off 저장 | 파티 도크·설정 스위치 (useLocationShare, 서버 기준) | AuthController PUT · `DELETE /api/locations` | ✅ 끄면 모든 화면에서 위치 전송 중단 |
+| 파티(링크) 모집/신청/승인 | PartyPage, PartyDock | PartyController + PartyService | ✅ 남의 링크는 호스트 220m 안에서만 보기·신청 |
 | 파티 함께 달리기 | MapPage 파티모드 | `/api/locations?partyId=` | ✅ |
 | 팔로우 모드 / heading-up | MapPage | — (프론트) | ✅ |
 | 파티 종료 · 삭제 | PartyPage | `/end`, `DELETE /api/parties/{id}` | ✅ (호스트만) |
 | **WebSocket 채팅 (파티)** | ChatPage, PartyDock | ChatController (STOMP) | ✅ |
 | **크루(동호회)** | CrewPage | CrewController + CrewService | ✅ |
+| **크루 설정·나가기** | CrewSettingsModal | `PUT /api/crews/{id}/settings` | 완료 — 가입 방식(승인·바로·마감), 수락·거절은 리더만 |
 | **크루 채팅** | CrewPage | CrewChatController | ✅ |
 | **라이딩 매칭** | PartyDock 근처 라이더 | MatchController + MatchService | ✅ |
 | **프로필 설정** | ProfilePage | UserController | ✅ |
-| **누적 주행 통계** | ProfilePage | `/api/ride-records/stats` | ✅ |
+| **설정 (이메일·비밀번호·위치 공유)** | SettingsPage | `PUT /api/users/{id}/email·password` | ✅ |
+| **다른 라이더 상세 프로필** | UserProfileModal (피드·지도·도크·개인 라이딩) | `GET /api/users/{id}/public` | ✅ 220m·로그인 조건 |
+| **경유지 경로 (최대 100)** | MapPage | `routes.waypoints` | ✅ |
+| **크루 이번주 라이딩** | CrewPage, CrewRidePanel | CrewRideController + CrewRideService | ✅ 초대·토큰·220m 인원 체크·자동 이동 · 라이딩 종료 = 크루 라이딩 끝 |
+| **파티 방장 제어판** | PartyRoom | `.../kick`, `PUT .../route` | 완료 — 팀원 강퇴(재신청 불가), 방장 코스로 경로 수정 |
+| **누적 주행 통계** | ProfilePage | `/api/ride-records/stats` | ✅ 상승고도는 탄 거리만큼 인정 · km당 상승 |
+| **AI 라이딩 리포트·한마디 조언** | RideReport, RideCharts, RideTip | RideInsightService, RideTipService (Claude) | 완료 — 크레딧 충전 전이라 실제 호출은 실패 |
+| **라이딩 기록 페이지** | ProfilePage, Pagination | — (화면에서 나눔) | 완료 — 10개씩 |
+| **보유 자전거 검색 링크** | BikeLinks | — | 완료 — 새 탭 구글 검색 |
 | **개인 라이딩** | PersonalRidingRoom | `/api/ride-records` | ✅ |
-| **코스 지역 구분** | MapPage, BrowsePage | `routes.region` | ✅ |
-| 둘러보기 피드 | BrowsePage | FeedController + FeedService | ✅ |
+| **코스 지역 구분** | MapPage, BrowsePage | `routes.region` · RegionService(`seoul_gu` 경계) | ✅ 지역 선택 우선, 없으면 출발점 구 |
+| 둘러보기 피드 | BrowsePage | FeedController + FeedService | ✅ 20개씩 [더 보기], [게시물 올리기]한 코스만 |
 | 피드 좋아요 | BrowsePage | `route_likes` | ✅ |
 | 게시물 올리기(문구·태그) | ComposePostModal | `routes.description / tags` | ✅ |
-| 피드 댓글/공유/북마크 | 아이콘만 | ❌ 없음 | ⚠️ 비활성 |
+| 피드 북마크(코스 저장) | BrowsePage, MapPage | `POST /api/routes/{id}/bookmark` | 완료 — 코스 만들기 목록에 섞임 |
+| 피드 댓글/공유 | 아이콘만 | ❌ 없음 | ⚠️ 비활성 |
 | 라이딩 기록 저장 | MapPage | RideRecordController | ✅ |
 | 경로 분석값 저장 | MapPage 저장 시 전송 | `routes.distance_km / ascend_m / time_min` | ✅ (이전 저장분은 null) |

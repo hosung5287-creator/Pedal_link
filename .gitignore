@@ -42,6 +42,9 @@ debug.log
 .env.local.*
 **/.env.local
 **/.env.local.*
+# 백엔드 비밀 값 (Claude API 키 등) — my-app-backend/.env
+**/.env
+**/.env.bak
 
 # 작업표
 docs

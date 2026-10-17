@@ -7,6 +7,7 @@ import { reportLocation, getOtherLocations } from '../api/locations';
 import { getRouteById } from '../api/routes';
 import { stopPartyRide, getParty } from '../api/parties';
 import { api } from '../api/client';
+import { useLocationShare } from '../hooks/useLocationShare';
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
 
@@ -43,6 +44,11 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
   const [ending, setEnding] = useState(false);
   const [geoError, setGeoError] = useState('');
   const [summary, setSummary] = useState(null); // 종료 후 기록 팝업
+  // 위치 공유 스위치 — 꺼져 있으면 내 위치를 서버에 보내지 않는다(다른 사람 위치는 계속 본다).
+  // 폴링 타이머를 다시 만들지 않도록 최신 값은 ref 로 읽는다.
+  const [locShare, setLocShare] = useLocationShare(user?.id);
+  const locShareRef = useRef(locShare);
+  useEffect(() => { locShareRef.current = locShare; }, [locShare]);
 
   // 지도 초기화
   useEffect(() => {
@@ -144,7 +150,9 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
       if (!pos || !map) return;
 
       try {
-        await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        if (locShareRef.current) {
+          await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        }
         const others = (await getOtherLocations(user.id, party.id)) || [];
         if (cancelled || !mapRef.current) return;
 
@@ -198,7 +206,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     };
   }, [party.id, user.id, user.name]);
 
-  // 참가자(비호스트) 전용 — 방장이 라이딩을 끝내면(rideStartedAt이 null이 됨) 감지해서
+  // 참가자(비호스트) 전용 — 방장이 라이딩을 끝내면(rideStartedAt이 null이 되거나 파티가 ended) 감지해서
   // 내 기록을 저장하고 "라이딩이 종료되었습니다" 팝업을 띄운다.
   useEffect(() => {
     if (isHost) return;
@@ -208,7 +216,14 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
       try {
         const fresh = await getParty(party.id);
         if (cancelled || !fresh) return;
-        if (!fresh.rideStartedAt) {
+        // 방장이 나를 내보냈으면 라이딩 화면만 닫는다 (안내는 도크 배너가 띄운다)
+        if (!(fresh.participants || []).some((m) => m.userId === user.id)) {
+          clearInterval(timer);
+          onPartyChange?.(fresh); // 도크의 내 방 목록에서도 바로 빠지게
+          onEnded?.({ gone: true });
+          return;
+        }
+        if (!fresh.rideStartedAt || fresh.status === 'ended') {
           clearInterval(timer);
           onPartyChange?.(fresh);
 
@@ -314,6 +329,14 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
             </div>
           ))}
         </div>
+
+        {/* 위치 공유가 꺼져 있으면 내 위치를 보내지 않는다 — 왜 남에게 안 보이는지 알려주고 바로 켤 수 있게 */}
+        {!locShare && (
+          <div className="rrShareOff" role="status">
+            <span>위치 공유 꺼짐 · 다른 라이더에게 내 위치가 보이지 않아요</span>
+            <button type="button" onClick={() => setLocShare(true)}>켜기</button>
+          </div>
+        )}
 
         <button type="button" className="rrRecenterBtn" onClick={recenter} aria-label="내 위치로">⌖</button>
 

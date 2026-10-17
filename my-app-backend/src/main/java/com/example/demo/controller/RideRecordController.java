@@ -1,10 +1,15 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.RideInsightResponse;
 import com.example.demo.dto.RideRecordRequest;
+import com.example.demo.dto.RideTipResponse;
 import com.example.demo.entity.RideRecord;
 import com.example.demo.entity.Route;
 import com.example.demo.repository.RideRecordRepository;
 import com.example.demo.repository.RouteRepository;
+import com.example.demo.service.ClaudeClient;
+import com.example.demo.service.RideInsightService;
+import com.example.demo.service.RideTipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +26,8 @@ public class RideRecordController {
 
     private final RideRecordRepository rideRecordRepository;
     private final RouteRepository routeRepository;
+    private final RideInsightService rideInsightService;
+    private final RideTipService rideTipService;
 
     // 이 상승고도(m) 이상이면 "산악 코스"로 친다. 나중에 조정하고 싶으면 이 값만 바꾸면 된다.
     private static final int MOUNTAIN_ASCEND_M = 300;
@@ -88,8 +95,51 @@ public class RideRecordController {
     // 프로필에 보여줄 누적 통계·성취감 지표 — 기록이 많지 않은 서비스 규모라 그냥 합산한다
     @GetMapping("/stats")
     public Map<String, Object> stats(@RequestParam Long userId) {
+        return statsOf(recordsOf(userId));
+    }
+
+    // 프로필 AI 라이딩 리포트 — 저장된 분석과, 그 뒤로 기록이 바뀌었는지 (Claude 는 부르지 않는다)
+    @GetMapping("/insight")
+    public RideInsightResponse insight(@RequestParam Long userId) {
+        return rideInsightService.get(userId, recordsOf(userId));
+    }
+
+    // [AI 분석 보기] — 기록이 그대로면 저장된 결과를, 바뀌었으면 Claude 에 새로 물어본다
+    @PostMapping("/insight")
+    public ResponseEntity<?> analyze(@RequestParam Long userId) {
+        List<RideRecord> records = recordsOf(userId);
+        try {
+            return ResponseEntity.ok(rideInsightService.analyze(userId, records, statsOf(records)));
+        } catch (ClaudeClient.AiException e) {
+            return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 라이딩 통계 카드의 한마디 조언 — 저장된 조언과, 통계가 바뀌어 새로 만들 차례인지 (Claude 는 부르지 않는다)
+    @GetMapping("/tip")
+    public RideTipResponse tip(@RequestParam Long userId) {
+        return rideTipService.get(userId, statsOf(recordsOf(userId)));
+    }
+
+    // 통계가 바뀌었으면 Claude 가 새 한마디 조언을 쓴다 (프로필을 열 때 stale 이면 프론트가 부른다)
+    @PostMapping("/tip")
+    public ResponseEntity<?> refreshTip(@RequestParam Long userId) {
+        List<RideRecord> records = recordsOf(userId);
+        try {
+            return ResponseEntity.ok(rideTipService.refresh(userId, records, statsOf(records)));
+        } catch (ClaudeClient.AiException e) {
+            return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 최신순 기록 + 기록마다 인정된 상승고도
+    private List<RideRecord> recordsOf(Long userId) {
         List<RideRecord> records = rideRecordRepository.findByUserIdOrderByRidedAtDesc(userId);
         fillAscendM(records);
+        return records;
+    }
+
+    private Map<String, Object> statsOf(List<RideRecord> records) {
         double totalDistanceKm = records.stream().mapToDouble(RideRecord::getDistanceKm).sum();
         int totalDurationMin = records.stream().mapToInt(RideRecord::getDurationMin).sum();
         int totalAscendM = records.stream().filter(r -> r.getAscendM() != null).mapToInt(RideRecord::getAscendM).sum();

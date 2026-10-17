@@ -4,8 +4,11 @@ import BrandLogo from '../components/BrandLogo';
 
 import { useEffect, useRef, useState } from 'react';
 import { text, crew as t } from '../constants';
-import { getCrews, getCrew, joinCrew, leaveCrew, approveMember, rejectMember, createCrew } from '../api/crews';
+import { getCrews, getCrew, joinCrew, leaveCrew, createCrew } from '../api/crews';
 import { useChat } from '../hooks/useChat';
+import { OpenRideModal, CrewRidePanel, RideInviteCard } from '../components/CrewRidePanel';
+import { CrewSettingsModal, LeaveCrewModal } from '../components/CrewSettingsModal';
+import { getActiveCrewRide } from '../api/crewRides';
 import { displayTime } from '../utils/chat';
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
@@ -20,6 +23,7 @@ function formatWhen(iso) {
 function CrewCard({ crew, isLoggedIn, onJoin, onOpen, onLoginNeeded }) {
   const joined = crew.myState === 'joined';
   const pending = crew.myState === 'pending';
+  const closed = crew.joinPolicy === 'closed'; // 리더가 신청을 막아둔 크루
 
   return (
     <article className="crewCard">
@@ -45,6 +49,8 @@ function CrewCard({ crew, isLoggedIn, onJoin, onOpen, onLoginNeeded }) {
           </button>
         ) : pending ? (
           <button type="button" className="crewJoinBtn isPending" disabled>{t.pending}</button>
+        ) : closed ? (
+          <button type="button" className="crewJoinBtn isClosed" disabled>{t.closedJoin}</button>
         ) : (
           <button
             type="button"
@@ -71,21 +77,24 @@ function CrewDetail({ crew, user, onBack, onLeave, onUpdate }) {
   const [chatInput, setChatInput] = useState('');
   const chatBottomRef = useRef(null);
 
-  const [showRequests, setShowRequests] = useState(false);
-  const [reqBusy, setReqBusy] = useState(false);
-  const [reqError, setReqError] = useState('');
-
-  const runRequestAction = async (fn) => {
-    setReqBusy(true);
-    setReqError('');
-    try {
-      onUpdate(await fn());
-    } catch {
-      setReqError(t.requestActionFailed);
-    } finally {
-      setReqBusy(false);
-    }
-  };
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  // 진행 중인 크루 라이딩 (크루당 하나) — 응답·체크 상태가 바뀌므로 주기적으로 다시 받는다
+  const [ride, setRide] = useState(null);
+  const [openingRide, setOpeningRide] = useState(false);
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let alive = true;
+    const load = () => getActiveCrewRide(crew.id, user.id)
+      .then((r) => { if (alive) setRide(r || null); })
+      .catch(() => {});
+    load();
+    // 화면이 안 보일 때(다른 탭·최소화)는 건너뛴다 — 서버 요청 절약
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 5000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [crew.id, user?.id]);
+  // 응답·체크 결과를 바로 반영 (끝나거나 취소된 라이딩은 패널에서 내린다)
+  const handleRideChange = (r) => setRide(r && ['recruiting', 'checking', 'riding'].includes(r.status) ? r : null);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -140,7 +149,11 @@ function CrewDetail({ crew, user, onBack, onLeave, onUpdate }) {
                   <div key={msg.id ?? i} className={`crewChatBubbleRow${mine ? ' isMine' : ''}`}>
                     <div className="crewChatBubble">
                       {!mine && <div className="crewChatSender">{msg.senderName}</div>}
-                      <p className="crewChatContent">{msg.content}</p>
+                      {msg.type === 'RIDE_INVITE' ? (
+                        <RideInviteCard eventId={msg.content} user={user} active={ride} onChange={handleRideChange} />
+                      ) : (
+                        <p className="crewChatContent">{msg.content}</p>
+                      )}
                       <div className="crewChatTime">{displayTime(msg)}</div>
                     </div>
                   </div>
@@ -189,11 +202,16 @@ function CrewDetail({ crew, user, onBack, onLeave, onUpdate }) {
         <section className="crewCol crewColControl">
           <h2 className="crewColTitle">{isLeader ? t.controlTitle : t.memberPanelTitle}</h2>
           <div className="crewControlCard">
-            {isLeader && (
-              <button type="button" className="crewPrimaryBtn" disabled title={t.soonHint}>
+            {/* 크루당 진행 중인 라이딩은 하나 — 있으면 패널, 없으면 팀장에게 열기 버튼 */}
+            {ride ? (
+              <CrewRidePanel ride={ride} user={user} onChange={handleRideChange} />
+            ) : isLeader && (
+              <button type="button" className="crewPrimaryBtn" onClick={() => setOpeningRide(true)}>
                 + {t.openRide}
-                <span className="crewSoonBadge">{t.soon}</span>
               </button>
+            )}
+            {openingRide && (
+              <OpenRideModal crew={crew} user={user} onClose={() => setOpeningRide(false)} onOpened={handleRideChange} />
             )}
 
             <h3 className="crewSubTitle">{t.upcomingTitle}</h3>
@@ -217,51 +235,25 @@ function CrewDetail({ crew, user, onBack, onLeave, onUpdate }) {
 
             <div className="crewMenu">
               {isLeader && (
-                <>
-                  <button type="button" className="crewMenuBtn" disabled title={t.soonHint}>
-                    {t.settings}<span className="crewSoonBadge">{t.soon}</span>
-                  </button>
-                  <button type="button" className="crewMenuBtn" onClick={() => setShowRequests((v) => !v)}>
-                    {t.manageRequests}
-                    {pending.length > 0 && <span className="crewCountBadge">{pending.length}</span>}
-                  </button>
-                </>
+                <button type="button" className="crewMenuBtn" onClick={() => setSettingsOpen(true)}>
+                  {t.settings}
+                  {pending.length > 0 && <span className="crewCountBadge" aria-label={`${t.requestsTitle} ${pending.length}`}>{pending.length}</span>}
+                </button>
               )}
-              <button type="button" className="crewMenuBtn isDanger" onClick={() => onLeave(crew.id)}>
+              <button type="button" className="crewMenuBtn isDanger" onClick={() => setLeaveOpen(true)}>
                 {t.leave}
               </button>
             </div>
-
-            {isLeader && showRequests && (
-              <>
-                {reqError && <p className="crewError">{reqError}</p>}
-                <ul className="crewRequests">
-                  {pending.length === 0 && <li className="crewEmptyRow">{t.noPending}</li>}
-                  {pending.map((p) => (
-                    <li key={p.userId} className="crewRequestRow">
-                      <span>{p.name}</span>
-                      <span className="crewRequestActions">
-                        <button
-                          type="button" className="crewApproveBtn" disabled={reqBusy}
-                          onClick={() => runRequestAction(() => approveMember(crew.id, p.userId))}
-                        >
-                          {t.approve}
-                        </button>
-                        <button
-                          type="button" className="crewRejectBtn" disabled={reqBusy}
-                          onClick={() => runRequestAction(() => rejectMember(crew.id, p.userId))}
-                        >
-                          {t.reject}
-                        </button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
           </div>
         </section>
       </div>
+
+      {settingsOpen && (
+        <CrewSettingsModal crew={crew} user={user} onClose={() => setSettingsOpen(false)} onUpdate={onUpdate} />
+      )}
+      {leaveOpen && (
+        <LeaveCrewModal crew={crew} isLeader={isLeader} onClose={() => setLeaveOpen(false)} onLeave={onLeave} />
+      )}
     </section>
   );
 }
@@ -411,14 +403,11 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
     }
   };
 
+  // 실패하면 그대로 던진다 — 나가기 창(LeaveCrewModal)이 받아서 이유를 보여준다
   const handleLeave = async (id) => {
     setError('');
-    try {
-      replace(withMyState(await leaveCrew(id, user.id)));
-      setOpenId(null);
-    } catch {
-      setError(t.leaveFailed);
-    }
+    replace(withMyState(await leaveCrew(id, user.id)));
+    setOpenId(null);
   };
 
   const handleCreate = async (body) => {

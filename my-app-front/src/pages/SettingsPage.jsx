@@ -5,6 +5,7 @@ import BrandLogo from '../components/BrandLogo';
 import { text, account, partyDock } from '../constants';
 import { getProfile, changeEmail, changePassword } from '../api/users';
 import { useLocationShare } from '../hooks/useLocationShare';
+import { errorMessage } from '../api/client';
 
 // 회원가입(SignupPage)·백엔드(UserController)와 같은 규칙 — 한쪽만 바뀌지 않도록 같이 맞춘다
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,16 +13,6 @@ const MIN_PASSWORD = 8;
 
 const emptyEmailForm = { newEmail: '', currentPassword: '' };
 const emptyPasswordForm = { currentPassword: '', newPassword: '', newPasswordCheck: '' };
-
-// 서버 오류 본문({"message": "..."})에서 사용자에게 보여줄 문구만 꺼낸다.
-// 비밀번호 틀림(401)·이미 쓰는 이메일(409)·소셜 계정(400) 문구를 서버가 이미 한국어로 준다.
-function serverMessage(err, fallback) {
-  try {
-    const msg = JSON.parse(err?.message)?.message;
-    if (msg) return msg;
-  } catch { /* JSON 이 아니면 기본 문구 */ }
-  return fallback;
-}
 
 // 설정 페이지 — 이메일/비밀번호 변경 · 위치 공유 + 로그아웃.
 export default function SettingsPage({ user, onMoveHome, onMoveBrowse, onMoveParty, onOpenMap, onLogout, onMoveCrew, onUserUpdate }) {
@@ -68,7 +59,8 @@ export default function SettingsPage({ user, onMoveHome, onMoveBrowse, onMovePar
       closeForm();
       setNotice(account.settingsEmailDone);
     } catch (err) {
-      setError(serverMessage(err, account.settingsFailed));
+      // 비밀번호 틀림(401)·이미 쓰는 이메일(409)·소셜 계정(400) 문구를 서버가 한국어로 준다
+      setError(errorMessage(err, account.settingsFailed));
     } finally {
       setSaving(false);
     }
@@ -90,7 +82,7 @@ export default function SettingsPage({ user, onMoveHome, onMoveBrowse, onMovePar
       closeForm();
       setNotice(account.settingsPasswordDone);
     } catch (err) {
-      setError(serverMessage(err, account.settingsFailed));
+      setError(errorMessage(err, account.settingsFailed));
     } finally {
       setSaving(false);
     }

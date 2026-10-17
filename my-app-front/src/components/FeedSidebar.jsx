@@ -1,43 +1,18 @@
-import { useMemo } from 'react';
 import { feedSide as t } from '../constants';
 import RouteMapThumbnail from './RouteMapThumbnail';
 
 // 피드 오른쪽 사이드바 — 인기 코스 / 활발한 지역.
 //
-// 별도 통계 API 가 없어서 피드 데이터에서 바로 계산한다.
-// (좋아요 합계 = 인기, 출발지 등장 횟수 = 그 지역 활동량)
-// 나중에 서버에 랭킹 API 가 생기면 이 계산만 교체하면 된다.
+// 피드를 20개씩 나눠 받기 때문에 순위는 서버(GET /api/feed/summary)가 전체 게시물로 계산해 준다.
+// (좋아요 수 = 인기, 출발지 앞 두 단어("서울 마포구")별 게시물 수 = 그 지역 활동량)
+// summary: { topRoutes: [피드 카드], topRegions: [{ name, posts, riders }] }
 
-function rankRoutes(items) {
-  return [...items]
-    .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
-    .slice(0, 5);
-}
-
-function rankRegions(items) {
-  const counts = new Map();
-  for (const it of items) {
-    // "서울 강남구 …" 처럼 긴 주소는 앞 두 덩어리만 지역으로 본다
-    const label = (it.fromLabel || '').trim();
-    if (!label) continue;
-    const key = label.split(/\s+/).slice(0, 2).join(' ');
-    const prev = counts.get(key) || { name: key, posts: 0, riders: new Set() };
-    prev.posts += 1;
-    if (it.authorId != null) prev.riders.add(it.authorId);
-    counts.set(key, prev);
-  }
-  return [...counts.values()]
-    .map((r) => ({ name: r.name, posts: r.posts, riders: r.riders.size }))
-    .sort((a, b) => b.posts - a.posts)
-    .slice(0, 5);
-}
-
-export default function FeedSidebar({ items, onOpenMap }) {
-  const topRoutes = useMemo(() => rankRoutes(items), [items]);
-  const topRegions = useMemo(() => rankRegions(items), [items]);
+export default function FeedSidebar({ summary, onOpenMap }) {
+  const topRoutes = summary?.topRoutes || [];
+  const topRegions = summary?.topRegions || [];
   const maxPosts = topRegions[0]?.posts || 1;
 
-  if (items.length === 0) return null;
+  if (topRoutes.length === 0 && topRegions.length === 0) return null;
 
   return (
     <aside className="feedSide" aria-label={t.aria}>

@@ -19,6 +19,16 @@ export class ApiError extends Error {
   }
 }
 
+// ApiError.message 에는 응답 본문이 그대로 들어 있다. 서버가 { "message": "..." } 로 준
+// 사용자용 문구만 꺼내고, 없으면 fallback 을 쓴다.
+export function errorMessage(err, fallback) {
+  try {
+    const msg = JSON.parse(err?.message)?.message;
+    if (msg) return msg;
+  } catch { /* JSON 이 아니면 기본 문구 */ }
+  return fallback;
+}
+
 async function request(path, { method = 'GET', body, headers, withCredentials = false } = {}) {
   const options = { method, headers: { ...headers } };
 

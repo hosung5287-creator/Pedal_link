@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { text, GU_LIST } from '../constants';
+import { text } from '../constants';
 import { getRoutes } from '../api/routes';
 import { publishPost } from '../api/feed';
 import { compressImage, formatBytes, MAX_UPLOAD_BYTES } from '../utils/image';
@@ -12,7 +12,6 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
   const [routeId, setRouteId] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
-  const [regions, setRegions] = useState([]); // 여러 개 선택 가능 — 제출할 때 콤마로 합친다
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [photo, setPhoto] = useState(null);      // { dataUrl, bytes, width, height }
@@ -33,17 +32,10 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
     return () => { alive = false; };
   }, [user.id]);
 
-  // 코스를 고르면(또는 처음 목록이 뜨면) 그 코스에 이미 저장돼 있던 지역을 기본값으로 채운다.
-  // 코스 저장 시 자동 감지가 안 됐거나(옛날 코스) 틀렸으면 여기서 고쳐서 올릴 수 있다.
-  useEffect(() => {
-    const selected = routes.find((r) => String(r.id) === String(routeId));
-    const saved = (selected?.region || '').split(',').map((s) => s.trim()).filter(Boolean);
-    setRegions(saved);
-  }, [routeId, routes]);
-
-  const toggleRegion = (gu) => {
-    setRegions((prev) => (prev.includes(gu) ? prev.filter((g) => g !== gu) : [...prev, gu]));
-  };
+  // 게시물 지역 = 고른 코스의 지역. 코스를 저장할 때 '지역 선택'에서 고른 구, 없으면 출발점 기준으로
+  // 백엔드가 정해 둔 값이라 여기서는 보여주기만 하고 보내지 않는다(백엔드가 코스 값을 그대로 쓴다).
+  const selectedRoute = routes.find((r) => String(r.id) === String(routeId));
+  const routeRegions = (selectedRoute?.region || '').split(',').map((s) => s.trim()).filter(Boolean);
 
   // ESC 로 닫기
   useEffect(() => {
@@ -80,7 +72,7 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
     setError(null);
     try {
       const card = await publishPost(routeId, {
-        userId: user.id, description, tags, photo: photo?.dataUrl ?? null, region: regions.join(','),
+        userId: user.id, description, tags, photo: photo?.dataUrl ?? null,
       });
       onPublished(card);
       onClose();
@@ -125,19 +117,11 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
 
             <div className="composeField">
               <span>{text.browseComposeRegion}</span>
-              <div className="composeChipRow">
-                {GU_LIST.map((gu) => (
-                  <button
-                    type="button"
-                    key={gu}
-                    className={`composeChip${regions.includes(gu) ? ' isActive' : ''}`}
-                    onClick={() => toggleRegion(gu)}
-                  >
-                    <span className="composeChipDot" aria-hidden="true" />
-                    {gu}
-                  </button>
-                ))}
+              {/* span 이면 .composeField > span(라벨) 스타일이 덮어써서 div 로 둔다 */}
+              <div className={`composeRegionValue${routeRegions.length ? '' : ' isEmpty'}`}>
+                {routeRegions.length ? routeRegions.join(', ') : text.browseComposeRegionNone}
               </div>
+              <p className="composeRegionHint">{text.browseComposeRegionHint}</p>
             </div>
 
             <label className="composeField">

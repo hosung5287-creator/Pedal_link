@@ -449,6 +449,14 @@
 
 .partyDeleteYesBtn:hover { filter: brightness(1.05); }
 
+/* 모집 중인 링크 위 안내 — 근처(호스트 220m)에서만 보인다는 설명 */
+.partyRangeHint {
+  margin: -4px 0 14px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
 .partyError {
   margin: 0 0 12px;
   color: var(--crit);

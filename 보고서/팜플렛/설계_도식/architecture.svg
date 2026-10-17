@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="179.7mm" height="75mm" viewBox="0 0 179.7 75"><defs><marker id="arr" viewBox="0 0 6 6" refX="5.4" refY="3" markerWidth="2.1" markerHeight="2.1" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5B7180"/></marker><marker id="arrS" viewBox="0 0 6 6" refX="5.4" refY="3" markerWidth="2.4" markerHeight="2.4" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#0284C7"/></marker></defs><rect x="45" y="3" width="132.7" height="52" rx="2.4" fill="#FFFFFF" stroke="#B9C7D1" stroke-width="0.35" stroke-dasharray="1.2 0.9"/>
+<text x="48" y="7.2" font-size="2.258" font-weight="700" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Rocky Linux 서버 (VM)</text>
+<polyline points="38,30 49.6,30" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="40.33" y="26.22" width="6.53" height="2.36" rx="0.6" fill="#FFFFFF"/>
+<text x="43.6" y="27.4" font-size="1.905" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">HTTPS</text>
+<polyline points="74.2,30 80.6,30" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<polyline points="104.2,30 111.6,30" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="104.55" y="26.26" width="6.70" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="107.9" y="27.4" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">프록시</text>
+<polyline points="147.2,30 153.1,30" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="147.96" y="26.26" width="4.28" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="150.1" y="27.4" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">SQL</text>
+<polyline points="20,43 20,58 16,58 16,60.6" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<polyline points="20,58 47,58 47,60.6" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<polyline points="47,58 78,58 78,60.6" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="22.54" y="56.86" width="17.93" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="31.5" y="58" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">화면에서 바로 호출</text>
+<polyline points="129.5,51 129.5,60.6" fill="none" stroke="#5B7180" stroke-width="0.35" stroke-linejoin="round" marker-end="url(#arr)"/>
+<rect x="130.10" y="56.76" width="21.01" height="2.27" rx="0.6" fill="#FFFFFF"/>
+<text x="140.6" y="57.9" font-size="1.834" font-weight="600" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">통계 숫자 → 요약·조언</text>
+<rect x="2" y="17" width="36" height="26" rx="1.6" fill="#E6F4FD" stroke="#0EA5E9" stroke-width="0.35"/>
+<text x="20.0" y="25.62222" font-size="2.822" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">사용자 브라우저</text>
+<text x="20.0" y="28.88196" font-size="2.117" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">PC · 모바일</text>
+<text x="20.0" y="31.76946" font-size="2.258" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">React 19 · Vite</text>
+<text x="20.0" y="34.75002" font-size="2.258" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Leaflet 지도</text>
+<rect x="50" y="19" width="24.2" height="22" rx="1.6" fill="#FFF6D9" stroke="#E5A800" stroke-width="0.35"/>
+<text x="62.1" y="26.88018" font-size="2.681" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Cloudflare</text>
+<text x="62.1" y="30.4191" font-size="2.681" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Tunnel</text>
+<text x="62.1" y="33.538920000000005" font-size="2.046" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">외부 공개 HTTPS</text>
+<rect x="81" y="19" width="23.2" height="22" rx="1.6" fill="#FFF6D9" stroke="#E5A800" stroke-width="0.35"/>
+<text x="92.6" y="27.29928" font-size="2.822" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Nginx</text>
+<text x="92.6" y="30.512159999999998" font-size="2.046" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">화면 파일 제공</text>
+<text x="92.6" y="33.21288" font-size="2.046" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">/api · /ws 연결</text>
+<rect x="112" y="9" width="35.2" height="42" rx="1.6" fill="#E6F7F0" stroke="#10B981" stroke-width="0.35"/>
+<text x="129.6" y="14.2" font-size="2.822" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Spring Boot 4</text>
+<text x="129.6" y="18.6" font-size="2.117" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Java 21</text>
+<rect x="114.6" y="22.2" width="30" height="5.2" rx="1.1" fill="#FFFFFF" stroke="#A7E3CB" stroke-width="0.25"/>
+<text x="129.6" y="24.8" font-size="2.081" font-weight="600" fill="#047857" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">REST API</text>
+<rect x="114.6" y="29.0" width="30" height="5.2" rx="1.1" fill="#FFFFFF" stroke="#A7E3CB" stroke-width="0.25"/>
+<text x="129.6" y="31.6" font-size="2.081" font-weight="600" fill="#047857" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">STOMP 실시간 채팅</text>
+<rect x="114.6" y="35.8" width="30" height="5.2" rx="1.1" fill="#FFFFFF" stroke="#A7E3CB" stroke-width="0.25"/>
+<text x="129.6" y="38.4" font-size="2.081" font-weight="600" fill="#047857" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">실시간 위치 · 메모리 15초</text>
+<rect x="114.6" y="42.599999999999994" width="30" height="5.2" rx="1.1" fill="#FFFFFF" stroke="#A7E3CB" stroke-width="0.25"/>
+<text x="129.6" y="45.199999999999996" font-size="2.081" font-weight="600" fill="#047857" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">JPA · Hibernate Spatial</text>
+<rect x="153.5" y="17" width="22.6" height="26" rx="1.6" fill="#E8EFF7" stroke="#0369A1" stroke-width="0.35"/>
+<text x="164.8" y="25.7628" font-size="2.54" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">PostgreSQL 18</text>
+<text x="164.8" y="28.97568" font-size="2.328" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">+ PostGIS</text>
+<text x="164.8" y="31.86252" font-size="2.046" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">테이블 18개</text>
+<text x="164.8" y="34.56324" font-size="2.046" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">공간 쿼리</text>
+<rect x="2" y="61" width="28" height="12" rx="1.6" fill="#F4F9FC" stroke="#9FB1BE" stroke-width="0.35"/>
+<text x="16.0" y="65.69584" font-size="2.469" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">BRouter</text>
+<text x="16.0" y="68.62953999999999" font-size="1.976" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">자전거 경로 · 상승고도</text>
+<rect x="33" y="61" width="28" height="12" rx="1.6" fill="#F4F9FC" stroke="#9FB1BE" stroke-width="0.35"/>
+<text x="47.0" y="65.69584" font-size="2.469" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">카카오 로컬</text>
+<text x="47.0" y="68.62953999999999" font-size="1.976" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">장소 검색</text>
+<rect x="64" y="61" width="28" height="12" rx="1.6" fill="#F4F9FC" stroke="#9FB1BE" stroke-width="0.35"/>
+<text x="78.0" y="65.69584" font-size="2.469" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">OpenStreetMap</text>
+<text x="78.0" y="68.62953999999999" font-size="1.976" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">지도 타일</text>
+<rect x="112" y="61" width="35.2" height="12" rx="1.6" fill="#F4F9FC" stroke="#9FB1BE" stroke-width="0.35"/>
+<text x="129.6" y="65.69584" font-size="2.469" font-weight="700" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">Claude API (Anthropic)</text>
+<text x="129.6" y="68.62953999999999" font-size="1.976" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">AI 라이딩 리포트 · 한마디 조언</text>
+<rect x="154" y="58.4" width="3.2" height="2" rx="0.5" fill="#E6F4FD" stroke="#0EA5E9" stroke-width="0.3"/>
+<text x="158.4" y="59.4" font-size="1.905" font-weight="600" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">화면</text>
+<rect x="154" y="61.5" width="3.2" height="2" rx="0.5" fill="#FFF6D9" stroke="#E5A800" stroke-width="0.3"/>
+<text x="158.4" y="62.5" font-size="1.905" font-weight="600" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">서버 연결</text>
+<rect x="154" y="64.6" width="3.2" height="2" rx="0.5" fill="#E6F7F0" stroke="#10B981" stroke-width="0.3"/>
+<text x="158.4" y="65.6" font-size="1.905" font-weight="600" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">백엔드</text>
+<rect x="154" y="67.7" width="3.2" height="2" rx="0.5" fill="#E8EFF7" stroke="#0369A1" stroke-width="0.3"/>
+<text x="158.4" y="68.7" font-size="1.905" font-weight="600" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">데이터베이스</text>
+<rect x="154" y="70.8" width="3.2" height="2" rx="0.5" fill="#F4F9FC" stroke="#9FB1BE" stroke-width="0.3"/>
+<text x="158.4" y="71.8" font-size="1.905" font-weight="600" fill="#5B7180" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">외부 서비스</text></svg>

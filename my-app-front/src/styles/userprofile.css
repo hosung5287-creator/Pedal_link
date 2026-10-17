@@ -1,0 +1,148 @@
+/* 다른 라이더 프로필 창 (components/UserProfileModal.jsx) — 게시물 올리기 창과 같은 모달 골격 */
+.upBackdrop {
+  position: fixed;
+  inset: 0;
+  /* 파티 도크(1200)·라이딩 화면(2100) 위, 매칭 신청 알림(2200) 아래 — 어디서 열어도 가려지지 않게 */
+  z-index: 2150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(12, 27, 39, 0.45);
+}
+
+.upModal {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 26px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 20px 60px rgba(12, 27, 39, 0.25);
+}
+
+.upClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.upClose:hover { background: var(--wash); color: var(--ink); }
+.upClose:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+
+.upHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 36px; /* 닫기 버튼과 겹치지 않게 */
+}
+
+.upAvatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--grad);
+  color: #ffffff;
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.upHeadText { min-width: 0; }
+.upHeadText h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+.upMeBadge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.upJoined {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.upHint {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.upBio {
+  margin: 16px 0 0;
+  color: var(--ink);
+  font-size: 0.94rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.upSection { margin-top: 20px; }
+.upSection h3 {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.upInfoList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.upInfoList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+.upInfoList li:last-child { border-bottom: 0; }
+.upInfoList li > span { flex: none; color: var(--muted); font-weight: 600; }
+.upInfoList strong { text-align: right; font-weight: 700; overflow-wrap: anywhere; }
+
+.upStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.upStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  text-align: center;
+}
+.upStat strong { font-size: 1.15rem; font-weight: 900; }
+.upStat span { color: var(--muted); font-size: 0.72rem; font-weight: 700; }
+
+@media (max-width: 420px) {
+  .upModal { padding: 22px 18px; }
+  .upStats { grid-template-columns: repeat(2, 1fr); }
+}

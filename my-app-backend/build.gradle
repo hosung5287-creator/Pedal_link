@@ -26,23 +26,22 @@ dependencies {
 	
 	//@RequestMapping
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	
-	//룸북 의존성 
+
+	//룸북 의존성
 	compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.postgresql:postgresql'
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-     implementation 'org.hibernate.orm:hibernate-spatial'
+
+    // PostGIS 공간 타입 (geometry)
+    implementation 'org.hibernate.orm:hibernate-spatial'
 
 	 //시큐리티 의존성 비밀번호 해싱
 	 implementation 'org.springframework.boot:spring-boot-starter-security'
 
 	 // WebSocket (채팅)
 	 implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+	 // Claude API (프로필 AI 라이딩 리포트)
+	 implementation 'com.anthropic:anthropic-java:2.34.0'
 
     
 }

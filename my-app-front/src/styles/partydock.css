@@ -336,47 +336,16 @@
 .pdChatSendBtn:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
 
 
-/* 멤버 프로필 팝업 */
-.pdProfileBackdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(12, 27, 39, 0.4);
-}
-
-.pdProfileCard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 24px;
-  border-radius: 14px;
-  background: var(--surface);
-  text-align: center;
-}
-.pdProfileCard strong { color: var(--ink); font-size: 1.1rem; }
-.pdProfileCard p { margin: 4px 0 0; color: var(--muted); font-size: 0.85rem; }
-
-.pdAvatarLg { width: 56px; height: 56px; font-size: 1.4rem; }
-
-.pdProfileClose {
-  margin-top: 8px;
-  min-height: 40px;
-  padding: 0 20px;
-  border: 1px solid var(--line);
+/* 근처 탭 안내 — 멀어서 프로필을 못 여는 경우 등 (몇 초 뒤 사라짐) */
+.pdNearNotice {
+  margin: 0;
+  padding: 8px 12px;
   border-radius: 10px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.8rem;
   font-weight: 700;
-  cursor: pointer;
 }
-.pdProfileClose:hover { background: var(--wash); }
 
 @media (max-width: 639px) {
   /* 아이폰 홈 인디케이터에 도크가 깔리지 않도록 safe-area 만큼 띄운다 */
@@ -468,7 +437,12 @@
   border-radius: 14px;
   background: var(--surface);
   box-shadow: 0 20px 48px rgba(12, 27, 39, 0.28);
-  animation: pdPop 0.16s ease-out;
+  animation: pdBannerPop 0.16s ease-out;
+}
+/* pdPop 은 transform 을 none 으로 끝내 가운데 정렬(translateX)이 잠깐 풀린다 — 배너는 정렬을 유지한 채 내려온다 */
+@keyframes pdBannerPop {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translateX(-50%); }
 }
 .pdMatchBannerActions { display: flex; gap: 6px; flex-shrink: 0; }
 .pdMatchAcceptBtn, .pdMatchRejectBtn {
@@ -484,6 +458,17 @@
 .pdMatchAcceptBtn:hover:not(:disabled) { background: var(--mint-dark); }
 .pdMatchRejectBtn { background: var(--surface-2); color: var(--muted); }
 .pdMatchAcceptBtn:disabled, .pdMatchRejectBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* 강퇴 안내 — 매칭 신청 배너와 같은 자리, 둘 다 뜨면 아래로 한 칸 내린다 */
+.pdKickedBanner { border-left: 4px solid var(--crit); }
+.pdKickedBanner.isStacked { top: 96px; }
+.pdKickedText { flex: 1 1 auto; min-width: 0; color: var(--ink); font-size: 0.85rem; font-weight: 700; line-height: 1.45; }
+.pdKickedBanner .pdMatchRejectBtn { flex-shrink: 0; white-space: nowrap; }
+/* 좁은 화면 — 상단 메뉴 버튼을 가리지 않게 헤더 아래로 내린다 */
+@media (max-width: 639px) {
+  .pdKickedBanner,
+  .pdKickedBanner.isStacked { top: 84px; }
+}
 
 /* 탭 내용이 패널 안에서 스크롤되도록 */
 .pdMembers,
@@ -621,6 +606,33 @@
 .pdApplyBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .pdApplyError { margin: 0; color: var(--crit); font-size: 0.82rem; font-weight: 700; }
+
+/* 위치 공유가 꺼져 있을 때 — 근처(220m) 모집 중 링크는 켜야 보인다는 안내 + 켜기 */
+.pdRangeHint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.pdRangeHint button {
+  flex: none;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
 /* 목록이 짧아도 "파티 만들기" 는 항상 패널 아래쪽에 붙는다 */
 .pdCreateBtnList { flex-shrink: 0; margin-top: auto; }
 

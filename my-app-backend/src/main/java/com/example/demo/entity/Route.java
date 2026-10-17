@@ -43,6 +43,11 @@ public class Route {
 
     private Integer timeMin;     // 예상 소요 시간 (분)
 
+    // 경유지 — 출발 → 경유지(순서대로) → 도착. [{lat,lng,label}, ...] JSON 텍스트, 없으면 null.
+    // 코스를 다시 불러올 때 같은 경로로 다시 계산하려면 경유지 좌표가 필요해서 저장한다.
+    @Column(columnDefinition = "text")
+    private String waypoints;
+
     // 둘러보기 게시물 내용 — 작성 모달에서 채운다. 비어 있으면 피드가 자동 문구를 쓴다.
     @Column(length = 500)
     private String description;
@@ -59,4 +64,7 @@ public class Route {
     private LineString shortestPath;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    // [게시물 올리기]를 누른 시각 — 이 값이 있어야 피드에 나온다. 코스를 저장만 하면 null (DB/migrations/013)
+    private LocalDateTime publishedAt;
 }

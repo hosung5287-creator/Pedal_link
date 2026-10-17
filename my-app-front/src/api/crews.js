@@ -81,9 +81,16 @@ export const createCrew = (body) =>
 
 export const joinCrew = (id, userId) =>
   withMock(() => api.post(`/api/crews/${id}/join`, { userId }), () => {
-    mockState = mockState.map((c) => (c.id === Number(id)
+    mockState = mockState.map((c) => (c.id === Number(id) && c.joinPolicy !== 'closed'
       ? { ...c, myState: c.joinPolicy === 'open' ? 'joined' : 'pending' }
       : c));
+    return mockState.find((c) => c.id === Number(id));
+  });
+
+// 크루 설정 (리더만) — joinPolicy: 'approval' | 'open' | 'closed'
+export const updateCrewSettings = (id, userId, { joinPolicy }) =>
+  withMock(() => api.put(`/api/crews/${id}/settings`, { userId, joinPolicy }), () => {
+    mockState = mockState.map((c) => (c.id === Number(id) ? { ...c, joinPolicy } : c));
     return mockState.find((c) => c.id === Number(id));
   });
 
@@ -93,8 +100,9 @@ export const leaveCrew = (id, userId) =>
     return mockState.find((c) => c.id === Number(id));
   });
 
-export const approveMember = (id, userId) =>
-  withMock(() => api.post(`/api/crews/${id}/requests/${userId}/approve`), () => {
+// 가입 요청 수락·거절 — leaderId(처리하는 사람)가 그 크루 리더인지 서버가 확인한다
+export const approveMember = (id, userId, leaderId) =>
+  withMock(() => api.post(`/api/crews/${id}/requests/${userId}/approve`, { leaderId }), () => {
     mockState = mockState.map((c) => {
       if (c.id !== Number(id)) return c;
       const applicant = (c.pendingRequests || []).find((p) => p.userId === userId);
@@ -108,8 +116,8 @@ export const approveMember = (id, userId) =>
     return mockState.find((c) => c.id === Number(id));
   });
 
-export const rejectMember = (id, userId) =>
-  withMock(() => api.post(`/api/crews/${id}/requests/${userId}/reject`), () => {
+export const rejectMember = (id, userId, leaderId) =>
+  withMock(() => api.post(`/api/crews/${id}/requests/${userId}/reject`, { leaderId }), () => {
     mockState = mockState.map((c) => (c.id === Number(id)
       ? { ...c, pendingRequests: (c.pendingRequests || []).filter((p) => p.userId !== userId) }
       : c));

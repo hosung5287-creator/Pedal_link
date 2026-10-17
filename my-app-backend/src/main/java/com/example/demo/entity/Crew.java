@@ -32,7 +32,7 @@ public class Crew {
     private String tag;
     private String coverPhoto;
 
-    // open | approval
+    // approval(신청 → 리더 수락) | open(신청하면 바로 가입) | closed(신청 안 받음)
     @Column(nullable = false, length = 20)
     private String joinPolicy = "approval";
 

@@ -182,6 +182,70 @@
 .crewCreatePrimaryBtn:hover:not(:disabled) { background: var(--mint-dark); }
 .crewCreatePrimaryBtn:disabled { opacity: 0.65; cursor: not-allowed; }
 
+/* 크루 설정 창 — components/CrewSettingsModal.jsx (틀은 위 crewCreate* 를 같이 쓴다) */
+.crewPolicyGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+}
+.crewPolicyGroup legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.crewPolicyOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.crewPolicyOption:hover { border-color: var(--mint); }
+.crewPolicyOption.isSelected { border-color: var(--mint); background: var(--accent-soft); }
+.crewPolicyOption input { margin: 3px 0 0; accent-color: var(--mint-dark); }
+.crewPolicyGroup:disabled .crewPolicyOption { cursor: not-allowed; opacity: 0.7; }
+.crewPolicyText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.crewPolicyText strong { color: var(--ink); font-size: 0.92rem; }
+.crewPolicyText span { color: var(--muted); font-size: 0.8rem; }
+
+.crewSettingsSection { margin-bottom: 18px; }
+.crewSettingsHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.crewSettingsHead .crewCountBadge { margin-left: 0; }
+.crewSettingsHint { margin: 0 0 10px; color: var(--muted); font-size: 0.78rem; }
+
+/* 크루 나가기 확인 창 */
+.crewConfirmModal { width: min(420px, 100%); }
+.crewConfirmModal h2 { margin-bottom: 10px; }
+.crewConfirmText { margin: 0 0 18px; color: var(--muted); font-size: 0.9rem; line-height: 1.55; }
+.crewDangerBtn {
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--crit);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.crewDangerBtn:hover:not(:disabled) { background: #dc2626; }
+.crewDangerBtn:disabled { opacity: 0.65; cursor: not-allowed; }
+
 /* ── 크루 카드 격자 ──────────────────────────────────── */
 
 .crewGrid {
@@ -269,7 +333,8 @@
 }
 .crewJoinBtn:hover:not(:disabled) { background: var(--mint-dark); }
 .crewJoinBtn.isJoined { background: var(--surface-2); border: 1px solid var(--line); color: var(--good); }
-.crewJoinBtn.isPending { background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); cursor: not-allowed; }
+.crewJoinBtn.isPending,
+.crewJoinBtn.isClosed { background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); cursor: not-allowed; }
 
 .crewEmpty {
   margin: 0;
@@ -570,7 +635,7 @@
 .crewMenuBtn.isDanger { border-color: rgba(239, 68, 68, 0.35); color: var(--crit); }
 .crewMenuBtn.isDanger:hover { background: #fef2f2; border-color: var(--crit); }
 
-/* 가입 요청 관리 — 메뉴 버튼 아래로 펼쳐지는 목록 */
+/* 가입 요청 목록 — 크루 설정 창 안 */
 .crewRequests { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .crewRequestRow {
   display: flex;
@@ -615,3 +680,107 @@
   .crewDetailHead { flex-direction: column; align-items: flex-start; }
   .crewCardMeta.isRow { grid-auto-flow: row; gap: 6px; }
 }
+
+/* ───────── 크루 라이딩 ("이번주 라이딩 열기") — components/CrewRidePanel.jsx ───────── */
+.crRideBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400; /* 파티 도크(1200) 위 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(12, 27, 39, 0.45);
+}
+.crRideModal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(460px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(12, 27, 39, 0.25);
+}
+.crRideModal h2 { margin: 0; font-size: 1.25rem; }
+.crField { display: flex; flex-direction: column; gap: 6px; }
+.crField > span, .crFieldHead { color: var(--muted); font-size: 0.82rem; font-weight: 800; }
+.crFieldHead { display: flex; justify-content: space-between; align-items: center; }
+.crField input:not([type="checkbox"]), .crField select {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.crLinkBtn { border: 0; background: none; color: var(--mint-dark); font: inherit; font-weight: 800; cursor: pointer; }
+.crPickList {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.crPickList label { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-weight: 600; cursor: pointer; }
+.crHint { margin: 0; color: var(--muted); font-size: 0.8rem; line-height: 1.45; }
+.crError { margin: 0; color: var(--crit); font-size: 0.82rem; font-weight: 700; }
+.crActions { display: flex; justify-content: flex-end; gap: 8px; }
+.crPrimaryBtn, .crGhostBtn, .crSmallBtn {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.crPrimaryBtn { border: 0; background: var(--mint); color: #ffffff; }
+.crPrimaryBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.crGhostBtn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.crGhostBtn:hover:not(:disabled) { background: var(--wash); }
+.crSmallBtn { min-height: 28px; padding: 0 10px; border: 1px solid var(--mint); background: var(--accent-soft); color: var(--mint-dark); font-size: 0.75rem; }
+.crPrimaryBtn:disabled, .crGhostBtn:disabled, .crSmallBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+.crWide { width: 100%; }
+
+.crConfirm { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; background: #fffbeb; }
+.crConfirm p { margin: 0; color: #92400e; font-size: 0.82rem; font-weight: 700; line-height: 1.45; }
+
+/* 상태 표시 */
+.crStatus {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.crStatus.is-recruiting { background: #fef3c7; color: #a16207; }
+.crStatus.is-checking { background: var(--accent-soft); color: var(--mint-dark); }
+.crStatus.is-riding { background: #dcfce7; color: #15803d; }
+
+/* 채팅 초대 카드 */
+.crInvite { display: flex; flex-direction: column; gap: 6px; min-width: 200px; }
+.crInviteTag { color: #a16207; font-size: 0.72rem; font-weight: 800; }
+.crInviteMeta { color: var(--muted); font-size: 0.8rem; }
+.crMine { margin: 0; color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+.crMine.isOk { color: #15803d; }
+
+/* 관리 칸 패널 */
+.crPanel { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.crPanelHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.crPanelMeta { margin: 0; color: var(--muted); font-size: 0.8rem; }
+.crRideMembers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.crRideMembers li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 0.85rem; }
+.crMemberName { flex: 1; min-width: 0; font-weight: 700; }
+.crMemberStatus { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 0.72rem; font-weight: 800; }
+.crMemberStatus.is-accepted { background: var(--accent-soft); color: var(--mint-dark); }
+.crMemberStatus.is-checked { background: #dcfce7; color: #15803d; }
+.crMemberStatus.is-declined { background: #fee2e2; color: #b91c1c; }
+.crReason { flex-basis: 100%; color: var(--crit); font-size: 0.75rem; font-weight: 700; }

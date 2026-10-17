@@ -2,12 +2,15 @@ import '../styles/browse.css';
 
 import BrandLogo from '../components/BrandLogo';
 
-import { useEffect, useState } from 'react';
-import { text, GU_LIST } from '../constants';
-import { getFeed, toggleLike } from '../api/feed';
+import { useEffect, useRef, useState } from 'react';
+import { text, GU_LIST, userProfile } from '../constants';
+import { getFeedPage, getFeedSummary, toggleBookmark, toggleLike } from '../api/feed';
 import RouteMapThumbnail from '../components/RouteMapThumbnail';
 import ComposePostModal from '../components/ComposePostModal';
 import FeedSidebar from '../components/FeedSidebar';
+import UserProfileModal from '../components/UserProfileModal';
+
+const FEED_PAGE_SIZE = 20; // [더 보기] 한 번에 불러오는 게시물 수
 
 // 분 → "1시간 20분" / "45분"
 function formatDuration(min) {
@@ -64,7 +67,17 @@ function timeAgo(iso) {
 // 피드 게시물 한 개.
 // 카드 박스가 아니라 구분선으로 나뉘는 타임라인 형태다 (X/Threads 계열).
 // 순서: 작성자 한 줄 → 본문 → 미디어(코스 정보 바 포함) → 액션
-function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded, onOpenMap }) {
+function BookmarkIcon({ filled }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+      <path d="M6 3h12v18l-6-4.5L6 21z" />
+    </svg>
+  );
+}
+
+// isMine: 내가 올린 게시물이면 저장 버튼을 숨긴다(내 코스는 이미 저장된 경로 목록에 있다)
+function FeedCard({ item, isLoggedIn, isMine, onLike, onBookmark, onLoginNeeded, onOpenRoute, onOpenAuthor }) {
   // 작성 모달로 쓴 태그가 있으면 그걸 쓰고, 없으면 데이터에서 유도한다
   const tags = item.tags?.length ? item.tags : buildTags(item);
   const avatarLetter = (item.authorName || '?').trim().charAt(0);
@@ -76,12 +89,15 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded, onOpenMap }) {
 
   return (
     <article className="feedPost">
-      <span className="feedAvatar" aria-hidden="true">{avatarLetter}</span>
+      {/* 아바타는 마우스로 누르기 편하게 같이 열어 준다 — 키보드·스크린리더는 아래 이름 버튼을 쓴다 */}
+      <span className="feedAvatar isClickable" aria-hidden="true" onClick={onOpenAuthor}>{avatarLetter}</span>
 
       <div className="feedBody">
         {/* 이름 · 위치 · 시간을 한 줄로 (레퍼런스의 "Gustave Flowbert in Marketplace · 42m") */}
         <p className="feedMeta">
-          <strong>{item.authorName}</strong>
+          <button type="button" className="feedAuthorBtn" onClick={onOpenAuthor} aria-label={userProfile.open(item.authorName)}>
+            <strong>{item.authorName}</strong>
+          </button>
           {splitRegions(item.region).length > 0 && (
             <span className="feedMetaRegion">{splitRegions(item.region).join(', ')}</span>
           )}
@@ -107,7 +123,8 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded, onOpenMap }) {
                 {item.timeMin != null ? ` · ${formatDuration(item.timeMin)}` : ''}
               </span>
             </span>
-            <button type="button" className="feedMediaBtn" onClick={onOpenMap}>
+            {/* 코스 만들기 화면에 이 코스를 바로 연다 — 거기서 [라이딩 시작] 을 누를 수 있다 */}
+            <button type="button" className="feedMediaBtn" onClick={() => onOpenRoute(item.id)}>
               {text.browseOpenMap}
             </button>
           </div>
@@ -119,7 +136,7 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded, onOpenMap }) {
             className={`feedAction${item.liked ? ' isLiked' : ''}`}
             aria-pressed={item.liked}
             aria-label={item.liked ? text.browseUnlike : text.browseLike}
-            onClick={() => (isLoggedIn ? onLike(item.id) : onLoginNeeded())}
+            onClick={(e) => (isLoggedIn ? onLike(item.id) : onLoginNeeded(e))}
           >
             <HeartIcon filled={item.liked} />
             {item.likeCount}
@@ -140,44 +157,119 @@ function FeedCard({ item, isLoggedIn, onLike, onLoginNeeded, onOpenMap }) {
             0
           </button>
 
-          <button type="button" className="feedAction feedBookmark" disabled title={text.browsePreparing} aria-label={text.browseSave}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-              <path d="M6 3h12v18l-6-4.5L6 21z" />
-            </svg>
-          </button>
+          {!isMine && (
+            <button
+              type="button"
+              className={`feedAction feedBookmark${item.bookmarked ? ' isSaved' : ''}`}
+              aria-pressed={!!item.bookmarked}
+              aria-label={item.bookmarked ? text.browseUnsave : text.browseSave}
+              title={item.bookmarked ? text.browseUnsave : text.browseSave}
+              onClick={(e) => (isLoggedIn ? onBookmark(item.id) : onLoginNeeded(e))}
+            >
+              <BookmarkIcon filled={item.bookmarked} />
+            </button>
+          )}
         </div>
       </div>
     </article>
   );
 }
 
-export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, onMoveParty, onMoveBrowse , onMoveCrew}) {
+export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, onOpenRoute, onMoveParty, onMoveBrowse , onMoveCrew}) {
   const isLoggedIn = !!user;
+  const [toast, setToast] = useState(''); // 저장·저장 취소 안내 (잠깐 떴다 사라진다)
+  const toastTimer = useRef(null);
+  const showToast = (msg) => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 2600);
+  };
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [regionFilter, setRegionFilter] = useState('전체');
+  const [profileTarget, setProfileTarget] = useState(null); // { id, name } — 프로필 창을 띄운 작성자
+  const [page, setPage] = useState(0);            // 마지막으로 불러온 페이지
+  const [hasNext, setHasNext] = useState(false);  // [더 보기] 를 보여줄지
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [summary, setSummary] = useState(null);   // 사이드바 순위 (전체 게시물 기준)
+
+  // 첫 페이지 — 로그인 사용자나 지역 필터가 바뀌면 처음부터 다시 받는다 (지역은 서버가 거른다)
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    getFeedPage(user?.id, { page: 0, size: FEED_PAGE_SIZE, region: regionFilter })
+      .then((data) => {
+        if (!alive) return;
+        setItems(data?.items || []);
+        setPage(0);
+        setHasNext(!!data?.hasNext);
+        setLoading(false);
+      })
+      .catch(() => { if (alive) { setError(text.browseLoadFailed); setLoading(false); } });
+    return () => { alive = false; };
+  }, [user?.id, regionFilter]);
 
   useEffect(() => {
     let alive = true;
-    getFeed(user?.id)
-      .then((data) => { if (alive) { setItems(data || []); setLoading(false); } })
-      .catch(() => { if (alive) { setError(text.browseLoadFailed); setLoading(false); } });
+    getFeedSummary(user?.id)
+      .then((data) => { if (alive) setSummary(data); })
+      .catch(() => { /* 사이드바는 없어도 피드는 보인다 */ });
     return () => { alive = false; };
   }, [user?.id]);
+
+  // [더 보기] — 다음 페이지를 이어 붙인다. 그 사이 새 글이 올라와 밀린 카드는 id 로 걸러 중복을 막는다.
+  const loadMore = async () => {
+    if (loadingMore || !hasNext) return;
+    setLoadingMore(true);
+    try {
+      const data = await getFeedPage(user?.id, { page: page + 1, size: FEED_PAGE_SIZE, region: regionFilter });
+      setItems((prev) => {
+        const seen = new Set(prev.map((it) => it.id));
+        return [...prev, ...(data?.items || []).filter((it) => !seen.has(it.id))];
+      });
+      setPage(page + 1);
+      setHasNext(!!data?.hasNext);
+    } catch {
+      setError(text.browseLoadFailed);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // onMoveLogin 은 App 의 moveLogin — e.preventDefault() 를 쓰므로 이벤트를 그대로 넘겨야 한다
   const openCompose = (e) => (isLoggedIn ? setComposeOpen(true) : onMoveLogin(e));
 
-  const shownItems = regionFilter === '전체'
-    ? items
-    : items.filter((it) => splitRegions(it.region).includes(regionFilter));
+  const shownItems = items;
+
+  // 작성자 프로필 창 — 로그인한 사람만 볼 수 있다(비로그인이면 로그인 화면으로)
+  const openAuthor = (e, item) => {
+    if (!isLoggedIn) return onMoveLogin(e);
+    if (item.authorId == null) return;
+    setProfileTarget({ id: item.authorId, name: item.authorName });
+  };
 
   // 올린 게시물을 목록 맨 앞으로 (이미 있던 카드면 교체)
   const handlePublished = (card) => {
     setItems(prev => [card, ...prev.filter(it => it.id !== card.id)]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 북마크(저장) — 다른 사람의 코스를 코스 만들기의 "저장된 경로" 목록에 담는다. 먼저 표시를 바꾸고 서버 값으로 맞춘다.
+  const handleBookmark = async (routeId) => {
+    const before = items;
+    setItems((prev) => prev.map((it) => (it.id === routeId ? { ...it, bookmarked: !it.bookmarked } : it)));
+    try {
+      const res = await toggleBookmark(routeId, user.id);
+      setItems((prev) => prev.map((it) => (it.id === routeId ? { ...it, bookmarked: res.bookmarked } : it)));
+      showToast(res.bookmarked ? text.browseSavedToast : text.browseUnsavedToast);
+    } catch {
+      setItems(before);
+      showToast(text.browseSaveFailed);
+    }
   };
 
   // 낙관적 업데이트 — 하트를 먼저 칠하고, 서버 응답으로 정확한 값을 맞춘다
@@ -240,15 +332,34 @@ export default function BrowsePage({ user, onMoveHome, onMoveLogin, onOpenMap, o
               key={item.id}
               item={item}
               isLoggedIn={isLoggedIn}
+              isMine={isLoggedIn && item.authorId === user.id}
               onLike={handleLike}
+              onBookmark={handleBookmark}
               onLoginNeeded={onMoveLogin}
-              onOpenMap={onOpenMap}
+              onOpenRoute={onOpenRoute}
+              onOpenAuthor={(e) => openAuthor(e, item)}
             />
           ))}
+          {!loading && hasNext && (
+            <button type="button" className="feedMoreBtn" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? text.browseLoading : text.browseMore}
+            </button>
+          )}
         </main>
 
-        <FeedSidebar items={items} onOpenMap={onOpenMap} />
+        <FeedSidebar summary={summary} onOpenMap={onOpenMap} />
       </div>
+
+      {profileTarget && (
+        <UserProfileModal
+          userId={profileTarget.id}
+          name={profileTarget.name}
+          isMe={profileTarget.id === user?.id}
+          onClose={() => setProfileTarget(null)}
+        />
+      )}
+
+      <div className={`feedToast${toast ? ' isShown' : ''}`} role="status" aria-live="polite">{toast}</div>
 
       {composeOpen && (
         <ComposePostModal

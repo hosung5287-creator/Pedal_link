@@ -136,6 +136,8 @@
   font-size: 0.86rem;
   font-weight: 700;
 }
+/* 한마디 조언을 Claude 가 새로 쓰는 동안 */
+.accountAchieve.isMaking { color: var(--muted); font-weight: 600; }
 
 /* 라이더 역량 — 가장 강한 항목이 항상 꽉 찬 막대(왼쪽→오른쪽)이고 나머지는 그에 비례한다 */
 .accountAbilityList {
@@ -249,6 +251,12 @@
 }
 .accountRideMeta span { text-align: right; white-space: nowrap; }
 
+/* 라이딩 기록 카드 머리의 "1–10 / 156건" */
+.accountRideRange { color: var(--muted); font-size: 0.82rem; font-weight: 700; }
+
+/* 페이지를 넘겨 카드 맨 위로 올라갈 때 상단 여백 */
+.accountCard { scroll-margin-top: 16px; }
+
 /* 기본 정보 수정 폼 */
 .accountEditGrid {
   display: grid;
@@ -351,6 +359,81 @@
   font-weight: 800;
 }
 
+/* 설정 — 변경 폼이 펼쳐지는 행 · 위치 공유 스위치 */
+.accountList li.accountSettingRow {
+  flex-direction: column;
+  align-items: stretch;
+}
+.accountSettingHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.accountSettingForm { margin-top: 14px; }
+
+/* 값이 길어도(긴 이메일) 왼쪽 라벨은 줄어들거나 줄바꿈되지 않게 */
+.accountLabel { flex: none; white-space: nowrap; }
+.accountValue {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.accountSettingText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.accountSettingText small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.accountNotice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.accountSwitch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #c9d6de;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.accountSwitch.isOn { background: var(--mint); }
+.accountSwitch:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.accountSwitchKnob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(12, 27, 39, 0.2);
+  transition: transform 0.15s;
+}
+.accountSwitch.isOn .accountSwitchKnob { transform: translateX(20px); }
+@media (prefers-reduced-motion: reduce) {
+  .accountSwitch, .accountSwitchKnob { transition: none; }
+}
+
 /* 로그아웃 버튼 (설정 하단) */
 .accountLogout {
   justify-self: start;
@@ -373,4 +456,11 @@
 @media (max-width: 639px) {
   .accountMain { padding: 32px 0 56px; }
   .accountHead h1 { font-size: 1.4rem; }
+
+  /* 라이딩 기록 한 줄 — 좁은 화면에선 날짜·거리·시간·상승고도를 코스 이름 아래 줄로 내린다
+     (고정 너비 4칸이 옆에 붙으면 카드 밖으로 넘쳐 페이지가 가로로 밀렸다) */
+  .accountRideRow { flex-direction: column; align-items: stretch; gap: 4px; }
+  .accountRideMeta { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+  .accountRideMeta span { text-align: left; }
+  .accountRideMeta span:empty { display: none; }
 }

@@ -1,8 +1,10 @@
 import { api } from './client';
 import { getRoutes } from './routes';
 
-export async function getParties() {
-    return api.get('/api/parties');
+// userId(보는 사람) 기준 — 내 파티 + 호스트와 220m 안에 있는 모집 중 파티만 온다.
+// 남의 파티는 나와 호스트가 둘 다 위치 공유 중일 때만 보인다. 각 파티에 hostDistanceM(m)이 붙는다.
+export async function getParties(userId) {
+    return api.get(userId ? `/api/parties?userId=${userId}` : '/api/parties');
 }
 
 // 파티 1건 — 지도에서 코스와 멤버를 읽을 때 쓴다
@@ -45,8 +47,19 @@ export async function applyToParty(id, applicant) {
     return api.post(`/api/parties/${id}/apply`, { userId: applicant.id });
 }
 
-export async function approveRequest(partyId, userId) {
-    return api.post(`/api/parties/${partyId}/requests/${userId}/approve`, {});
+// 참가 요청 수락·거절 — hostId(처리하는 사람)가 방장인지 서버가 확인한다
+export async function approveRequest(partyId, userId, hostId) {
+    return api.post(`/api/parties/${partyId}/requests/${userId}/approve`, { userId: hostId });
+}
+
+// 팀원 내보내기(강퇴, 방장만) — 내보내진 사람은 같은 파티에 다시 신청할 수 없다
+export async function kickMember(partyId, memberId, hostId) {
+    return api.post(`/api/parties/${partyId}/members/${memberId}/kick`, { userId: hostId });
+}
+
+// 파티 코스 바꾸기 (방장만, 방장이 만든 코스 중에서, 라이딩 시작 전에만)
+export async function changePartyRoute(partyId, routeId, hostId) {
+    return api.put(`/api/parties/${partyId}/route`, { userId: hostId, routeId });
 }
 
 // 파티 삭제 (호스트만)
@@ -69,8 +82,8 @@ export async function endParty(partyId, userId) {
     return api.post(`/api/parties/${partyId}/end`, { userId });
 }
 
-export async function rejectRequest(partyId, userId) {
-    return api.post(`/api/parties/${partyId}/requests/${userId}/reject`, {});
+export async function rejectRequest(partyId, userId, hostId) {
+    return api.post(`/api/parties/${partyId}/requests/${userId}/reject`, { userId: hostId });
 }
 
 // 참가자 스스로 파티 나가기 (호스트는 불가 — 파티 삭제를 써야 함)

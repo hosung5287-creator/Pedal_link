@@ -69,9 +69,46 @@ export function makeOtherUserIcon() {
   });
 }
 
-export function drawMarkers(startPoint, endPoint, layer) {
+// 경유지 색 — 지도 우클릭 메뉴의 "경유지로 추가" 버튼·패널 점과 같은 어두운 노랑
+export const WAYPOINT_COLOR = '#ca8a04';
+
+// 경유지 마커 — 지나가는 순서 번호를 붙인 작은 노란 원
+function makeWaypointIcon(order) {
+  return L.divIcon({
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:${WAYPOINT_COLOR};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#fff;font:800 12px/1 sans-serif;">${order}</div>`,
+    className: '',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -14],
+  });
+}
+
+// 경유지 팝업 — 이름 + 삭제 버튼. onRemove(index) 가 있으면 버튼을 누를 때 부른다.
+function waypointPopup(w, i, onRemove) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;min-width:140px';
+  const title = document.createElement('span');
+  title.textContent = `${text.waypointPlace} ${i + 1}: ${w.label}`;
+  wrap.appendChild(title);
+  if (onRemove) {
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = text.waypointDelete;
+    del.style.cssText = 'padding:6px 10px;background:#dc2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600';
+    del.addEventListener('click', () => onRemove(i));
+    wrap.appendChild(del);
+  }
+  return wrap;
+}
+
+export function drawMarkers(startPoint, endPoint, layer, waypoints = [], onRemoveWaypoint = null) {
   if (!layer) return;
   layer.clearLayers();
+  waypoints.forEach((w, i) => {
+    L.marker([w.lat, w.lng], { icon: makeWaypointIcon(i + 1) })
+      .bindPopup(waypointPopup(w, i, onRemoveWaypoint))
+      .addTo(layer);
+  });
   if (startPoint) {
     L.marker([startPoint.lat, startPoint.lng], { icon: makeBikeIcon('#2563eb') })
       .bindPopup(`${text.startPlace}: ${startPoint.label}`)
@@ -100,16 +137,18 @@ export function categorizeHighway(h) {
 // segments 가 있으면 자전거 경로를 도로 종류별 색으로 칠한다.
 export function drawRoutes(bikeRoute, shortestRoute, layer, map, segments) {
   if (!layer || !map) return;
-  if (!bikeRoute?.length || !shortestRoute?.length) return;
+  if (!bikeRoute?.length) return;
   layer.clearLayers();
 
-  // 최단경로는 옅은 회색 점선(참고용)으로 뒤에 깐다
-  L.polyline(shortestRoute, {
-    color: '#94a3b8',
-    dashArray: '6 8',
-    opacity: 0.7,
-    weight: 4,
-  }).bindPopup(text.shortestRoute).addTo(layer);
+  // 최단경로는 옅은 회색 점선(참고용)으로 뒤에 깐다 — 없는 코스(자전거 경로만 저장된 것)도 있다
+  if (shortestRoute?.length) {
+    L.polyline(shortestRoute, {
+      color: '#94a3b8',
+      dashArray: '6 8',
+      opacity: 0.7,
+      weight: 4,
+    }).bindPopup(text.shortestRoute).addTo(layer);
+  }
 
   if (segments?.length) {
     // 흰색 케이싱 → 색 구간이 지도 위에서 또렷하게
@@ -263,9 +302,10 @@ function parseBrouterSegments(props, coords) {
   return segs.length ? segs : null;
 }
 
-export async function requestBrouterRoute(from, to, profile) {
+// via: 경유지 목록 — 출발 → 경유지(순서대로) → 도착을 한 번에 계산한다 (BRouter lonlats 는 '|' 로 점을 잇는다)
+export async function requestBrouterRoute(from, to, profile, via = []) {
   const url = new URL('https://brouter.de/brouter');
-  url.searchParams.set('lonlats', `${from.lng},${from.lat}|${to.lng},${to.lat}`);
+  url.searchParams.set('lonlats', [from, ...via, to].map((p) => `${p.lng},${p.lat}`).join('|'));
   url.searchParams.set('profile', profile);
   url.searchParams.set('alternativeidx', '0');
   url.searchParams.set('format', 'geojson');

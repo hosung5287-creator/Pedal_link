@@ -21,5 +21,6 @@ public class RouteResponse {
     private Integer ascendM;
     private List<PointDto> bikeRoute;
     private List<PointDto> shortestRoute;
+    private List<WaypointDto> waypoints;   // 경유지 (없으면 빈 목록)
     private LocalDateTime createdAt;
 }

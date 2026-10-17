@@ -1,0 +1,30 @@
+/* 보유 자전거 → 구글 검색 링크 (components/BikeLinks.jsx) */
+.bikeLinks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.bikeLink {
+  color: var(--mint-dark);
+  font-weight: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.bikeLink:hover { color: var(--mint); }
+.bikeLink:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.bikeLinkIcon {
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 0.8em;
+  text-decoration: none;
+}

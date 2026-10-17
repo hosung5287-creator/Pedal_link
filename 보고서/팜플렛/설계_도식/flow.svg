@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="179.7mm" height="35mm" viewBox="0 0 179.7 35"><defs><marker id="arr" viewBox="0 0 6 6" refX="5.4" refY="3" markerWidth="2.1" markerHeight="2.1" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5B7180"/></marker><marker id="arrS" viewBox="0 0 6 6" refX="5.4" refY="3" markerWidth="2.4" markerHeight="2.4" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#0284C7"/></marker></defs><rect x="0.2" y="0.6" width="32.1" height="23.4" rx="1.8" fill="#FFFFFF" stroke="#BFE3F7" stroke-width="0.35"/>
+<circle cx="5.0" cy="6.2" r="2.6" fill="#0284C7"/>
+<text x="5.0" y="6.25" font-size="1.976" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">01</text>
+<text x="9.2" y="6.3" font-size="2.893" font-weight="700" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">코스 만들기</text>
+<text x="16.25" y="13.4" font-size="2.152" font-weight="400" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">출발 · 경유 · 도착 지정</text>
+<text x="16.25" y="18.4" font-size="2.152" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">BRouter 경로 · 상승고도</text>
+<polyline points="16.25,24 16.25,27" fill="none" stroke="#0369A1" stroke-width="0.3" stroke-linejoin="round" stroke-dasharray="0.6 0.5"/>
+<rect x="1.2" y="27.2" width="30.1" height="5.6" rx="1.2" fill="#E8EFF7" stroke="#B7CBDE" stroke-width="0.3"/>
+<text x="16.25" y="30.05" font-size="1.94" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">routes</text>
+<path d="M33.75,9.6 L35.75,12.3 L33.75,15" fill="none" stroke="#0284C7" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="37.0" y="0.6" width="32.1" height="23.4" rx="1.8" fill="#FFFFFF" stroke="#BFE3F7" stroke-width="0.35"/>
+<circle cx="41.8" cy="6.2" r="2.6" fill="#0284C7"/>
+<text x="41.8" y="6.25" font-size="1.976" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">02</text>
+<text x="46.0" y="6.3" font-size="2.893" font-weight="700" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">함께 모이기</text>
+<text x="53.05" y="13.4" font-size="2.152" font-weight="400" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">220m 근처 파티 · 매칭</text>
+<text x="53.05" y="18.4" font-size="2.152" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">크루 초대 · 인원 체크</text>
+<polyline points="53.05,24 53.05,27" fill="none" stroke="#0369A1" stroke-width="0.3" stroke-linejoin="round" stroke-dasharray="0.6 0.5"/>
+<rect x="38.0" y="27.2" width="30.1" height="5.6" rx="1.2" fill="#E8EFF7" stroke="#B7CBDE" stroke-width="0.3"/>
+<text x="53.05" y="30.05" font-size="1.94" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">parties · crew_events</text>
+<path d="M70.54999999999998,9.6 L72.54999999999998,12.3 L70.54999999999998,15" fill="none" stroke="#0284C7" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="73.8" y="0.6" width="32.1" height="23.4" rx="1.8" fill="#FFFFFF" stroke="#BFE3F7" stroke-width="0.35"/>
+<circle cx="78.6" cy="6.2" r="2.6" fill="#0284C7"/>
+<text x="78.6" y="6.25" font-size="1.976" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">03</text>
+<text x="82.8" y="6.3" font-size="2.893" font-weight="700" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">함께 달리기</text>
+<text x="89.85" y="13.4" font-size="2.152" font-weight="400" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">실시간 위치 3초 공유</text>
+<text x="89.85" y="18.4" font-size="2.152" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">채팅 · 근접 알림</text>
+<polyline points="89.85,24 89.85,27" fill="none" stroke="#0369A1" stroke-width="0.3" stroke-linejoin="round" stroke-dasharray="0.6 0.5"/>
+<rect x="74.8" y="27.2" width="30.1" height="5.6" rx="1.2" fill="#E8EFF7" stroke="#B7CBDE" stroke-width="0.3"/>
+<text x="89.85" y="30.05" font-size="1.94" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">메모리 · chat_messages</text>
+<path d="M107.35,9.6 L109.35,12.3 L107.35,15" fill="none" stroke="#0284C7" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="110.6" y="0.6" width="32.1" height="23.4" rx="1.8" fill="#FFFFFF" stroke="#BFE3F7" stroke-width="0.35"/>
+<circle cx="115.39999999999999" cy="6.2" r="2.6" fill="#0284C7"/>
+<text x="115.39999999999999" y="6.25" font-size="1.976" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">04</text>
+<text x="119.6" y="6.3" font-size="2.893" font-weight="700" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">기록 남기기</text>
+<text x="126.64999999999999" y="13.4" font-size="2.152" font-weight="400" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">거리 · 시간 · 상승고도</text>
+<text x="126.64999999999999" y="18.4" font-size="2.152" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">탄 거리만큼 인정</text>
+<polyline points="126.64999999999999,24 126.64999999999999,27" fill="none" stroke="#0369A1" stroke-width="0.3" stroke-linejoin="round" stroke-dasharray="0.6 0.5"/>
+<rect x="111.6" y="27.2" width="30.1" height="5.6" rx="1.2" fill="#E8EFF7" stroke="#B7CBDE" stroke-width="0.3"/>
+<text x="126.64999999999999" y="30.05" font-size="1.94" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">ride_records</text>
+<path d="M144.14999999999998,9.6 L146.14999999999998,12.3 L144.14999999999998,15" fill="none" stroke="#0284C7" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="147.39999999999998" y="0.6" width="32.1" height="23.4" rx="1.8" fill="#FFFFFF" stroke="#BFE3F7" stroke-width="0.35"/>
+<circle cx="152.2" cy="6.2" r="2.6" fill="#0284C7"/>
+<text x="152.2" y="6.25" font-size="1.976" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">05</text>
+<text x="156.39999999999998" y="6.3" font-size="2.893" font-weight="700" fill="#0C1B27" text-anchor="start" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">돌아보기</text>
+<text x="163.45" y="13.4" font-size="2.152" font-weight="400" fill="#0C1B27" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">AI 리포트 · 한마디 조언</text>
+<text x="163.45" y="18.4" font-size="2.152" font-weight="400" fill="#5B7180" text-anchor="middle" dominant-baseline="central" font-family="'Malgun Gothic','맑은 고딕',sans-serif">피드 공유 · 북마크</text>
+<polyline points="163.45,24 163.45,27" fill="none" stroke="#0369A1" stroke-width="0.3" stroke-linejoin="round" stroke-dasharray="0.6 0.5"/>
+<rect x="148.39999999999998" y="27.2" width="30.1" height="5.6" rx="1.2" fill="#E8EFF7" stroke="#B7CBDE" stroke-width="0.3"/>
+<text x="163.45" y="30.05" font-size="1.94" font-weight="600" fill="#0369A1" text-anchor="middle" dominant-baseline="central" font-family="Consolas,'Courier New',monospace">ride_insights · ride_tips</text></svg>

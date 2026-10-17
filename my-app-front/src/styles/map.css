@@ -992,6 +992,16 @@
   color: #666;
 }
 
+/* 저장 목록의 "경유 N곳" — 지역 태그와 같은 모양, 경유지 색 */
+.routeListVia {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #a16207;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .routeListDate {
   font-size: 11px;
   color: #999;
@@ -1007,6 +1017,16 @@
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--mint-dark);
+  font-size: 10px;
+  font-weight: 800;
+}
+.routeListMeta { flex-wrap: wrap; }
+/* 피드에서 저장한 다른 사람의 코스 — "저장한 코스 · 작성자" */
+.routeListSaved {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--mint-dark);
+  color: #ffffff;
   font-size: 10px;
   font-weight: 800;
 }
@@ -1106,6 +1126,9 @@
   font: inherit;
 }
 .leaflet-tooltip.proxTooltip .proxAvatar { width: 30px; height: 30px; font-size: 0.8rem; }
+/* 이름표를 누르면 프로필 창 — 누를 수 있다는 걸 보이게 */
+.leaflet-tooltip.proxTooltip.leaflet-interactive { cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+.leaflet-tooltip.proxTooltip.leaflet-interactive:hover { border-color: var(--mint); box-shadow: 0 8px 24px rgba(14, 165, 233, 0.28); }
 .proxTooltip .proxText { display: flex; flex-direction: column; line-height: 1.15; }
 .proxTooltip .proxText strong { font-size: 0.85rem; font-weight: 800; }
 .proxTooltip .proxDist { font-size: 0.72rem; font-weight: 700; color: var(--mint-dark); }

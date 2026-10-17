@@ -546,6 +546,75 @@
 .prApproveBtn { background: var(--mint); color: #ffffff; }
 .prRejectBtn { background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
 
+/* 방장 제어판에서 펼친 메뉴 표시 + 팀원 수(알림이 아니라 개수라 회색) */
+.prMenuBtn.isOpen { background: var(--wash); border-color: var(--mint); }
+.prCountBadge.isNeutral { background: var(--surface-2); color: var(--muted); }
+
+/* 파티 설정(팀원 관리) / 경로 수정 펼침 상자 */
+.prPanelBox { display: flex; flex-direction: column; gap: 8px; }
+.prPanelTitle { margin: 0; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
+
+.prTeammate { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.prTeammate > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+
+.prKickBtn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--crit);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.prKickBtn:hover:not(:disabled) { background: #fef2f2; border-color: var(--crit); }
+.prKickBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.prRoutePick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.prRouteOption {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.prRouteOption strong { padding-right: 64px; font-size: 0.82rem; font-weight: 800; overflow-wrap: anywhere; }
+.prRouteOption span { color: var(--muted); font-size: 0.72rem; }
+.prRouteOption:hover:not(:disabled) { background: var(--wash); border-color: var(--mint); }
+.prRouteOption:disabled { cursor: default; }
+.prRouteOption.isCurrent { border-color: var(--mint); background: var(--wash); }
+.prRouteCurrent {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #ffffff;
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .prConfirmBox {
   display: flex;
   flex-direction: column;

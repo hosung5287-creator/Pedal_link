@@ -3,20 +3,23 @@ import '../styles/partydock.css';
 import { useEffect, useRef, useState } from 'react';
 import { partyDock as t, text } from '../constants';
 import { getParties, applyToParty } from '../api/parties';
-import { getOtherLocations } from '../api/locations';
+import { getOtherLocations, reportLocation } from '../api/locations';
+import { errorMessage } from '../api/client';
 import { useLocationShare } from '../hooks/useLocationShare';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
 import { markRead } from '../utils/chatUnread';
 import { OPEN_RIDING_EVENT } from '../utils/riding';
 import { getMyRoutesForParty } from '../api/parties';
-import { sendMatchRequest, getIncomingMatches, getOutgoingMatches, acceptMatch, rejectMatch } from '../api/matches';
+import { sendMatchRequest, acceptMatch, rejectMatch } from '../api/matches';
 import BrandLogo from './BrandLogo';
 import PartyRoom from './PartyRoom';
 import RidingRoom from './RidingRoom';
 import PersonalRidingRoom from './PersonalRidingRoom';
+import UserProfileModal from './UserProfileModal';
+import { getMyStatus } from '../api/me';
 
-const NEAR_M = 220;   // 이 거리 안이면 "접근 중"
+const NEAR_M = 220;   // 이 거리 안이면 "접근 중" — 근처 모집 중 파티 범위(백엔드 PartyService.PARTY_RANGE_M)와 같다
 const MATCH_M = 50;   // 이 거리 안이어야 매칭 신청 버튼이 뜬다 (지오펜스와 같은 기준)
 
 function distanceM(a, b) {
@@ -57,9 +60,13 @@ export default function PartyDock({ user, onMoveParty }) {
   const [applyingId, setApplyingId] = useState(null);
   const [applyError, setApplyError] = useState('');
   const [locs, setLocs] = useState({});
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(null); // 프로필 창을 연 사람 { userId, name }
+  const [nearNotice, setNearNotice] = useState(''); // 멀어서 프로필을 못 여는 등 짧은 안내
+  const nearNoticeTimer = useRef(null);
   const myPos = useRef(null);
   const [locShare, setLocShare] = useLocationShare(user?.id);
+  // 파티 목록을 바로 다시 받게 하는 신호 — 위치 공유를 켜고 첫 위치를 보낸 직후 등
+  const [partiesReload, setPartiesReload] = useState(0);
 
   // 개인 라이딩(파티 없이 혼자) — 시작 전 고르는 팝업 + 실제 떠 있는 세션
   const [soloPicker, setSoloPicker] = useState(false);
@@ -92,17 +99,45 @@ export default function PartyDock({ user, onMoveParty }) {
   const soloConfigRef = useRef(null);
   useEffect(() => { soloConfigRef.current = soloConfig; }, [soloConfig]);
   const handledAcceptedIdsRef = useRef(new Set());
+  // 크루 라이딩 자동 이동 — 한 번 연 라이딩은 다시 자동으로 열지 않는다(닫으면 초록 버튼으로 다시 들어간다)
+  const autoOpenedRef = useRef(new Set());
+  // 방장이 나를 내보낸 파티 안내 — 서버는 파티가 끝날 때까지 계속 알려 주므로, 한 번 띄운 파티 id 는 사용자별로 기억해 둔다
+  const [kickedNotice, setKickedNotice] = useState(null); // { partyId, title } | null
 
+  // 내 상태 확인 (5초) — 받은·보낸 매칭 신청 + 크루 라이딩 자동 이동을 요청 하나로 받는다.
+  // 화면이 안 보일 때(다른 탭·최소화)는 건너뛰고, 다시 보이면 바로 한 번 확인한다.
   useEffect(() => {
     if (!user?.id) return;
     let alive = true;
     const load = async () => {
+      if (document.hidden) return;
       try {
-        const [incoming, outgoing] = await Promise.all([
-          getIncomingMatches(user.id),
-          getOutgoingMatches(user.id),
-        ]);
+        const status = await getMyStatus(user.id);
         if (!alive) return;
+        const incoming = status?.incomingMatches;
+        const outgoing = status?.outgoingMatches;
+
+        // 팀장이 크루 라이딩을 시작했고 내가 체크된 인원이면, 어느 화면에 있든 라이딩 화면을 연다
+        const crewRiding = status?.crewRiding;
+        if (crewRiding?.partyId && !autoOpenedRef.current.has(crewRiding.partyId)) {
+          autoOpenedRef.current.add(crewRiding.partyId);
+          setPartiesReload((n) => n + 1);   // 새로 만들어진 파티를 받아 와야 라이딩 화면이 그려진다
+          setOpen(false);
+          setRoomOpen(false);
+          setRidingId(crewRiding.partyId);
+        }
+
+        // 방장에게 강퇴당한 파티 — 처음 알게 된 것만 안내하고, 파티 목록을 다시 받아 그 방을 닫는다
+        const kickKey = `pl:kickedSeen:${user.id}`;
+        let seen = [];
+        try { seen = JSON.parse(localStorage.getItem(kickKey) || '[]'); } catch { seen = []; }
+        const freshKick = (status?.kickedParties || []).find((k) => !seen.includes(k.partyId));
+        if (freshKick) {
+          try { localStorage.setItem(kickKey, JSON.stringify([...seen, freshKick.partyId].slice(-50))); } catch { /* 저장 못 해도 안내는 띄운다 */ }
+          setKickedNotice(freshKick);
+          setPartiesReload((n) => n + 1);
+        }
+
         setIncomingMatches(incoming || []);
         setOutgoingUserIds(new Set((outgoing || []).filter((m) => m.status === 'pending').map((m) => m.toUserId)));
 
@@ -112,7 +147,7 @@ export default function PartyDock({ user, onMoveParty }) {
         if (newlyAccepted) {
           handledAcceptedIdsRef.current.add(newlyAccepted.id);
           if (soloConfigRef.current) {
-            const freshParties = await getParties();
+            const freshParties = await getParties(user.id);
             if (!alive) return;
             setAllParties(freshParties || []);
             setSoloConfig(null);
@@ -124,7 +159,9 @@ export default function PartyDock({ user, onMoveParty }) {
     };
     load();
     const timer = setInterval(load, 5000);
-    return () => { alive = false; clearInterval(timer); };
+    const onVisible = () => { if (!document.hidden) load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { alive = false; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [user?.id]);
 
   const handleSendMatch = async (toUserId) => {
@@ -182,6 +219,26 @@ export default function PartyDock({ user, onMoveParty }) {
   const ridingParty = myRooms.find((r) => r.rideStartedAt && r.status !== 'ended') || null;
   const isRiding = !!ridingParty;
 
+  // 라이딩 화면에 넘길 파티. 크루 라이딩은 "라이딩 종료"와 함께 파티가 끝나(ended) 내 방 목록에서 빠지는데,
+  // 그래도 기록 팝업을 닫을 때까지는 화면을 유지하도록 마지막으로 본 파티를 기억해 둔다.
+  const liveRidingRoom = ridingId != null ? myRooms.find((r) => r.id === ridingId) || null : null;
+  const [ridingSnap, setRidingSnap] = useState(null);
+  useEffect(() => { if (liveRidingRoom) setRidingSnap(liveRidingRoom); }, [liveRidingRoom]);
+  const ridingRoomParty = liveRidingRoom || (ridingSnap?.id === ridingId ? ridingSnap : null);
+
+  // 라이딩 화면을 닫을 때 — 파티가 남아 있으면 그 대기방으로 돌아가고, 끝났거나 내보내졌으면 그냥 닫는다.
+  // 라이딩 화면의 폴링 타이머 안에서도 불리므로 내 방 목록은 ref 로 최신 값을 읽는다.
+  const myRoomsRef = useRef(myRooms);
+  useEffect(() => { myRoomsRef.current = myRooms; });
+  const leaveRidingRoom = (partyId, gone = false) => {
+    setRidingId(null);
+    setRidingSnap(null);
+    if (gone || !myRoomsRef.current.some((r) => r.id === partyId)) return;
+    setRoomInitialId(partyId);
+    setOpen(true);
+    setRoomOpen(true);
+  };
+
   const [chatRoomId, setChatRoomId] = useState(null);
 
   // 채팅방이 하나뿐이면 바로 열고, 여러 개면 고른 방이 없어질 때만 목록으로 돌린다
@@ -238,7 +295,7 @@ export default function PartyDock({ user, onMoveParty }) {
     let alive = true;
     const load = async () => {
       try {
-        const list = await getParties();
+        const list = await getParties(user.id);
         if (!alive) return;
         setAllParties(list || []);
         const mine = (list || []).find((p) =>
@@ -248,9 +305,39 @@ export default function PartyDock({ user, onMoveParty }) {
       } catch { /* 재시도 */ }
     };
     load();
-    const timer = setInterval(load, 15000);
+    // 화면이 안 보일 때(다른 탭·최소화)는 건너뛴다 — 서버 요청 절약
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 15000);
     return () => { alive = false; clearInterval(timer); };
-  }, [user?.id]);
+  }, [user?.id, partiesReload]);
+
+  // 위치 공유가 켜져 있는 동안은 어느 화면에 있든 내 위치를 보낸다.
+  // 근처 모집 중 파티(호스트와 220m)는 서버가 판단하므로 보는 사람·호스트 둘 다 위치가 서버에 있어야 한다.
+  // 도크는 로그인하면 항상 떠 있어서 여기서 맡는다. 끄면 멈추고, 서버 위치는 useLocationShare 가 지운다.
+  useEffect(() => {
+    if (!user?.id || !locShare || !navigator.geolocation) return undefined;
+    let first = true;
+    const send = () => {
+      const pos = myPos.current;
+      if (!pos) return;
+      reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng })
+        .then(() => {
+          // 켠 직후 첫 위치가 올라가면 목록을 바로 다시 받아 근처 링크가 곧장 보이게 한다
+          if (first) { first = false; setPartiesReload((n) => n + 1); }
+        })
+        .catch(() => {});
+    };
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        myPos.current = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (first) send();
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 },
+    );
+    // 가만히 있으면 위치 콜백이 안 올 수 있어 마지막 위치를 주기적으로 다시 보낸다 (서버는 15초 지나면 공유 중이 아니라고 본다)
+    const timer = setInterval(send, 5000);
+    return () => { navigator.geolocation.clearWatch(id); clearInterval(timer); };
+  }, [user?.id, user?.name, locShare]);
 
   // 내 위치 추적 (패널 열림 동안)
   useEffect(() => {
@@ -277,7 +364,8 @@ export default function PartyDock({ user, onMoveParty }) {
       } catch { /* 무시 */ }
     };
     load();
-    const timer = setInterval(load, 5000);
+    // 화면이 안 보일 때(다른 탭·최소화)는 건너뛴다 — 서버 요청 절약
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 5000);
     return () => { alive = false; clearInterval(timer); };
   }, [open, curTab, user?.id]);
 
@@ -299,13 +387,30 @@ export default function PartyDock({ user, onMoveParty }) {
     try {
       const updated = await applyToParty(partyId, { id: user.id });
       setAllParties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-    } catch {
-      setApplyError(t.applyFailed);
+    } catch (e) {
+      // 범위 밖·위치 공유 꺼짐 같은 거부 사유를 서버가 알려준다
+      setApplyError(errorMessage(e, t.applyFailed));
     } finally {
       setApplyingId(null);
     }
   };
   const distTo = (loc) => (loc && myPos.current ? distanceM(myPos.current, loc) : null);
+
+  // 사람을 눌러 상세 프로필 — 내 파티 멤버·나는 항상, 근처 라이더는 지도와 같은 220m(NEAR_M) 안일 때만
+  const openPerson = (p) => {
+    if (p.userId === user?.id || memberIds.has(p.userId)) {
+      setSelected({ userId: p.userId, name: p.name });
+      return;
+    }
+    if (p.dist == null || p.dist > NEAR_M) {
+      clearTimeout(nearNoticeTimer.current);
+      setNearNotice(text.mapProfileTooFar(p.dist == null ? '?' : Math.round(p.dist)));
+      nearNoticeTimer.current = setTimeout(() => setNearNotice(''), 4000);
+      return;
+    }
+    setSelected({ userId: p.userId, name: p.name });
+  };
+  useEffect(() => () => clearTimeout(nearNoticeTimer.current), []);
 
   const nearby = Object.values(locs)
     .filter((o) => o.userId !== user?.id)
@@ -360,6 +465,7 @@ export default function PartyDock({ user, onMoveParty }) {
                 </span>
                 <span className="pdSwitch" aria-hidden="true"><span className="pdSwitchKnob" /></span>
               </button>
+              {nearNotice && <p className="pdNearNotice" role="status">{nearNotice}</p>}
 
               {/* 내 파티 멤버 — 파티 탭에 있던 '내 파티' 서브탭을 여기로 옮겼다.
                   근처 탭이 "사람" 탭이 되어 멤버와 주변 라이더를 한 화면에서 본다. */}
@@ -369,7 +475,7 @@ export default function PartyDock({ user, onMoveParty }) {
                   <ul className="pdMembers">
                     {members.map((m) => (
                       <li key={m.userId}>
-                        <button type="button" className="pdMember" onClick={() => setSelected(m)}>
+                        <button type="button" className="pdMember" onClick={() => openPerson(m)}>
                           <span className="pdAvatar" aria-hidden="true">{letterOf(m.name)}</span>
                           <span className="pdMemberInfo">
                             <span className="pdMemberName">
@@ -399,7 +505,7 @@ export default function PartyDock({ user, onMoveParty }) {
                     const sent = outgoingUserIds.has(o.userId);
                     return (
                       <li key={o.userId}>
-                        <button type="button" className={`pdMember${near ? ' isNear' : ''}`} onClick={() => setSelected(o)}>
+                        <button type="button" className={`pdMember${near ? ' isNear' : ''}`} onClick={() => openPerson(o)}>
                           <span className="pdAvatar" aria-hidden="true">{letterOf(o.name)}</span>
                           <span className="pdMemberInfo">
                             <span className="pdMemberName">
@@ -432,10 +538,20 @@ export default function PartyDock({ user, onMoveParty }) {
           {curTab === 'party' && (
             <div className="pdPartyPane">
               {applyError && <p className="pdApplyError">{applyError}</p>}
+              {/* 남의 모집 중 링크는 호스트와 220m 안에서만 보인다 — 왜 적게 보이는지 알려준다 */}
+              {browsableParties.length > 0 && !locShare && (
+                <p className="pdRangeHint">
+                  {text.partyNeedShare}
+                  <button type="button" onClick={() => setLocShare(true)}>{text.partyShareOnBtn}</button>
+                </p>
+              )}
                   {browsableParties.length === 0 ? (
                     <div className="pdPartyEmpty">
                       <span className="pdEmptyIcon" aria-hidden="true"><PeopleIcon size={28} /></span>
-                      <p className="pdNearHint">{t.noPartyTitle}</p>
+                      <p className="pdNearHint">{locShare ? text.partyNoNearby : text.partyNeedShare}</p>
+                      {!locShare && (
+                        <button type="button" className="pdApplyBtn" onClick={() => setLocShare(true)}>{text.partyShareOnBtn}</button>
+                      )}
                     </div>
                   ) : (
                     <ul className="pdPartyList">
@@ -449,6 +565,7 @@ export default function PartyDock({ user, onMoveParty }) {
                               <span>{p.fromLabel} → {p.toLabel}</span>
                               <span className="pdPartyCardMeta">
                                 {p.participants.length}/{p.maxMembers}{t.memberCountUnit} · {p.hostName}
+                                {state === 'none' && p.hostDistanceM != null && ` · ${text.partyHostDist(p.hostDistanceM)}`}
                               </span>
                             </div>
                             {state === 'host' || state === 'joined' ? (
@@ -538,17 +655,13 @@ export default function PartyDock({ user, onMoveParty }) {
             )
           )}
 
-          {selected && (
-            <div className="pdProfileBackdrop" onClick={() => setSelected(null)}>
-              <div className="pdProfileCard" onClick={(e) => e.stopPropagation()}>
-                <span className="pdAvatar pdAvatarLg" aria-hidden="true">{letterOf(selected.name)}</span>
-                <strong>{selected.name}</strong>
-                {inParty && selected.userId === party.hostId && <span className="pdTag pdTagHost">{t.hostBadge}</span>}
-                <p>{t.profileSoon}</p>
-                <button type="button" className="pdProfileClose" onClick={() => setSelected(null)}>닫기</button>
-              </div>
-            </div>
-          )}
+        </div>
+      )}
+
+      {kickedNotice && (
+        <div className={`pdMatchBanner pdKickedBanner${incomingMatches.length > 0 ? ' isStacked' : ''}`} role="alert">
+          <span className="pdKickedText">{t.kickedNotice(kickedNotice.title)}</span>
+          <button type="button" className="pdMatchRejectBtn" onClick={() => setKickedNotice(null)}>{t.kickedOk}</button>
         </div>
       )}
 
@@ -627,6 +740,16 @@ export default function PartyDock({ user, onMoveParty }) {
         </div>
       )}
 
+      {selected && (
+        <UserProfileModal
+          userId={selected.userId}
+          name={selected.name}
+          isMe={selected.userId === user?.id}
+          badges={inParty && selected.userId === party.hostId ? [t.hostBadge] : []}
+          onClose={() => setSelected(null)}
+        />
+      )}
+
       {soloConfig && (
         <PersonalRidingRoom
           user={user}
@@ -650,29 +773,16 @@ export default function PartyDock({ user, onMoveParty }) {
         />
       )}
 
-      {ridingId != null && (() => {
-        const ridingParty = myRooms.find((r) => r.id === ridingId);
-        if (!ridingParty) return null;
-        return (
-          <RidingRoom
-            party={ridingParty}
-            user={user}
-            onPartyChange={(updated) => setAllParties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))}
-            onClose={() => {
-              setRidingId(null);
-              setRoomInitialId(ridingParty.id);
-              setOpen(true);
-              setRoomOpen(true);
-            }}
-            onEnded={() => {
-              setRidingId(null);
-              setRoomInitialId(ridingParty.id);
-              setOpen(true);
-              setRoomOpen(true);
-            }}
-          />
-        );
-      })()}
+      {ridingRoomParty && (
+        <RidingRoom
+          key={ridingRoomParty.id}
+          party={ridingRoomParty}
+          user={user}
+          onPartyChange={(updated) => setAllParties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))}
+          onClose={() => leaveRidingRoom(ridingRoomParty.id)}
+          onEnded={(info) => leaveRidingRoom(ridingRoomParty.id, info?.gone)}
+        />
+      )}
     </div>
   );
 }

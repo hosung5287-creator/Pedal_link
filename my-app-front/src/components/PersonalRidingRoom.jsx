@@ -8,12 +8,17 @@ import { getRouteById } from '../api/routes';
 import { sendMatchRequest, getOutgoingMatches } from '../api/matches';
 import { getProfile } from '../api/users';
 import { api } from '../api/client';
+import { useLocationShare } from '../hooks/useLocationShare';
+import UserProfileModal from './UserProfileModal';
+import { text } from '../constants';
 
 // MapPage의 지오펜스와 같은 값 — 50m 안에 들어오면 알림, 250m 밖으로 나가야 이탈로 친다(끊김 방지용 여유)
 const GEOFENCE_RADIUS_M = 50;
 const GEOFENCE_EXIT_M = 250;
 // 이 거리 안이면 지도에 핀을 그려서 "근처에 누가 있는지" 보이게 한다 (매칭 가능 여부와는 별개)
 const VISIBLE_M = 500;
+// 핀을 눌러 상세 프로필을 볼 수 있는 거리 — 지도·파티 도크와 같은 220m (파티 모집 범위)
+const PROFILE_RANGE_M = 220;
 
 const GENDER_LABEL = { male: '남성', female: '여성' };
 
@@ -85,6 +90,30 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   const [proxAlert, setProxAlert] = useState(null); // { userId, name, dist, entering }
   const [sentMatches, setSentMatches] = useState(new Set()); // 이미 매칭 신청을 보낸 userId
   const [matchSending, setMatchSending] = useState(false);
+  // 위치 공유 스위치 — 꺼져 있으면 내 위치를 서버에 보내지 않는다(다른 사람 위치는 계속 본다).
+  // 폴링 타이머를 다시 만들지 않도록 최신 값은 ref 로 읽는다.
+  const [locShare, setLocShare] = useLocationShare(user?.id);
+  // 핀을 눌러 연 상세 프로필 { id, name } + 멀어서 못 열 때 잠깐 뜨는 안내
+  const [profileTarget, setProfileTarget] = useState(null);
+  const [notice, setNotice] = useState('');
+  const noticeTimerRef = useRef(null);
+  const openProfile = (userId, name, marker) => {
+    const me = lastPosRef.current;
+    const map = mapRef.current;
+    const dist = me && map ? Math.round(map.distance([me.lat, me.lng], marker.getLatLng())) : null;
+    if (dist == null || dist > PROFILE_RANGE_M) {
+      clearTimeout(noticeTimerRef.current);
+      setNotice(text.mapProfileTooFar(dist ?? '?'));
+      noticeTimerRef.current = setTimeout(() => setNotice(''), 4000);
+      return;
+    }
+    setProfileTarget({ id: userId, name });
+  };
+  const openProfileRef = useRef(openProfile);
+  openProfileRef.current = openProfile;
+  useEffect(() => () => clearTimeout(noticeTimerRef.current), []);
+  const locShareRef = useRef(locShare);
+  useEffect(() => { locShareRef.current = locShare; }, [locShare]);
 
   const showProxAlert = (info) => {
     clearTimeout(proxTimerRef.current);
@@ -194,7 +223,9 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
       if (!pos || !map) return;
 
       try {
-        await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        if (locShareRef.current) {
+          await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
+        }
         const others = (await getOtherLocations(user.id)) || [];
         if (cancelled || !mapRef.current) return;
 
@@ -223,7 +254,8 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
                   direction: 'top', offset: [0, -14], className: 'rrProfileTooltip', opacity: 1,
                 })
                 .addTo(map);
-              marker.on('click', () => marker.openTooltip()); // 모바일은 호버가 없으니 탭으로도 열리게
+              // 누르면 상세 프로필 (220m 안) — 마우스를 올리면 뜨는 미리보기 말풍선은 그대로 둔다
+              marker.on('click', () => openProfileRef.current(o.userId, o.name, marker));
               markers.set(o.userId, marker);
 
               profiles.set(o.userId, 'loading');
@@ -366,6 +398,24 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
                 {sentMatches.has(proxAlert.userId) ? '신청함' : '매칭 신청'}
               </button>
             )}
+          </div>
+        )}
+
+        {/* 위치 공유가 꺼져 있으면 내 위치를 보내지 않는다 — 왜 남에게 안 보이는지 알려주고 바로 켤 수 있게 */}
+        {notice && <p className="rrNotice" role="status">{notice}</p>}
+
+        {profileTarget && (
+          <UserProfileModal
+            userId={profileTarget.id}
+            name={profileTarget.name}
+            onClose={() => setProfileTarget(null)}
+          />
+        )}
+
+        {!locShare && (
+          <div className="rrShareOff" role="status">
+            <span>위치 공유 꺼짐 · 다른 라이더에게 내 위치가 보이지 않아요</span>
+            <button type="button" onClick={() => setLocShare(true)}>켜기</button>
           </div>
         )}
 

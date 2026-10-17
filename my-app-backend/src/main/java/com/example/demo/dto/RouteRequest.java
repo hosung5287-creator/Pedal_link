@@ -19,6 +19,7 @@ public class RouteRequest {
     private Integer timeMin;
     private List<PointDto> bikeRoute;
     private List<PointDto> shortestRoute;
+    private List<WaypointDto> waypoints;   // 경유지 (순서대로, 없으면 null/빈 목록)
 
 
 }

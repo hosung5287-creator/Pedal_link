@@ -23,7 +23,7 @@ public class PartyMember {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // pending | joined | rejected
+    // pending | joined | rejected | kicked(방장이 내보냄 — 같은 파티에 다시 신청할 수 없다)
     @Column(nullable = false, length = 20)
     private String status = "pending";
 

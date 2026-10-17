@@ -1,0 +1,135 @@
+/* 프로필 AI 라이딩 리포트 — components/RideReport.jsx · RideCharts.jsx */
+
+/* 프로필은 grid 라 칸이 내용(1년치 잔디 SVG) 너비만큼 늘어난다 — 카드가 줄어들고 잔디만 가로로 밀리게 */
+.rrCard { min-width: 0; }
+
+.rrHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.rrHead h2 { margin: 0; }
+.rrBy { color: var(--muted); font-size: 0.76rem; font-weight: 700; }
+
+/* AI 요약·조언 */
+.rrInsight {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--wash);
+}
+.rrHint, .rrQuestion { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.55; }
+.rrQuestion { font-style: normal; }
+.rrSummary { margin: 0; color: var(--ink); font-size: 1rem; font-weight: 800; line-height: 1.55; }
+.rrLevel {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--mint-dark);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  vertical-align: 2px;
+}
+.rrAdvice { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink); font-size: 0.9rem; line-height: 1.6; }
+.rrMeta { margin: 0; color: var(--muted); font-size: 0.76rem; font-weight: 600; }
+.rrStale { color: var(--ink); }
+.rrError { margin: 0; color: var(--crit); font-size: 0.84rem; font-weight: 700; }
+.rrAnalyzeBtn {
+  align-self: flex-start;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.rrAnalyzeBtn:hover:not(:disabled) { background: var(--mint-dark); }
+.rrAnalyzeBtn:disabled { opacity: 0.7; cursor: progress; }
+.rrAnalyzeBtn:focus-visible { outline: 2px solid var(--mint-dark); outline-offset: 2px; }
+
+/* 그래프 탭 */
+.rrTabs { display: flex; gap: 4px; margin: 20px 0 14px; border-bottom: 1px solid var(--line); }
+.rrTabs button {
+  margin-bottom: -1px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.rrTabs button:hover { color: var(--ink); }
+.rrTabs button.isActive { color: var(--ink); border-bottom-color: var(--mint-dark); }
+.rrTabs button:focus-visible { outline: 2px solid var(--mint-dark); outline-offset: -2px; border-radius: 6px 6px 0 0; }
+
+/* 그래프 공통 */
+.rcChart { display: flex; flex-direction: column; gap: 10px; }
+.rcSvg { display: block; overflow: visible; font-family: inherit; }
+.rcSvg text { font-family: inherit; }
+.rcAxisText { fill: var(--muted); font-size: 10px; font-weight: 600; }
+.rcGridline { stroke: var(--line); stroke-width: 1; }
+.rcBaseline { stroke: #c7d5de; stroke-width: 1; }
+.rcLine { fill: none; stroke: var(--mint-dark); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.rcArea { fill: var(--mint); fill-opacity: 0.14; stroke: none; }
+.rcDot { fill: var(--mint-dark); stroke: var(--surface); stroke-width: 2; }
+.rcAvgLine { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+.rcCrosshair { stroke: var(--muted); stroke-width: 1; }
+.rcHit { fill: transparent; cursor: crosshair; }
+.rcEmpty { margin: 0; padding: 28px 12px; color: var(--muted); font-size: 0.88rem; text-align: center; }
+.rcCaption { margin: -2px 0 0; color: var(--muted); font-size: 0.78rem; }
+
+.rcHeadline { margin: 0; color: var(--muted); font-size: 0.86rem; font-weight: 700; }
+.rcHeadline strong { color: var(--ink); font-size: 1.5rem; font-weight: 900; margin-right: 2px; }
+.rcHeadline span { margin-left: 8px; }
+
+.rcPlot { position: relative; }
+
+/* 말풍선 — 점(칸) 바로 위에 뜬다 */
+.rcTip {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #ffffff;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+  box-shadow: 0 6px 18px rgba(12, 27, 39, 0.2);
+}
+.rcTip strong { font-weight: 800; }
+.rcTip span { color: #c7d5de; font-size: 0.72rem; }
+
+/* A. 잔디 */
+.rcTotals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.rcTotals div { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.rcTotals dt { color: var(--muted); font-size: 0.74rem; font-weight: 700; }
+.rcTotals dd { margin: 2px 0 0; color: var(--ink); font-size: 1.25rem; font-weight: 900; }
+.rcTotals small { margin-left: 2px; color: var(--muted); font-size: 0.74rem; font-weight: 700; }
+
+.rcHeatWrap { position: relative; display: flex; }
+.rcHeatDays { flex: none; margin-top: 4px; }
+.rcHeatScroll { flex: 1 1 auto; min-width: 0; overflow-x: auto; padding: 4px 0 6px; }
+.rcGrass.isEmpty { fill: #ebf0f3; }
+.rcGrass { stroke: rgba(12, 27, 39, 0.06); stroke-width: 1; }
+
+.rcLegend { display: flex; align-items: center; justify-content: flex-end; gap: 4px; color: var(--muted); font-size: 0.74rem; font-weight: 600; }
+.rcLegend span { margin: 0 4px; }
+.rcLegendCell { display: inline-block; width: 11px; height: 11px; border-radius: 2px; }
+.rcLegendCell.isEmpty { background: #ebf0f3; }
+
+@media (max-width: 639px) {
+  .rcTotals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rrTabs button { flex: 1 1 0; padding: 10px 6px; }
+}

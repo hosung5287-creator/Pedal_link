@@ -1,10 +1,14 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.FeedPageResponse;
 import com.example.demo.dto.FeedResponse;
+import com.example.demo.dto.FeedSummaryResponse;
 import com.example.demo.dto.PointDto;
 import com.example.demo.entity.Route;
+import com.example.demo.entity.RouteBookmark;
 import com.example.demo.entity.RouteLike;
 import com.example.demo.entity.User;
+import com.example.demo.repository.RouteBookmarkRepository;
 import com.example.demo.repository.RouteLikeRepository;
 import com.example.demo.repository.RouteRepository;
 import com.example.demo.repository.UserRepository;
@@ -14,6 +18,7 @@ import org.locationtech.jts.geom.LineString;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,41 +35,112 @@ public class FeedService {
 
     private final RouteRepository routeRepository;
     private final RouteLikeRepository routeLikeRepository;
+    private final RouteBookmarkRepository routeBookmarkRepository;
     private final UserRepository userRepository;
 
     // 썸네일에 쓸 좌표 개수 상한 — 이보다 많으면 일정 간격으로 솎아낸다
     private static final int THUMBNAIL_POINTS = 60;
+    private static final int MAX_PAGE_SIZE = 50;   // 피드 한 페이지 최대 개수
+    private static final int SIDEBAR_LIMIT = 5;    // 사이드바 순위 개수
 
     /**
      * 둘러보기 피드. 최신 경로부터.
      * @param viewerId 보고 있는 사람(비로그인이면 null) — 좋아요 눌렀는지 표시에만 쓴다
      */
     public List<FeedResponse> getFeed(Long viewerId) {
-        List<Route> routes = routeRepository.findAllByOrderByCreatedAtDesc();
+        return toCards(routeRepository.findByPublishedAtIsNotNullOrderByPublishedAtDesc(), viewerId);
+    }
+
+    /**
+     * 피드 한 페이지 — 최신순으로 size 개씩. [더 보기] 를 누를 때마다 page 를 하나씩 올려 부른다.
+     * @param region 구 이름(예: "마포구"). 비어 있거나 "전체"면 모든 게시물
+     */
+    public FeedPageResponse getFeedPage(Long viewerId, int page, int size, String region) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(page, 0);
+        String gu = (region == null || region.isBlank() || "전체".equals(region.trim())) ? null : region.trim();
+
+        // 한 개 더 읽어서 다음 페이지가 있는지 본다 (전체 개수를 세는 쿼리를 따로 돌리지 않으려고)
+        List<Route> rows = routeRepository.findFeedPage(gu, safeSize + 1, (long) safePage * safeSize);
+        boolean hasNext = rows.size() > safeSize;
+        List<Route> routes = hasNext ? rows.subList(0, safeSize) : rows;
+        return new FeedPageResponse(toCards(routes, viewerId), safePage, safeSize, hasNext);
+    }
+
+    /** 피드 사이드바 — 인기 코스(좋아요 순) 5개, 활발한 지역(게시물 수 순) 5개를 전체 게시물로 계산한다 */
+    public FeedSummaryResponse getSummary(Long viewerId) {
+        List<Long> topIds = routeRepository.findTopLikedRouteIds(SIDEBAR_LIMIT);
+        Map<Long, Route> byId = routeRepository.findAllById(topIds).stream()
+                .collect(Collectors.toMap(Route::getId, r -> r));
+        List<Route> topRoutes = topIds.stream().map(byId::get).filter(Objects::nonNull).toList(); // 순위 순서 유지
+
+        List<FeedSummaryResponse.RegionStat> regions = routeRepository.findTopRegions(SIDEBAR_LIMIT).stream()
+                .map(row -> new FeedSummaryResponse.RegionStat(
+                        (String) row[0], ((Number) row[1]).longValue(), ((Number) row[2]).longValue()))
+                .toList();
+        return new FeedSummaryResponse(toCards(topRoutes, viewerId), regions);
+    }
+
+    // 경로 여러 개 → 피드 카드. 작성자 이름·좋아요 수는 이 경로들 것만 한 번에 모아 읽는다(N+1 방지)
+    private List<FeedResponse> toCards(List<Route> routes, Long viewerId) {
         if (routes.isEmpty()) return List.of();
 
-        // 작성자 이름을 한 번에 조회 (경로마다 조회하면 N+1)
         Set<Long> authorIds = routes.stream()
                 .map(Route::getUserId).filter(Objects::nonNull).collect(Collectors.toSet());
         Map<Long, String> authorNames = userRepository.findAllById(authorIds).stream()
                 .collect(Collectors.toMap(User::getId, User::getName));
 
-        // 좋아요 수도 한 번에 집계
+        List<Long> routeIds = routes.stream().map(Route::getId).toList();
         Map<Long, Long> likeCounts = new HashMap<>();
-        for (Object[] row : routeLikeRepository.countGroupedByRouteId()) {
+        for (Object[] row : routeLikeRepository.countGroupedByRouteIdIn(routeIds)) {
             likeCounts.put((Long) row[0], (Long) row[1]);
         }
 
         Set<Long> likedByViewer = viewerId == null
                 ? Set.of()
                 : new HashSet<>(routeLikeRepository.findRouteIdsByUserId(viewerId));
+        Set<Long> bookmarkedByViewer = viewerId == null
+                ? Set.of()
+                : new HashSet<>(routeBookmarkRepository.findRouteIdsByUserIdAndRouteIdIn(viewerId, routeIds));
 
         return routes.stream()
-                .map(route -> toCard(route,
-                        authorNames.getOrDefault(route.getUserId(), "익명 라이더"),
-                        likeCounts.getOrDefault(route.getId(), 0L),
-                        likedByViewer.contains(route.getId())))
+                .map(route -> {
+                    FeedResponse card = toCard(route,
+                            authorNames.getOrDefault(route.getUserId(), "익명 라이더"),
+                            likeCounts.getOrDefault(route.getId(), 0L),
+                            likedByViewer.contains(route.getId()));
+                    card.setBookmarked(bookmarkedByViewer.contains(route.getId()));
+                    return card;
+                })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 북마크(저장) 토글 — 다른 사람의 코스를 내 "저장된 경로 목록"에 담거나 뺀다. 코스는 복사하지 않는다.
+     * 내 코스는 이미 목록에 있으므로 저장할 수 없다.
+     */
+    @Transactional
+    public Map<String, Object> toggleBookmark(Long routeId, Long userId) {
+        Route route = routeRepository.findById(routeId)
+                .orElseThrow(() -> new IllegalArgumentException("경로를 찾을 수 없습니다"));
+        if (userId.equals(route.getUserId())) {
+            throw new IllegalArgumentException("내 코스는 이미 저장된 경로 목록에 있어요");
+        }
+
+        var existing = routeBookmarkRepository.findByUserIdAndRouteId(userId, routeId);
+        if (existing.isPresent()) {
+            routeBookmarkRepository.delete(existing.get());
+            return Map.of("bookmarked", false);
+        }
+        // 피드에 올리지 않은(저장만 한) 코스는 남이 담을 수 없다
+        if (route.getPublishedAt() == null) {
+            throw new IllegalArgumentException("피드에 올라온 게시물만 저장할 수 있어요");
+        }
+        RouteBookmark bookmark = new RouteBookmark();
+        bookmark.setUserId(userId);
+        bookmark.setRouteId(routeId);
+        routeBookmarkRepository.save(bookmark);
+        return Map.of("bookmarked", true);
     }
 
     /** 경로 1건 → 피드 카드 1장 */
@@ -85,7 +161,8 @@ public class FeedService {
         r.setPath(thumbnailPath(route.getBikePath()));
         r.setLikeCount(likeCount);
         r.setLiked(liked);
-        r.setCreatedAt(route.getCreatedAt());
+        // 피드의 "n시간 전"은 코스를 만든 때가 아니라 게시물로 올린 때 기준
+        r.setCreatedAt(route.getPublishedAt() != null ? route.getPublishedAt() : route.getCreatedAt());
         return r;
     }
 
@@ -98,8 +175,8 @@ public class FeedService {
     }
 
     /**
-     * 게시물 올리기 — 이미 저장된 내 경로에 문구와 해시태그를 붙인다.
-     * 이 프로젝트에서 "게시물"은 별도 테이블이 아니라 경로에 딸린 내용이다.
+     * 게시물 올리기 — 이미 저장된 내 경로에 문구와 해시태그를 붙이고 피드에 공개한다(published_at).
+     * 이 프로젝트에서 "게시물"은 별도 테이블이 아니라 경로에 딸린 내용이다. 저장만 한 코스는 피드에 나오지 않는다.
      */
     @Transactional
     public FeedResponse publish(Long routeId, Long userId, String description, String rawTags, String region) {
@@ -112,9 +189,13 @@ public class FeedService {
 
         route.setDescription(trimToNull(description, 500));
         route.setTags(normalizeTags(rawTags));
-        // 코스 저장 시 자동으로 못 채워졌거나 잘못됐을 때, 게시물 올리는 시점에 고쳐 쓸 수 있게 한다.
+        // 게시물 지역은 코스를 저장할 때 정해진 값(고른 지역 또는 출발점 기준)을 그대로 쓴다.
+        // 글쓰기 화면은 지역을 보내지 않는다 — 값이 올 때만(예전 클라이언트 등) 덮어쓴다.
         // 여러 지역을 콤마로 이어 붙여 저장할 수 있어(tags 필드와 같은 방식) 여유 있게 잡는다.
-        route.setRegion(trimToNull(region, 300));
+        String pickedRegion = trimToNull(region, 300);
+        if (pickedRegion != null) route.setRegion(pickedRegion);
+        // 처음 올릴 때 공개 — 이 시각부터 피드에 나온다. 이미 올린 게시물을 고쳐 올리면 처음 올린 시각을 그대로 둔다.
+        if (route.getPublishedAt() == null) route.setPublishedAt(LocalDateTime.now());
         routeRepository.save(route);
 
         String authorName = userRepository.findById(userId).map(User::getName).orElse("익명 라이더");
@@ -175,7 +256,8 @@ public class FeedService {
         Coordinate[] coords = line.getCoordinates();
         if (coords.length == 0) return List.of();
 
-        int step = Math.max(1, coords.length / THUMBNAIL_POINTS);
+        // 올림 나눗셈 — 내림이면 119개짜리 선에서 step 이 1 이 되어 상한(60)의 두 배 가까이 남았다
+        int step = Math.max(1, (coords.length + THUMBNAIL_POINTS - 1) / THUMBNAIL_POINTS);
         List<PointDto> points = new ArrayList<>();
         for (int i = 0; i < coords.length; i += step) {
             points.add(toPoint(coords[i]));

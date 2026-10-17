@@ -6,9 +6,10 @@ import { api } from './client';
 // 자전거도로 GeoJSON 조회
 export const getCycleways = () => api.get('/api/cycleways');
 
-// 저장된 경로 목록 (userId 있으면 해당 유저 것만)
-export const getRoutes = (userId) =>
-  api.get(userId ? `/api/routes?userId=${userId}` : '/api/routes');
+// 저장된 경로 목록 — 기본은 내 코스만.
+// includeSaved: true 면 피드에서 저장(북마크)한 다른 사람의 코스도 함께 온다 (bookmarked: true, authorName 포함)
+export const getRoutes = (userId, { includeSaved = false } = {}) =>
+  api.get(`/api/routes?userId=${userId}${includeSaved ? '&includeSaved=true' : ''}`);
 
 // 경로 1개 상세 (bikeRoute / shortestRoute 좌표 포함)
 export const getRouteById = (id) => api.get(`/api/routes/${id}`);
@@ -18,5 +19,6 @@ export const getRouteById = (id) => api.get(`/api/routes/${id}`);
 //   bikeRoute: [{lat,lng}], shortestRoute: [{lat,lng}] }
 export const saveRoute = (route) => api.post('/api/routes', route);
 
-// 경로 삭제 (ids: number[])
-export const deleteRoutes = (ids) => api.post('/api/routes/delete', ids);
+// 저장된 경로 목록에서 지우기 → { deleted, unsaved }
+// 내 코스는 삭제되고, 저장한 다른 사람의 코스는 저장만 취소된다(원래 코스는 그대로).
+export const deleteRoutes = (userId, ids) => api.post('/api/routes/delete', { userId, ids });

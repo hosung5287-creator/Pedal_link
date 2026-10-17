@@ -6,7 +6,9 @@ import CreatePartyModal from '../components/CreatePartyModal';
 import RouteMapThumbnail from '../components/RouteMapThumbnail';
 
 import { useEffect, useState } from 'react';
-import { text } from '../constants';
+import { text, partyDock } from '../constants';
+import { errorMessage } from '../api/client';
+import { useLocationShare } from '../hooks/useLocationShare';
 import {
   getParties, createParty,
   applyToParty, approveRequest, rejectRequest, deleteParty, startPartyRide,
@@ -152,7 +154,13 @@ function PartyCard({ party, me, isLoggedIn, onApply, onApprove, onReject, onLogi
       <dl className="partyCardMeta">
         <div><dt>일정</dt><dd>{formatStartAt(party.startAt)}</dd></div>
         <div><dt>인원</dt><dd>{text.partyParticipants} {party.participants.length}/{party.maxMembers}{text.partyMembers}</dd></div>
-        <div><dt>{text.partyHost}</dt><dd>{party.hostName}</dd></div>
+        <div>
+          <dt>{text.partyHost}</dt>
+          <dd>
+            {party.hostName}
+            {!isHost && myState === 'none' && party.hostDistanceM != null && ` · ${text.partyHostDist(party.hostDistanceM)}`}
+          </dd>
+        </div>
       </dl>
 
       {confirmingDelete && (
@@ -224,6 +232,9 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [roomId, setRoomId] = useState(null);
+  // 남의 모집 중 링크는 나와 호스트가 둘 다 위치 공유 중이고 220m 안일 때만 서버가 준다.
+  // 이 페이지는 켜고 끄지 않고 상태만 읽는다 (켜기는 파티 도크·설정에서).
+  const [locShare] = useLocationShare(user?.id);
 
   // 내가 호스트이거나 참여 확정된 파티 = 대기방을 열 수 있는 파티.
   // id 는 서버가 숫자로 주지만 예전 로그인 정보가 문자열로 남아 있을 수 있어 느슨하게 비교한다.
@@ -251,7 +262,8 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
       } catch { /* 채팅 서버가 없어도 페이지는 그대로 동작해야 한다 */ }
     };
     load();
-    const timer = setInterval(load, 20000);
+    // 화면이 안 보일 때(다른 탭·최소화)는 건너뛴다 — 서버 요청 절약
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 20000);
     // 다른 화면에서 방을 읽으면 즉시 반영
     window.addEventListener(UNREAD_EVENT, load);
     return () => {
@@ -261,9 +273,11 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
     };
   }, [myRoomIds, user?.id]);
 
+  // 근처 링크는 나나 호스트가 움직이면 바뀌어서 주기적으로 다시 받는다.
+  // 위치 공유를 막 켰을 때는 첫 위치가 올라가기 전일 수 있어 다음 주기에 보인다.
   useEffect(() => {
     let alive = true;
-    getParties()
+    const load = () => getParties(user?.id)
       .then((p) => {
         if (!alive) return;
         setParties(p);
@@ -277,10 +291,11 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
       .finally(() => {
         if (alive) setLoading(false);
       });
-    return () => { alive = false; };
-    // 마운트 시 1회만 로드 (user?.id 는 최초 렌더 값 사용 의도)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    load();
+    // 화면이 안 보일 때(다른 탭·최소화)는 건너뛴다 — 서버 요청 절약
+    const timer = setInterval(() => { if (!document.hidden) load(); }, 10000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [user?.id, locShare]);
 
   // 목록에서 해당 파티만 교체
   const replaceParty = (updated) =>
@@ -318,9 +333,17 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
     openRidingRoom(partyId);
   };
 
-  const handleApply = async (id) => replaceParty(await applyToParty(id, me));
-  const handleApprove = async (partyId, userId) => replaceParty(await approveRequest(partyId, userId));
-  const handleReject = async (partyId, userId) => replaceParty(await rejectRequest(partyId, userId));
+  const handleApply = async (id) => {
+    setError('');
+    try {
+      replaceParty(await applyToParty(id, me));
+    } catch (e) {
+      // 범위 밖(220m)·위치 공유 꺼짐 같은 거부 사유를 서버가 알려준다
+      setError(errorMessage(e, partyDock.applyFailed));
+    }
+  };
+  const handleApprove = async (partyId, userId) => replaceParty(await approveRequest(partyId, userId, user.id));
+  const handleReject = async (partyId, userId) => replaceParty(await rejectRequest(partyId, userId, user.id));
 
   return (
     <div className="partyPage">
@@ -452,11 +475,15 @@ export default function PartyPage({ user, onMoveHome, onMoveLogin, onStartRide, 
       <main className="partyLayout">
         <section className="partySection">
           <h2>{text.partyOpenList}</h2>
+          {/* 남의 링크는 근처(호스트 220m)에서만 보인다 — 안 보이는 이유를 알려준다 */}
+          <p className="partyRangeHint">
+            {!isLoggedIn ? text.partyNeedLogin : locShare ? text.partyNearOnly : text.partyNeedShare}
+          </p>
           {error && <p className="partyError">{error}</p>}
           {loading ? (
             <p className="partyEmpty">불러오는 중…</p>
           ) : parties.length === 0 ? (
-            <p className="partyEmpty">{text.partyNoParties}</p>
+            <p className="partyEmpty">{isLoggedIn && locShare ? text.partyNoNearby : text.partyNoParties}</p>
           ) : (
             <div className="partyGrid">
               {parties.map((p) => (

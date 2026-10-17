@@ -2,8 +2,9 @@ import '../styles/partyroom.css';
 
 import { useEffect, useRef, useState } from 'react';
 import { partyRoom as t, text } from '../constants';
-import { approveRequest, rejectRequest, leaveParty, deleteParty, startPartyRide, setPartyReady } from '../api/parties';
-import { getRouteById } from '../api/routes';
+import { approveRequest, rejectRequest, leaveParty, deleteParty, startPartyRide, setPartyReady, kickMember, changePartyRoute } from '../api/parties';
+import { getRouteById, getRoutes } from '../api/routes';
+import { errorMessage } from '../api/client';
 import { useChat } from '../hooks/useChat';
 import { displayTime } from '../utils/chat';
 import { markRead } from '../utils/chatUnread';
@@ -22,7 +23,6 @@ const ICONS = {
   copy: 'M20 9h-9a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1',
   settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
-  mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3',
   userPlus: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8M19 8v6M22 11h-6',
   logOut: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
   trash: 'M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6',
@@ -135,7 +135,10 @@ function RouteCard({ party }) {
 // - onClose 를 주지 않으면 닫기 버튼이 사라진다(페이지에 붙일 때).
 // - inline: 배경/그림자를 걷어내고 페이지 안에 카드처럼 놓는다.
 export function PartyRoomPanel({ party, rooms, user, onSelectRoom, onClose, onUpdate, onRemove, onStartRide, inline = false }) {
-  const [showRequests, setShowRequests] = useState(false);
+  // 방장 제어판에서 펼친 목록 — 'members'(팀원 관리·강퇴) | 'route'(경로 수정) | 'requests'(참가 요청) | null
+  const [panel, setPanel] = useState(null);
+  const [kickTarget, setKickTarget] = useState(null); // 강퇴 확인 중인 팀원 { userId, name }
+  const [myRoutes, setMyRoutes] = useState(null);     // 경로 수정에서 고를 방장의 코스 (null = 아직 안 불러옴)
   const [confirming, setConfirming] = useState(null); // 'leave' | 'delete' | null
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -163,11 +166,36 @@ export function PartyRoomPanel({ party, rooms, user, onSelectRoom, onClose, onUp
     try {
       onUpdate(await fn());
       setConfirming(null);
-    } catch {
-      setError(t.actionFailed);
+      return true;
+    } catch (e) {
+      setError(errorMessage(e, t.actionFailed)); // "라이딩 중에는…" 같은 서버 이유를 그대로 보여준다
+      return false;
     } finally {
       setBusy(false);
     }
+  };
+
+  // 방장 제어판 목록 펼치기/접기 — 경로 수정을 처음 열 때 방장이 만든 코스를 불러온다(북마크한 남의 코스는 빼고)
+  const togglePanel = (name) => {
+    setKickTarget(null);
+    setPanel((cur) => (cur === name ? null : name));
+    if (name === 'route' && myRoutes === null) {
+      getRoutes(user.id)
+        .then((list) => setMyRoutes(list || []))
+        .catch(() => setMyRoutes([]));
+    }
+  };
+
+  const teammates = members.filter((m) => m.userId !== party.hostId);
+
+  const kick = async () => {
+    if (!kickTarget) return;
+    if (await runAction(() => kickMember(party.id, kickTarget.userId, user.id))) setKickTarget(null);
+  };
+
+  const pickRoute = async (routeId) => {
+    if (routeId === party.routeId) return;
+    if (await runAction(() => changePartyRoute(party.id, routeId, user.id))) setPanel(null);
   };
 
   const send = () => {
@@ -351,16 +379,18 @@ export function PartyRoomPanel({ party, rooms, user, onSelectRoom, onClose, onUp
               <div className="prMenuList">
                 {isHost ? (
                   <>
-                    <button type="button" className="prMenuBtn" disabled title={t.settingsSoonHint}>
-                      <Ico name="settings" /><span>{t.settingsSoon}</span><span className="prSoonBadge">{t.soonBadge}</span>
+                    <button type="button" className={`prMenuBtn${panel === 'members' ? ' isOpen' : ''}`}
+                      aria-expanded={panel === 'members'} onClick={() => togglePanel('members')}>
+                      <Ico name="settings" /><span>{t.settings}</span>
+                      {teammates.length > 0 && <span className="prCountBadge isNeutral">{teammates.length}</span>}
                     </button>
-                    <button type="button" className="prMenuBtn" disabled title={t.editRouteSoonHint}>
-                      <Ico name="map" /><span>{t.editRouteSoon}</span><span className="prSoonBadge">{t.soonBadge}</span>
+                    <button type="button" className={`prMenuBtn${panel === 'route' ? ' isOpen' : ''}`}
+                      aria-expanded={panel === 'route'} onClick={() => togglePanel('route')}
+                      disabled={!!party.rideStartedAt} title={party.rideStartedAt ? t.routeLockedRiding : undefined}>
+                      <Ico name="map" /><span>{t.editRoute}</span>
                     </button>
-                    <button type="button" className="prMenuBtn" disabled title={t.voiceSoonHint}>
-                      <Ico name="mic" /><span>{t.voiceChat}</span><span className="prSoonBadge">{t.soonBadge}</span>
-                    </button>
-                    <button type="button" className="prMenuBtn" onClick={() => setShowRequests((v) => !v)}>
+                    <button type="button" className={`prMenuBtn${panel === 'requests' ? ' isOpen' : ''}`}
+                      aria-expanded={panel === 'requests'} onClick={() => togglePanel('requests')}>
                       <Ico name="userPlus" /><span>{t.manageRequests}</span>
                       {pending.length > 0 && <span className="prCountBadge">{pending.length}</span>}
                     </button>
@@ -376,7 +406,71 @@ export function PartyRoomPanel({ party, rooms, user, onSelectRoom, onClose, onUp
               </div>
             </div>
 
-            {showRequests && (
+            {/* 파티 설정 — 팀원 목록과 강퇴 */}
+            {isHost && panel === 'members' && (
+              <div className="prPanelBox">
+                <h4 className="prPanelTitle">{t.membersTitle}</h4>
+                <ul className="prRequests">
+                  {teammates.length === 0 && <li className="prHint">{t.noTeammates}</li>}
+                  {teammates.map((m) => (
+                    <li key={m.userId} className="prRequestRow">
+                      <span className="prTeammate">
+                        <span className="prAvatar prAvatarSm" aria-hidden="true">{letterOf(m.name)}</span>
+                        <span>{m.name}</span>
+                        <span className={`prMemberState${m.ready ? ' isReady' : ''}`}>{m.ready ? t.readyDone : t.readyWaiting}</span>
+                      </span>
+                      <button type="button" className="prKickBtn" disabled={busy}
+                        onClick={() => setKickTarget({ userId: m.userId, name: m.name })}>
+                        {t.kick}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {kickTarget && (
+                  <div className="prConfirmBox" role="alertdialog" aria-label={t.kick}>
+                    <p>{t.kickConfirm(kickTarget.name)}</p>
+                    <div className="prConfirmActions">
+                      <button type="button" className="prGhostBtn" onClick={() => setKickTarget(null)}>{t.confirmNo}</button>
+                      <button type="button" className="prDangerBtn" disabled={busy} onClick={kick}>{t.kickYes}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 경로 수정 — 방장이 만든 코스에서 고르기 (라이딩 시작 전에만) */}
+            {isHost && panel === 'route' && (
+              <div className="prPanelBox">
+                <h4 className="prPanelTitle">{t.routePickTitle}</h4>
+                {myRoutes === null ? (
+                  <p className="prHint">{t.routeLoading}</p>
+                ) : myRoutes.length === 0 ? (
+                  <p className="prHint">{t.noMyRoutes}</p>
+                ) : (
+                  <ul className="prRoutePick">
+                    {myRoutes.map((r) => {
+                      const current = r.id === party.routeId;
+                      return (
+                        <li key={r.id}>
+                          <button type="button" className={`prRouteOption${current ? ' isCurrent' : ''}`}
+                            disabled={busy || current} aria-current={current ? 'true' : undefined}
+                            onClick={() => pickRoute(r.id)}>
+                            <strong>{r.routeName}</strong>
+                            <span>
+                              {r.distanceKm != null ? `${r.distanceKm} km` : `${r.fromLabel} → ${r.toLabel}`}
+                              {r.region ? ` · ${r.region.split(',')[0]}` : ''}
+                            </span>
+                            {current && <em className="prRouteCurrent">{t.currentRoute}</em>}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {isHost && panel === 'requests' && (
               <ul className="prRequests">
                 {pending.length === 0 && <li className="prHint">{t.noPendingShort}</li>}
                 {pending.map((p) => (
@@ -384,11 +478,11 @@ export function PartyRoomPanel({ party, rooms, user, onSelectRoom, onClose, onUp
                     <span>{p.name}</span>
                     <span className="prRequestActions">
                       <button type="button" className="prApproveBtn" disabled={busy}
-                        onClick={() => runAction(() => approveRequest(party.id, p.userId))}>
+                        onClick={() => runAction(() => approveRequest(party.id, p.userId, user.id))}>
                         {text.partyApprove}
                       </button>
                       <button type="button" className="prRejectBtn" disabled={busy}
-                        onClick={() => runAction(() => rejectRequest(party.id, p.userId))}>
+                        onClick={() => runAction(() => rejectRequest(party.id, p.userId, user.id))}>
                         {text.partyReject}
                       </button>
                     </span>

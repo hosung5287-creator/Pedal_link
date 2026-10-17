@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.EmailChangeRequest;
 import com.example.demo.dto.PasswordChangeRequest;
 import com.example.demo.dto.ProfileUpdateRequest;
+import com.example.demo.dto.PublicProfileResponse;
 import com.example.demo.dto.UserProfileResponse;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
@@ -33,6 +34,17 @@ public class UserController {
             return ResponseEntity.status(404).body(Map.of("message", "사용자를 찾을 수 없습니다."));
         }
         return ResponseEntity.ok(UserProfileResponse.from(user));
+    }
+
+    // 다른 사용자가 보는 공개 프로필 — 이메일·위치 공유 설정은 빼고 준다.
+    // "로그인한 사람만"은 프론트에서 막는다(서버에 로그인 인증이 아직 없어서 여기서는 구분할 수 없다).
+    @GetMapping("/{id}/public")
+    public ResponseEntity<?> getPublicProfile(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "사용자를 찾을 수 없습니다."));
+        }
+        return ResponseEntity.ok(PublicProfileResponse.from(user));
     }
 
     // 보낸 필드만 반영한다 — null 로 온 필드는 기존 값을 그대로 둔다

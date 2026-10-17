@@ -331,7 +331,51 @@ public record LiveLocation(Long userId, String name, double lat, double lng, lon
 | PUT | `/api/users/{id}/profile` | 수정 (보낸 필드만 반영) |
 | GET | `/api/ride-records/stats?userId=` | 누적 주행 통계 |
 
-**현재 컨트롤러 12개 · 엔드포인트 46종**
+### 추가 (2026-09-26 ~ 10-03) — 상세는 [24_최근_업데이트_0926_1003.md](24_최근_업데이트_0926_1003.md)
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| PUT | `/api/users/{id}/email` | 이메일 변경 `{ currentPassword, newEmail }` (400·401·409) |
+| PUT | `/api/users/{id}/password` | 비밀번호 변경 `{ currentPassword, newPassword }` |
+| GET | `/api/users/{id}/public` | 공개 프로필 (이메일·위치 공유 설정 없음) |
+| DELETE | `/api/locations?userId=` | 위치 공유를 끌 때 내 실시간 위치 즉시 삭제 (204) |
+| GET | `/api/parties?userId=` | **변경** — 내 파티 + 호스트 220m 안 모집 중 파티, `hostDistanceM` 포함, 끝난 파티 제외 |
+| POST | `/api/parties/{id}/apply` | **변경** — 위치 공유·220m 안이어야 신청 |
+| GET | `/api/ride-records/stats` | **변경** — `ascendPerKm` 추가, 상승고도는 탄 거리 비율만큼 |
+| POST | `/api/routes` | **변경** — `waypoints` (최대 100), 지역 미지정 시 출발점 구 |
+| GET | `/api/routes?userId=` | **변경** — `waypointCount` |
+| GET | `/api/me/status?userId=` | 내 상태 한 번에 — 받은·보낸 매칭 + 크루 라이딩 자동 이동 |
+| POST | `/api/crews/{crewId}/rides` | 크루 라이딩 열기 (팀장) |
+| GET | `/api/crews/{crewId}/rides/active?userId=` | 진행 중인 크루 라이딩 (없으면 204) |
+| GET | `/api/crew-rides/{eventId}?userId=` | 크루 라이딩 1건 |
+| GET | `/api/crew-rides/my-riding?userId=` | 내가 체크되어 라이딩 중인 크루 라이딩 |
+| POST | `/api/crew-rides/{eventId}/respond` | 참여/불참 `{ userId, accept }` |
+| POST | `/api/crew-rides/{eventId}/start-check` | 인원 체크 시작 (팀장, 당일) |
+| POST | `/api/crew-rides/{eventId}/check` | 인원 체크 `{ userId, targetUserId? }` — 없으면 일괄 |
+| POST | `/api/crew-rides/{eventId}/start` | 라이딩 시작 → 파티 생성 |
+| POST | `/api/crew-rides/{eventId}/cancel` | 취소 (팀장) |
+
+### 추가 (2026-10-07) — 상세는 [25_최근_업데이트_1007.md](25_최근_업데이트_1007.md)
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| PUT | `/api/crews/{id}/settings` | 크루 가입 방식 `{ userId, joinPolicy: approval·open·closed }` (리더만) |
+| POST | `/api/crews/{id}/requests/{userId}/approve·reject` | **변경** — body `{ leaderId }`, 리더·대기 중 신청만 |
+| GET | `/api/ride-records/insight?userId=` | 저장된 AI 리포트 + 기록이 바뀌었는지 (Claude 호출 없음) |
+| POST | `/api/ride-records/insight?userId=` | AI 분석 — 기록이 그대로면 저장분, 바뀌었으면 Claude 호출 |
+| GET | `/api/ride-records/tip?userId=` | 저장된 한마디 조언 + `stale` |
+| POST | `/api/ride-records/tip?userId=` | 통계가 바뀌었으면 새 한마디 조언 |
+| GET | `/api/feed/page?userId=&page=&size=20&region=` | 피드 한 페이지 (올린 게시물만, 최신순) |
+| GET | `/api/feed/summary` | 피드 사이드바 순위 (전체 게시물 기준) |
+| POST | `/api/routes/{routeId}/bookmark` | 북마크 토글 `{ userId }` → `{ bookmarked }` (올린 남의 게시물만) |
+| GET | `/api/routes?userId=&includeSaved=true` | **변경** — 북마크한 남의 코스도 함께 |
+| POST | `/api/routes/delete` | **변경** — body `{ userId, ids }`, 내 코스만 삭제·남의 코스는 저장 취소 |
+| POST | `/api/routes/{routeId}/post` | **변경** — 처음 올릴 때 `published_at` 기록 (그때부터 피드 공개) |
+| POST | `/api/parties/{id}/requests/{userId}/approve·reject` | **변경** — body `{ userId(방장) }`, 아니면 403 |
+| POST | `/api/parties/{id}/members/{memberId}/kick` | 팀원 강퇴 `{ userId(방장) }` — 재신청 불가 |
+| PUT | `/api/parties/{id}/route` | 파티 코스 변경 `{ userId(방장), routeId }` — 방장 코스만, 라이딩 중 불가 |
+| POST | `/api/parties/{id}/stop-ride` | **변경** — 크루 라이딩 파티면 파티까지 종료(ended) |
+| GET | `/api/me/status?userId=` | **변경** — `kickedParties` 추가, `crewRiding` 은 실제 라이딩 중일 때만 |
+
+**현재 컨트롤러 15개 (CrewRideController·MeController 추가) · 엔드포인트 약 63종**
 
 ---
 

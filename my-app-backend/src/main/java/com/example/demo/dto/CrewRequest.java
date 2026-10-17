@@ -10,6 +10,6 @@ public class CrewRequest {
     private String scheduleText;
     private String description;
     private String tag;
-    private String joinPolicy; // open | approval
+    private String joinPolicy; // approval | open | closed
     private String coverPhoto;
 }

@@ -1,13 +1,18 @@
 import '../styles/account.css';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import BrandLogo from '../components/BrandLogo';
+import BikeLinks from '../components/BikeLinks';
+import RideReport from '../components/RideReport';
+import Pagination from '../components/Pagination';
+import RideTip from '../components/RideTip';
+import { fmt1, minutesToHours } from '../utils/format';
 import { text, account } from '../constants';
 import { getProfile, updateProfile } from '../api/users';
 import { getRideStats, getRideHistory } from '../api/rides';
 
 const GENDER_LABEL = { male: '남성', female: '여성', none: '선택 안 함' };
-const EVEREST_M = 8849; // 총 상승고도를 재미로 비교할 기준
+const RIDES_PER_PAGE = 10; // 라이딩 기록 한 페이지에 보여줄 개수 (페이지 번호는 5개씩 묶어서 보인다)
 
 // 라이더 역량 — 각 항목을 "만렙 기준값" 대비 퍼센트로 계산한 다음,
 // 그 중 제일 높은 항목을 100%(가장 긴 막대)로 놓고 나머지는 그에 비례해서 보여준다.
@@ -54,6 +59,8 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [barsReady, setBarsReady] = useState(false);
+  const [ridePageState, setRidePage] = useState(1);
+  const rideCardRef = useRef(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -81,6 +88,20 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
   }, [stats]);
 
   const abilities = buildAbilities(stats);
+
+  // 라이딩 기록 페이지 나누기 — 기록은 그래프 때문에 이미 전부 받아 와 있어서 화면에서 잘라 보여준다(서버 요청 없음)
+  const rideTotal = history?.length || 0;
+  const rideTotalPages = Math.max(1, Math.ceil(rideTotal / RIDES_PER_PAGE));
+  const ridePage = Math.min(ridePageState, rideTotalPages); // 기록이 줄어 페이지가 사라졌을 때
+  const rideStart = (ridePage - 1) * RIDES_PER_PAGE;
+  const pagedRides = history ? history.slice(rideStart, rideStart + RIDES_PER_PAGE) : [];
+
+  // 페이지를 넘기면 카드 맨 위(새 페이지 첫 줄)로 올려 준다
+  const changeRidePage = (n) => {
+    setRidePage(Math.min(Math.max(1, n), rideTotalPages));
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    rideCardRef.current?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+  };
 
   const startEdit = () => { setError(''); setEditing(true); };
   const cancelEdit = () => { setEditing(false); setError(''); setForm(formOf(profile)); };
@@ -132,22 +153,17 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
           <h2>라이딩 통계</h2>
           <div className="accountStats">
             <div className="accountStat"><strong>{stats ? stats.rideCount : '-'}</strong><span>라이딩 횟수</span></div>
-            <div className="accountStat"><strong>{stats ? stats.totalDistanceKm.toFixed(1) : '-'}</strong><span>총 거리(km)</span></div>
-            <div className="accountStat"><strong>{stats ? stats.totalDurationMin : '-'}</strong><span>총 시간(분)</span></div>
+            <div className="accountStat"><strong>{stats ? fmt1(stats.totalDistanceKm) : '-'}</strong><span>총 거리(km)</span></div>
+            <div className="accountStat"><strong>{stats ? minutesToHours(stats.totalDurationMin) : '-'}</strong><span>총 시간(h)</span></div>
             <div className="accountStat"><strong>{stats ? stats.totalAscendM : '-'}</strong><span>총 상승고도(m)</span></div>
+            <div className="accountStat"><strong>{stats?.ascendPerKm != null ? stats.ascendPerKm.toFixed(1) : '-'}</strong><span>km당 상승(m)</span></div>
             <div className="accountStat"><strong>{stats ? stats.mountainRideCount : '-'}</strong><span>산악 코스 완주</span></div>
           </div>
-          {stats?.totalAscendM > 0 && (
-            <p className="accountAchieve">
-              🏔️ 지금까지 오른 높이는 에베레스트산의 {((stats.totalAscendM / EVEREST_M) * 100).toFixed(1)}%예요
-            </p>
-          )}
-          {stats?.mountainRideCount > 0 && (
-            <p className="accountAchieve">
-              🚵 상승고도 {stats.mountainThresholdM}m 이상 코스를 {stats.mountainRideCount}번 완주한 산악 라이더예요
-            </p>
-          )}
+          {/* 통계가 바뀔 때마다 Claude 가 새로 쓰는 한마디 조언 (없으면 아무것도 안 보인다) */}
+          {user?.id && <RideTip userId={user.id} />}
         </section>
+
+        {history && <RideReport userId={user.id} rides={history} />}
 
         {abilities.length > 0 && (
           <section className="accountCard">
@@ -169,15 +185,22 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
           </section>
         )}
 
-        <section className="accountCard">
-          <h2>라이딩 기록</h2>
+        <section className="accountCard" ref={rideCardRef}>
+          <div className="accountCardHead">
+            <h2>라이딩 기록</h2>
+            {rideTotal > 0 && (
+              <span className="accountRideRange">
+                {rideStart + 1}–{rideStart + pagedRides.length} / {rideTotal}건
+              </span>
+            )}
+          </div>
           {!history ? (
             <p className="accountEmptyHint">불러오는 중…</p>
           ) : history.length === 0 ? (
             <p className="accountEmptyHint">아직 라이딩 기록이 없어요. 라이딩을 시작해보세요!</p>
           ) : (
             <ul className="accountRideList">
-              {history.map((r) => {
+              {pagedRides.map((r) => {
                 const isMountain = stats?.mountainThresholdM != null && r.ascendM >= stats.mountainThresholdM;
                 return (
                   <li key={r.id} className="accountRideRow">
@@ -196,6 +219,7 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
               })}
             </ul>
           )}
+          <Pagination page={ridePage} totalPages={rideTotalPages} onChange={changeRidePage} label="라이딩 기록 페이지" />
         </section>
 
         <section className="accountCard">
@@ -255,7 +279,7 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
               <li>성별<span>{GENDER_LABEL[profile?.gender] || '선택 안 함'}</span></li>
               <li>나이<span>{profile?.age ?? '-'}</span></li>
               <li>지역<span>{profile?.region || '-'}</span></li>
-              <li>보유 자전거<span>{profile?.bikeInfo || '-'}</span></li>
+              <li>보유 자전거<BikeLinks info={profile?.bikeInfo} /></li>
             </ul>
           )}
         </section>

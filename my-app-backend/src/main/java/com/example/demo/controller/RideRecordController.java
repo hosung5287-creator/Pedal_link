@@ -1,10 +1,15 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.RideInsightResponse;
 import com.example.demo.dto.RideRecordRequest;
+import com.example.demo.dto.RideTipResponse;
 import com.example.demo.entity.RideRecord;
 import com.example.demo.entity.Route;
 import com.example.demo.repository.RideRecordRepository;
 import com.example.demo.repository.RouteRepository;
+import com.example.demo.service.ClaudeClient;
+import com.example.demo.service.RideInsightService;
+import com.example.demo.service.RideTipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +26,8 @@ public class RideRecordController {
 
     private final RideRecordRepository rideRecordRepository;
     private final RouteRepository routeRepository;
+    private final RideInsightService rideInsightService;
+    private final RideTipService rideTipService;
 
     // 이 상승고도(m) 이상이면 "산악 코스"로 친다. 나중에 조정하고 싶으면 이 값만 바꾸면 된다.
     private static final int MOUNTAIN_ASCEND_M = 300;
@@ -45,8 +52,8 @@ public class RideRecordController {
         return ResponseEntity.ok(Map.of("id", saved.getId(), "message", "주행 기록 저장 완료"));
     }
 
-    // routes.ascend_m 을 조인해서 각 기록의 ascendM(전이 필드)을 채운다.
-    // 코스가 지워졌거나 자유주행(routeId 없음)이면 null로 남는다.
+    // routes.ascend_m 을 조인해서 각 기록의 ascendM(전이 필드) = "이번 라이딩에서 인정된 상승고도"를 채운다.
+    // 코스가 지워졌거나, 자유주행(routeId 없음)이거나, 코스의 상승고도를 모르면 null로 남는다.
     private void fillAscendM(List<RideRecord> records) {
         List<Long> routeIds = records.stream()
                 .map(RideRecord::getRouteId)
@@ -55,9 +62,26 @@ public class RideRecordController {
                 .collect(Collectors.toList());
         if (routeIds.isEmpty()) return;
 
-        Map<Long, Integer> ascendByRouteId = routeRepository.findAllById(routeIds).stream()
-                .collect(Collectors.toMap(Route::getId, Route::getAscendM));
-        records.forEach(r -> r.setAscendM(r.getRouteId() != null ? ascendByRouteId.get(r.getRouteId()) : null));
+        // 값(ascendM)이 아니라 Route 를 담는다 — toMap 은 값이 null 이면 NPE 를 내서,
+        // 상승고도 기능 이전에 저장된 코스(ascend_m = null)를 탄 사용자는 목록·통계가 500 이 났다.
+        Map<Long, Route> routeById = routeRepository.findAllById(routeIds).stream()
+                .collect(Collectors.toMap(Route::getId, route -> route));
+        records.forEach(r -> {
+            Route route = r.getRouteId() != null ? routeById.get(r.getRouteId()) : null;
+            r.setAscendM(route == null ? null : creditedAscendM(route, r.getDistanceKm()));
+        });
+    }
+
+    // 코스를 끝까지 안 타도 코스 전체 상승고도를 주면 과장되므로, 탄 거리 비율만큼만 인정한다(최대 100%).
+    // 상승고도는 코스를 만들 때 BRouter 가 지형 고도로 계산한 예상값이다(GPS 로 잰 값이 아님).
+    // 코스 거리를 모르면 비율을 낼 수 없어 코스 값을 그대로 쓴다.
+    private static Integer creditedAscendM(Route route, Double rideDistanceKm) {
+        Integer routeAscendM = route.getAscendM();
+        if (routeAscendM == null) return null;
+        Double routeDistanceKm = route.getDistanceKm();
+        if (routeDistanceKm == null || routeDistanceKm <= 0 || rideDistanceKm == null) return routeAscendM;
+        double ratio = Math.min(1.0, rideDistanceKm / routeDistanceKm);
+        return (int) Math.round(routeAscendM * ratio);
     }
 
     // 내 주행 기록 목록 (최신순) — 라이딩 기록 리스트 화면이 그대로 쓴다
@@ -71,14 +95,65 @@ public class RideRecordController {
     // 프로필에 보여줄 누적 통계·성취감 지표 — 기록이 많지 않은 서비스 규모라 그냥 합산한다
     @GetMapping("/stats")
     public Map<String, Object> stats(@RequestParam Long userId) {
+        return statsOf(recordsOf(userId));
+    }
+
+    // 프로필 AI 라이딩 리포트 — 저장된 분석과, 그 뒤로 기록이 바뀌었는지 (Claude 는 부르지 않는다)
+    @GetMapping("/insight")
+    public RideInsightResponse insight(@RequestParam Long userId) {
+        return rideInsightService.get(userId, recordsOf(userId));
+    }
+
+    // [AI 분석 보기] — 기록이 그대로면 저장된 결과를, 바뀌었으면 Claude 에 새로 물어본다
+    @PostMapping("/insight")
+    public ResponseEntity<?> analyze(@RequestParam Long userId) {
+        List<RideRecord> records = recordsOf(userId);
+        try {
+            return ResponseEntity.ok(rideInsightService.analyze(userId, records, statsOf(records)));
+        } catch (ClaudeClient.AiException e) {
+            return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 라이딩 통계 카드의 한마디 조언 — 저장된 조언과, 통계가 바뀌어 새로 만들 차례인지 (Claude 는 부르지 않는다)
+    @GetMapping("/tip")
+    public RideTipResponse tip(@RequestParam Long userId) {
+        return rideTipService.get(userId, statsOf(recordsOf(userId)));
+    }
+
+    // 통계가 바뀌었으면 Claude 가 새 한마디 조언을 쓴다 (프로필을 열 때 stale 이면 프론트가 부른다)
+    @PostMapping("/tip")
+    public ResponseEntity<?> refreshTip(@RequestParam Long userId) {
+        List<RideRecord> records = recordsOf(userId);
+        try {
+            return ResponseEntity.ok(rideTipService.refresh(userId, records, statsOf(records)));
+        } catch (ClaudeClient.AiException e) {
+            return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 최신순 기록 + 기록마다 인정된 상승고도
+    private List<RideRecord> recordsOf(Long userId) {
         List<RideRecord> records = rideRecordRepository.findByUserIdOrderByRidedAtDesc(userId);
         fillAscendM(records);
+        return records;
+    }
+
+    private Map<String, Object> statsOf(List<RideRecord> records) {
         double totalDistanceKm = records.stream().mapToDouble(RideRecord::getDistanceKm).sum();
         int totalDurationMin = records.stream().mapToInt(RideRecord::getDurationMin).sum();
         int totalAscendM = records.stream().filter(r -> r.getAscendM() != null).mapToInt(RideRecord::getAscendM).sum();
         long mountainRideCount = records.stream()
                 .filter(r -> r.getAscendM() != null && r.getAscendM() >= MOUNTAIN_ASCEND_M)
                 .count();
+
+        // km당 상승고도(m/km) — 얼마나 가파른 길을 타는지. 상승고도를 아는 기록(코스 라이딩)만 대상이다.
+        // 자유주행은 오르막이 0이 아니라 "모름"이라 분모에 넣으면 평균이 부당하게 낮아진다.
+        double ascendKnownKm = records.stream()
+                .filter(r -> r.getAscendM() != null)
+                .mapToDouble(RideRecord::getDistanceKm)
+                .sum();
+        Double ascendPerKm = ascendKnownKm > 0 ? Math.round(totalAscendM / ascendKnownKm * 10) / 10.0 : null;
 
         Map<String, Object> result = new HashMap<>();
         result.put("rideCount", records.size());
@@ -87,6 +162,7 @@ public class RideRecordController {
         result.put("totalAscendM", totalAscendM);
         result.put("mountainRideCount", mountainRideCount);
         result.put("mountainThresholdM", MOUNTAIN_ASCEND_M);
+        result.put("ascendPerKm", ascendPerKm); // 코스 라이딩 기록이 없으면 null
         return result;
     }
 }

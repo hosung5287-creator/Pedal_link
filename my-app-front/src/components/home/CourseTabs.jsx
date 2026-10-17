@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import CourseLiveDemo from './CourseLiveDemo';
 
-export default function CourseTabs({ features }) {
+// 탭 + 오른쪽 시연. 코스 만들기(기본)와 함께 달리기(Demo=PartyLiveDemo)가 같은 탭 UX 를 쓴다.
+export default function CourseTabs({ features, label = '코스 만들기 기능', Demo = CourseLiveDemo, idPrefix = 'course' }) {
   const [active, setActive] = useState(0);
-  const [direction, setDirection] = useState(1);
+
   const timer = useRef();
   const buttons = useRef([]);
   const reduced = useReducedMotion();
@@ -11,7 +13,7 @@ export default function CourseTabs({ features }) {
   const select = (index) => {
     clearTimeout(timer.current);
     if (index === active) return;
-    setDirection(index > active ? 1 : -1);
+
     setActive(index);
   };
   const navigate = (event, index) => {
@@ -27,10 +29,10 @@ export default function CourseTabs({ features }) {
     <motion.div className="courseShowcase" initial={reduced ? false : { opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}>
-      <div className="courseTabList" role="tablist" aria-label="코스 만들기 기능">
+      <div className="courseTabList" role="tablist" aria-label={label}>
         {features.map((feature, index) => (
           <button key={feature.title} ref={node => { buttons.current[index] = node; }}
-            type="button" role="tab" id={`course-tab-${index}`} aria-controls={`course-panel-${index}`}
+            type="button" role="tab" id={`${idPrefix}-tab-${index}`} aria-controls={`${idPrefix}-panel-${index}`}
             aria-selected={active === index} tabIndex={active === index ? 0 : -1}
             className={`courseTab${active === index ? ' isActive' : ''}`}
             onClick={() => select(index)} onFocus={() => select(index)}
@@ -38,24 +40,13 @@ export default function CourseTabs({ features }) {
             onPointerLeave={() => clearTimeout(timer.current)} onKeyDown={event => navigate(event, index)}>
             <span className="courseTabTitle"><span className="courseTabNumber" aria-hidden="true">0{index + 1}</span>{feature.title}</span>
             <span className="courseTabDesc">{feature.desc}</span>
-            {active === index && <motion.span className="courseTabIndicator" layoutId="course-active-tab"
+            {active === index && <motion.span className="courseTabIndicator" layoutId={`${idPrefix}-active-tab`}
               transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }} />}
           </button>
         ))}
       </div>
-      <div className="courseTabMedia">
-        {features.map((feature, index) => (
-          <motion.div key={feature.title} role="tabpanel" id={`course-panel-${index}`}
-            aria-labelledby={`course-tab-${index}`} aria-hidden={active !== index}
-            className="courseTabPanel" initial={false}
-            animate={{ opacity: active === index ? 1 : 0, scale: active === index || reduced ? 1 : 1.045,
-              x: active === index || reduced ? 0 : direction * -24 }}
-            transition={{ duration: reduced ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
-            style={{ pointerEvents: active === index ? 'auto' : 'none', zIndex: active === index ? 1 : 0 }}>
-            <img src={feature.image} alt={feature.alt} width={index === 1 ? 1450 : 2080} height={index === 1 ? 753 : 1080} decoding="async" />
-          </motion.div>
-        ))}
-        <span className="courseMapCredit">© OpenStreetMap contributors</span>
+      <div className="courseTabMedia" role="tabpanel" id={`${idPrefix}-panel-${active}`} aria-labelledby={`${idPrefix}-tab-${active}`}>
+        <Demo stage={active} />
       </div>
     </motion.div>
   );

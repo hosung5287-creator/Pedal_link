@@ -8,6 +8,7 @@ import SplitSection from '../components/home/SplitSection';
 import ClosingCta from '../components/home/ClosingCta';
 import SiteFooter from '../components/home/SiteFooter';
 import FeedMarquee from '../components/home/FeedMarquee';
+import MatchLiveDemo from '../components/home/MatchLiveDemo';
 
 export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, onMoveLogin, onMoveParty, onMoveCrew, onMoveBrowse, onMoveProfile, onMoveSettings, onLogout }) {
   return (
@@ -28,7 +29,7 @@ export default function HomePage({ user, onOpenMap, onMoveHome, onMoveSignup, on
       <MotionConfig reducedMotion="user">
         <main className="homeMain">
           <ShowcaseSection {...homeCourse} />
-          <SplitSection {...homeMatch} />
+          <SplitSection {...homeMatch} media={<MatchLiveDemo />} />
           <ShowcaseSection {...homeParty} />
           <SplitSection {...homeBrowse} reverse media={<FeedMarquee />} />
           <ClosingCta {...homeCta} onOpenMap={onOpenMap} onMoveBrowse={onMoveBrowse} />

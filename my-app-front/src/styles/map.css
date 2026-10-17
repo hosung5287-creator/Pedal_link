@@ -102,6 +102,28 @@
   color: var(--muted);
 }
 
+/* 파티 지도에서 위치 공유가 꺼져 있을 때 안내 */
+.mapPartyBanner .mapPartyShareOff {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--crit);
+  font-weight: 600;
+}
+
+.mapPartyShareOff button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 /* 경로 패널 안 지도 설정 (레이어·지역) — 예전 헤더에서 옮겨옴 */
 .plannerMapControls {
   display: grid;

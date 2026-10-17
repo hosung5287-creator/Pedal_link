@@ -1,0 +1,147 @@
+/* 함께 달리기 시연 (홈 S4) — 코스 시연(.cld)과 같은 골격: 왼쪽 패널 30% + 지도 */
+.pld {
+  position: relative;
+  min-height: 540px;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background: var(--surface-2);
+  container-type: inline-size;
+}
+.pldStage { position: absolute; inset: 0; }
+
+.pldMap { position: absolute; inset: 0 0 0 30%; overflow: hidden; }
+.pldMap > img,
+.pldRoute { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.pldMap > img { object-fit: fill; }
+.pldRoute path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.pldRouteCase { stroke: var(--surface); stroke-width: 12; }
+.pldRouteLine { stroke: var(--mint); stroke-width: 7; }
+
+.pldStart {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  margin: -42px 0 0 -19px;
+  border: 2px solid var(--mint-dark);
+  border-radius: 50% 50% 50% 4px;
+  background: var(--surface);
+  color: var(--mint-dark);
+  box-shadow: 0 4px 12px rgba(20, 51, 75, 0.14);
+}
+.pldStart svg { width: 26px; height: 26px; margin: 4px; }
+.pldStart span {
+  position: absolute;
+  top: -29px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pldMember {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--mint);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(12, 27, 39, 0.25);
+}
+.pldMember.isRiding { background: var(--mint-dark); }
+
+.pldCountDim { position: absolute; inset: 0; background: rgba(12, 27, 39, 0.45); pointer-events: none; }
+.pldCount {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--surface);
+  font-size: clamp(64px, 12cqi, 140px);
+  font-weight: 900;
+  text-shadow: 0 6px 30px rgba(12, 27, 39, 0.45);
+  pointer-events: none;
+}
+.pldCount.isGo { color: var(--sun); }
+
+.pldPanel {
+  position: relative;
+  width: 30%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(18px, 2.2vw, 34px);
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 10px 0 32px rgba(20, 51, 75, 0.04);
+}
+/* 앱 화면 헤더 — 실제 앱처럼 (뒤로 가기 + 화면 제목 + 실시간 표시) */
+.pldAppHead { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.pldAppHead strong { font-size: clamp(15px, 1.25vw, 18px); font-weight: 800; }
+.pldBack { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: var(--surface-2); color: var(--ink); }
+.pldBack svg { width: 16px; height: 16px; }
+.pldLive { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.pldLive::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+
+.pldCard { padding: 16px; border: 1px solid var(--line); border-radius: 14px; }
+.pldCardHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.pldCardHead strong { font-size: 15px; font-weight: 800; }
+.pldCard p { margin: 0 0 4px; color: var(--muted); font-size: 12px; }
+.pldBadge { padding: 4px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.12); color: var(--good); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.pldBadge.isRiding { background: var(--accent-soft); color: var(--mint-dark); }
+.pldCapacity { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.pldCapacity small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.pldCapacity b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.pldBar { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.pldBar i { display: block; height: 100%; border-radius: 3px; background: var(--mint); }
+
+.pldButton { padding: 14px 16px; border-radius: 10px; background: var(--mint); color: var(--surface); font-size: 13px; font-weight: 700; text-align: center; }
+
+.pldRequest small,
+.pldMembers small { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; }
+.pldRequestRow { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 12px; }
+.pldApprove { margin-left: auto; padding: 6px 12px; border-radius: 999px; background: var(--mint); color: var(--surface); font-weight: 800; }
+.pldCheck { margin-left: auto; color: var(--good); font-weight: 900; }
+.pldAvatar {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--mint);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+}
+.pldMembers > div { display: flex; gap: 6px; }
+.pldNote { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+.pldReplay { position: absolute; bottom: 22px; right: 20px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.pldReplay:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+.pldCredit { position: absolute; right: 6px; bottom: 3px; padding: 0 3px; background: rgba(255, 255, 255, 0.86); color: var(--muted); font-size: 9px; text-decoration: none; }
+
+.courseTabMedia:has(.pld) { aspect-ratio: auto; }
+
+@media (max-width: 767px) {
+  .pld { aspect-ratio: auto; min-height: 700px; display: flex; flex-direction: column; }
+  .pldMap { inset: 0 0 auto; height: 310px; }
+  .pldPanel { width: 100%; min-height: 390px; margin-top: 310px; padding: 18px 20px 52px; border-top: 1px solid var(--line); border-right: 0; }
+  .pldAppHead { padding-bottom: 12px; }
+  .pldCount { height: 310px; }
+  .pldReplay { right: 16px; bottom: 16px; }
+  .pldCredit { top: 295px; bottom: auto; }
+}

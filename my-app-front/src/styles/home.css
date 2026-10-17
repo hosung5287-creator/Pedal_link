@@ -161,6 +161,15 @@
   gap: 44px;
 }
 
+/* 제목 묶음 + (있으면) 오른쪽 버튼 — 좁은 화면에선 버튼이 아래로 */
+.homeShowcaseTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px 32px;
+}
+
 .homeShowcaseHead {
   display: flex;
   flex-direction: column;
@@ -281,6 +290,19 @@
   border-radius: 999px;
   background: var(--accent-soft);
 }
+
+.homeSplitIcon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--mint-dark);
+}
+.homeSplitIcon svg { width: 18px; height: 18px; }
+.homeSplitList li:has(.homeSplitIcon) { gap: 12px; font-weight: 600; }
 
 .homeSplit .homeImgSlot {
   flex: 0 0 46%;
@@ -706,7 +728,8 @@
 .homePage .heroFull .navbar { width:min(1560px, calc(100% - var(--home-gutter) * 2)); max-width:none; margin-inline:auto; }
 .homePage .homeShowcaseInner { gap:28px; }
 .homePage .homeShowcaseHead { max-width:780px; }
-.homePage .homeSplitInner { gap:clamp(40px, 5vw, 88px); }
+/* 넓은 화면에서 텍스트+시연 묶음이 왼쪽에 쏠리지 않게 가운데로 */
+.homePage .homeSplitInner { gap:clamp(40px, 5vw, 88px); justify-content:center; }
 .homePage .homeSplitText { flex:0 1 480px; }
 .homePage .homeShowcase,.homePage .homeSplit { padding-block:clamp(72px, 6vw, 104px); }
 @media(max-width:767px) {

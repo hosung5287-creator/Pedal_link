@@ -1,0 +1,50 @@
+/* 크루 시연 — 골격은 파티 시연(.pld*)을 그대로 쓰고, 크루에만 있는 조각만 여기 */
+
+/* 지도 위 크루 모임 장소 핀 (말풍선 + 이름) */
+.crdPin {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 6px;
+  translate: -50% -100%;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(20, 51, 75, 0.14);
+}
+.crdPin svg { width: 22px; height: 18px; color: var(--muted); }
+.crdPin.isActive { border-color: var(--mint-dark); color: var(--mint-dark); }
+.crdPin.isActive svg { color: var(--mint-dark); }
+
+/* 찾기 — 필터 칩 + 크루 목록 */
+.crdChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.crdChip { padding: 6px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--mint-dark); font-size: 11px; font-weight: 800; }
+.crdList { display: flex; flex-direction: column; gap: 8px; }
+.crdItem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: border-color 0.25s, background-color 0.25s;
+}
+.crdItem strong { font-size: 13px; font-weight: 800; }
+.crdItem span { grid-column: 1; color: var(--muted); font-size: 11px; }
+.crdItem b { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--muted); font-size: 12px; }
+.crdItem.isActive { border-color: var(--mint); background: #eff9ff; }
+
+/* 가입 신청 → 승인 대기 → 가입됨 */
+.crdCount { color: var(--ink) !important; font-weight: 800; }
+.crdJoin { transition: background-color 0.25s, color 0.25s; }
+.crdJoin.isPending { background: var(--surface-2); color: var(--muted); }
+.crdJoin.isJoined { background: var(--good); }
+
+@media (prefers-reduced-motion: reduce) {
+  .crdItem, .crdJoin { transition: none; }
+}

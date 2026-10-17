@@ -7,8 +7,8 @@ import { reportLocation, getOtherLocations } from '../api/locations';
 import { getRouteById } from '../api/routes';
 import { sendMatchRequest, getOutgoingMatches } from '../api/matches';
 import { getProfile } from '../api/users';
-import { api } from '../api/client';
 import { useLocationShare } from '../hooks/useLocationShare';
+import { submitRideRecord } from '../utils/rideRecords';
 import UserProfileModal from './UserProfileModal';
 import { text } from '../constants';
 
@@ -34,6 +34,13 @@ function fmtProxDist(d) {
 }
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
+
+// 기록 저장 결과 → 요약 팝업 안내 문구
+const SAVE_NOTE = {
+  queued: text.rideSaveQueued,
+  rejected: text.rideSaveFailed,
+  lost: text.rideSaveFailed,
+};
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -80,6 +87,13 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   const otherMarkersRef = useRef(new Map()); // userId -> Leaflet 마커 (VISIBLE_M 안에 있는 사람만)
   const profileCacheRef = useRef(new Map()); // userId -> 프로필 | 'loading' | null(실패)
   const proxTimerRef = useRef(null);
+  const rideDistanceRef = useRef(0); // 언마운트 시 저장용 최신 거리 미러
+  const finalizedRef = useRef(false); // 기록 확정은 종료 버튼·언마운트 중 한 번만
+  const stoppedRef = useRef(false);
+
+  const [shareOn, setShare] = useLocationShare(user.id);
+  const shareOnRef = useRef(shareOn);
+  useEffect(() => { shareOnRef.current = shareOn; }, [shareOn]);
 
   const [rideTime, setRideTime] = useState(0);
   const [rideDistance, setRideDistance] = useState(0);
@@ -90,9 +104,6 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   const [proxAlert, setProxAlert] = useState(null); // { userId, name, dist, entering }
   const [sentMatches, setSentMatches] = useState(new Set()); // 이미 매칭 신청을 보낸 userId
   const [matchSending, setMatchSending] = useState(false);
-  // 위치 공유 스위치 — 꺼져 있으면 내 위치를 서버에 보내지 않는다(다른 사람 위치는 계속 본다).
-  // 폴링 타이머를 다시 만들지 않도록 최신 값은 ref 로 읽는다.
-  const [locShare, setLocShare] = useLocationShare(user?.id);
   // 핀을 눌러 연 상세 프로필 { id, name } + 멀어서 못 열 때 잠깐 뜨는 안내
   const [profileTarget, setProfileTarget] = useState(null);
   const [notice, setNotice] = useState('');
@@ -112,8 +123,6 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   const openProfileRef = useRef(openProfile);
   openProfileRef.current = openProfile;
   useEffect(() => () => clearTimeout(noticeTimerRef.current), []);
-  const locShareRef = useRef(locShare);
-  useEffect(() => { locShareRef.current = locShare; }, [locShare]);
 
   const showProxAlert = (info) => {
     clearTimeout(proxTimerRef.current);
@@ -161,7 +170,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        if (cancelled || !mapRef.current) return;
+        if (cancelled || stoppedRef.current || !mapRef.current) return;
         const map = mapRef.current;
         const { latitude, longitude } = pos.coords;
         const prev = lastPosRef.current;
@@ -178,7 +187,10 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           if (dt >= 1) {
             const moved = map.distance([prev.lat, prev.lng], [latitude, longitude]);
             setMySpeedKmh((moved / dt) * 3.6);
-            if (moved > 5) setRideDistance((d) => d + moved);
+            if (moved > 5) {
+              rideDistanceRef.current += moved;
+              setRideDistance(rideDistanceRef.current);
+            }
           }
         }
         lastPosRef.current = { lat: latitude, lng: longitude, time: pos.timestamp };
@@ -205,6 +217,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
   // 라이딩 시간 타이머
   useEffect(() => {
     const timer = setInterval(() => {
+      if (stoppedRef.current) return;
       setRideTime(Math.floor((Date.now() - rideStartMsRef.current) / 1000));
     }, 1000);
     return () => clearInterval(timer);
@@ -220,10 +233,11 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
     const timer = setInterval(async () => {
       const pos = lastPosRef.current;
       const map = mapRef.current;
-      if (!pos || !map) return;
+      if (!pos || !map || stoppedRef.current) return;
 
       try {
-        if (locShareRef.current) {
+        // 위치 공유가 꺼져 있으면 내 위치는 보내지 않는다(남의 위치 조회는 유지)
+        if (shareOnRef.current) {
           await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
         }
         const others = (await getOtherLocations(user.id)) || [];
@@ -332,23 +346,52 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
     if (pos) mapRef.current?.panTo([pos.lat, pos.lng], { animate: true });
   };
 
+  // 기록 확정 — 종료 버튼과 언마운트(닫기·파티 전환) 공통. 한 번만 실행된다.
+  const buildRecord = () => {
+    const distanceM = rideDistanceRef.current;
+    if (distanceM <= 0) return null;
+    return {
+      userId: user.id,
+      distance: distanceM / 1000,
+      duration: Math.floor((Date.now() - rideStartMsRef.current) / 60000),
+      partyId: null,
+      routeId: route?.id ?? null,
+      routeName: route?.routeName ?? null,
+    };
+  };
+
+  // 종료 없이 화면이 닫히면(닫기·파티로 전환) 쌓인 기록을 버리지 않고 저장한다.
+  // 저장할 기록이 있을 때만 확정 표시를 한다 — 개발 모드(StrictMode)의 가짜 정리(거리 0)가
+  // 확정으로 굳어 이후 종료 버튼·실제 언마운트 저장을 막지 않게 하기 위해서다.
+  useEffect(() => () => {
+    if (finalizedRef.current) return;
+    const record = buildRecord();
+    if (!record) return;
+    finalizedRef.current = true;
+    submitRideRecord(record);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleEnd = async () => {
-    if (ending) return;
+    if (ending || finalizedRef.current) return;
+    finalizedRef.current = true;
+    stoppedRef.current = true;
+    if (watchIdRef.current) {
+      navigator.geolocation?.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     setEnding(true);
     try {
-      const distanceKm = rideDistance / 1000;
-      const durationMin = Math.floor(rideTime / 60);
-      if (rideDistance > 0) {
-        await api.post('/api/ride-records', {
-          userId: user.id,
-          distance: distanceKm,
-          duration: durationMin,
-          partyId: null,
-          routeId: route?.id ?? null,
-          routeName: route?.routeName ?? null,
-        }).catch(() => {});
-      }
-      setSummary({ distanceKm, durationMin, avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0 });
+      const record = buildRecord();
+      const distanceKm = rideDistanceRef.current / 1000;
+      const durationMin = Math.floor((Date.now() - rideStartMsRef.current) / 60000);
+      const result = record ? await submitRideRecord(record) : null;
+      setSummary({
+        distanceKm,
+        durationMin,
+        avgSpeedKmh: durationMin > 0 ? distanceKm / (durationMin / 60) : 0,
+        saveNote: (result && SAVE_NOTE[result.kind]) || '',
+      });
     } finally {
       setEnding(false);
     }
@@ -380,6 +423,12 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
         <p className="rrModeTag">{route ? `코스: ${title}` : '자유주행'}</p>
 
         {geoError && <p className="rrGeoError">{geoError}</p>}
+        {!shareOn && (
+          <div className="rrShareOff" role="status">
+            <span>{text.rideLocShareOff}</span>
+            <button type="button" onClick={() => setShare(true)}>{text.rideLocShareTurnOn}</button>
+          </div>
+        )}
 
         {proxAlert && (
           <div className={`rrProxToast${proxAlert.entering ? '' : ' isLeaving'}`} role="status">
@@ -401,7 +450,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           </div>
         )}
 
-        {/* 위치 공유가 꺼져 있으면 내 위치를 보내지 않는다 — 왜 남에게 안 보이는지 알려주고 바로 켤 수 있게 */}
+        {/* 핀을 눌렀는데 멀어서 상세 프로필을 못 열 때 잠깐 뜨는 안내 */}
         {notice && <p className="rrNotice" role="status">{notice}</p>}
 
         {profileTarget && (
@@ -410,13 +459,6 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
             name={profileTarget.name}
             onClose={() => setProfileTarget(null)}
           />
-        )}
-
-        {!locShare && (
-          <div className="rrShareOff" role="status">
-            <span>위치 공유 꺼짐 · 다른 라이더에게 내 위치가 보이지 않아요</span>
-            <button type="button" onClick={() => setLocShare(true)}>켜기</button>
-          </div>
         )}
 
         <button type="button" className="rrRecenterBtn" onClick={recenter} aria-label="내 위치로">⌖</button>
@@ -431,6 +473,7 @@ export default function PersonalRidingRoom({ user, route, onClose }) {
           <div className="rrSummaryBackdrop">
             <div className="rrSummaryCard">
               <h3>라이딩 기록</h3>
+              {summary.saveNote && <p className="rrSummaryNote" role="alert">{summary.saveNote}</p>}
               <div className="rrSummaryStats">
                 <div className="rrSummaryStat"><strong>{summary.distanceKm.toFixed(2)}</strong><span>km</span></div>
                 <div className="rrSummaryStat"><strong>{summary.durationMin}</strong><span>분</span></div>

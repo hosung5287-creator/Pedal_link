@@ -1,0 +1,81 @@
+/* 기능 아코디언 — 기본: 목록 위·시연 아래 (시연은 전체 폭) */
+.featAcc { display: grid; gap: 24px; }
+
+.featAccList { display: flex; flex-direction: column; }
+.featAccItem { position: relative; border-bottom: 1px solid var(--line); }
+.featAccItem::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: -1px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--mint);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.featAccItem.isOpen::before { opacity: 1; }
+
+.featAccHeading { margin: 0; font-size: inherit; }
+.featAccBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 12px 18px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.featAccBtn:hover,
+.featAccItem.isOpen .featAccBtn { color: var(--ink); }
+.featAccBtn:focus-visible { outline: 2px solid var(--mint); outline-offset: -2px; border-radius: 8px; }
+.featAccNum {
+  flex: 0 0 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  transition: background-color 0.2s, color 0.2s;
+}
+.featAccItem.isOpen .featAccNum { background: var(--mint); color: var(--surface); }
+
+.featAccPanel { overflow: hidden; }
+.featAccPanel p { margin: 0; padding: 0 12px 18px 56px; color: var(--muted); font-size: 0.95rem; line-height: 1.6; }
+
+.featAccMedia {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(20, 51, 75, 0.07);
+  isolation: isolate;
+}
+
+/* 1200px 이상 — 왼쪽 목록 300px + 오른쪽 시연. 목록은 시연 높이 기준 세로 가운데 */
+@media (min-width: 1200px) {
+  .featAcc { grid-template-columns: 300px minmax(0, 1fr); gap: 40px; align-items: center; }
+}
+
+@media (max-width: 767px) {
+  .featAccBtn { padding: 14px 8px 14px 14px; font-size: 1rem; }
+  .featAccPanel p { padding: 0 8px 14px 54px; font-size: 0.9rem; }
+  .featAccMedia { border-radius: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featAccItem::before, .featAccBtn, .featAccNum { transition: none; }
+}

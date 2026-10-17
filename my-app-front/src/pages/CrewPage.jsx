@@ -420,11 +420,15 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
   // 목록에 상세 정보(멤버)가 없으면 한 건만 더 불러온다
   const openDetail = async (id) => {
     setOpenId(id);
+    setError('');
     if (crews.find((c) => c.id === id)?.members?.length) return;
     try {
       const full = await getCrew(id);
       if (full) replace(withMyState(full));
-    } catch { /* 목록 정보만으로도 화면은 뜬다 */ }
+    } catch {
+      // 목록 정보만으로도 화면은 뜨지만, 멤버 등이 빠졌다는 걸 알려준다
+      setError(t.detailLoadFailed);
+    }
   };
 
   return (
@@ -442,13 +446,16 @@ export default function CrewPage({ user, onMoveHome, onMoveLogin, onOpenMap, onM
 
       <div className="crewBody">
         {openCrew ? (
-          <CrewDetail
-            crew={openCrew}
-            user={user}
-            onBack={() => setOpenId(null)}
-            onLeave={handleLeave}
-            onUpdate={(updated) => replace(withMyState(updated))}
-          />
+          <>
+            {error && <p className="crewError">{error}</p>}
+            <CrewDetail
+              crew={openCrew}
+              user={user}
+              onBack={() => { setOpenId(null); setError(''); }}
+              onLeave={handleLeave}
+              onUpdate={(updated) => replace(withMyState(updated))}
+            />
+          </>
         ) : (
           <>
             <nav className="crewTabs" role="tablist" aria-label={t.tabsLabel}>

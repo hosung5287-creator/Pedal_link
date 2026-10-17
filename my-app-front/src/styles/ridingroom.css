@@ -74,6 +74,7 @@
   cursor: pointer;
 }
 .rrClose:hover { background: rgba(255, 255, 255, 0.35); }
+.rrClose:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* 개인 라이딩 — 자유주행/코스 이름 표시 */
 .rrModeTag {
@@ -276,39 +277,6 @@
   text-align: center;
 }
 
-/* 위치 공유 꺼짐 안내 — 아래쪽, '내 위치로' 버튼(오른쪽) 왼편 · 종료 바 위 */
-.rrShareOff {
-  position: absolute;
-  left: 14px;
-  right: 70px;
-  bottom: 90px;
-  z-index: 1200;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 440px;
-  padding: 8px 8px 8px 14px;
-  border-radius: 14px;
-  background: rgba(12, 27, 39, 0.86);
-  color: #ffffff;
-  font-size: 0.8rem;
-  font-weight: 700;
-  box-shadow: 0 10px 24px rgba(12, 27, 39, 0.25);
-}
-.rrShareOff span { flex: 1; min-width: 0; }
-.rrShareOff button {
-  flex: none;
-  min-height: 32px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: #ffffff;
-  color: var(--mint-dark);
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
 .rrRecenterBtn {
   position: absolute;
   right: 14px;
@@ -334,6 +302,9 @@
   z-index: 1200;
   padding: 16px;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   justify-content: center;
   background: linear-gradient(0deg, rgba(12, 27, 39, 0.7), rgba(12, 27, 39, 0));
 }
@@ -403,4 +374,51 @@
 @media (max-width: 639px) {
   .rrBackdrop { padding: 0; }
   .rrRoom { width: 100%; height: 100%; border-radius: 0; }
+}
+
+/* 위치 공유 꺼짐 안내 — 종료 버튼 위, 지도 아래쪽 가운데 */
+.rrShareOff {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 8px 8px 8px 14px;
+  border-radius: 999px;
+  background: rgba(12, 27, 39, 0.82);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.rrShareOff button {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* 종료 실패 · 기록 저장 실패 안내 */
+.rrEndError {
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--crit);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.rrSummaryNote {
+  margin: 0 0 14px;
+  color: var(--crit);
+  font-size: 0.84rem;
+  font-weight: 600;
 }

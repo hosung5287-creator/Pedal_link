@@ -159,7 +159,7 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
             <div className="accountStat"><strong>{stats?.ascendPerKm != null ? stats.ascendPerKm.toFixed(1) : '-'}</strong><span>km당 상승(m)</span></div>
             <div className="accountStat"><strong>{stats ? stats.mountainRideCount : '-'}</strong><span>산악 코스 완주</span></div>
           </div>
-          {/* 통계가 바뀔 때마다 Claude 가 새로 쓰는 한마디 조언 (없으면 아무것도 안 보인다) */}
+          {/* 통계가 바뀔 때마다 Gemini 가 새로 쓰는 한마디 조언 (없으면 아무것도 안 보인다) */}
           {user?.id && <RideTip userId={user.id} />}
         </section>
 

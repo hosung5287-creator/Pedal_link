@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PedalLink 시스템 아키텍처",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "request-path",
+        "label": "요청 경로",
+        "focus": [
+          "users",
+          "spa",
+          "nginx",
+          "api",
+          "pg"
+        ],
+        "note": "브라우저의 React 화면이 Nginx 를 거쳐 Spring Boot API 와 PostgreSQL 에 닿는 주 경로."
+      },
+      {
+        "id": "realtime",
+        "label": "실시간",
+        "focus": [
+          "spa",
+          "nginx",
+          "stomp",
+          "live",
+          "api"
+        ],
+        "note": "채팅은 STOMP WebSocket, 위치 공유는 메모리 보관소(LiveLocationService)로 처리한다."
+      },
+      {
+        "id": "external",
+        "label": "외부 서비스",
+        "focus": [
+          "spa",
+          "brouter",
+          "kakao",
+          "api",
+          "claude",
+          "tunnel"
+        ],
+        "note": "경로 계산(BRouter)·장소 검색(Kakao)은 화면이, AI 분석(Claude)은 백엔드가 부른다. 외부 공개는 Cloudflare Tunnel."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "사용자",
+      "sublabel": "PC · 모바일 브라우저",
+      "pos": [
+        40,
+        290
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "spa",
+      "type": "frontend",
+      "label": "React SPA",
+      "sublabel": "Vite · Leaflet",
+      "tag": "my-app-front",
+      "pos": [
+        250,
+        290
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "tunnel",
+      "type": "cloud",
+      "label": "Cloudflare Tunnel",
+      "sublabel": "외부 공개 HTTPS",
+      "pos": [
+        470,
+        120
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "nginx",
+      "type": "cloud",
+      "label": "Nginx :80",
+      "sublabel": "정적 파일 · /api 프록시",
+      "pos": [
+        470,
+        290
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "live",
+      "type": "backend",
+      "label": "LiveLocationService",
+      "sublabel": "메모리 · 15초 보관",
+      "tag": "위치 공유",
+      "pos": [
+        700,
+        120
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Spring Boot :8080",
+      "sublabel": "REST 컨트롤러 15개",
+      "tag": "Java 21 · JPA",
+      "pos": [
+        700,
+        290
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "stomp",
+      "type": "messagebus",
+      "label": "STOMP 브로커",
+      "sublabel": "/ws · /topic/*",
+      "tag": "파티·크루 채팅",
+      "pos": [
+        700,
+        450
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL 18",
+      "sublabel": "PostGIS · 테이블 18개",
+      "pos": [
+        930,
+        290
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "brouter",
+      "type": "external",
+      "label": "BRouter",
+      "sublabel": "자전거·최단 경로",
+      "pos": [
+        160,
+        460
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "kakao",
+      "type": "external",
+      "label": "Kakao Local",
+      "sublabel": "장소 검색",
+      "pos": [
+        340,
+        460
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude API",
+      "sublabel": "AI 리포트 · 한마디 조언",
+      "tag": "claude-opus-5-5",
+      "pos": [
+        1160,
+        120
+      ],
+      "size": [
+        170,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Rocky Linux VM · 192.168.253.128",
+      "wraps": [
+        "tunnel",
+        "nginx",
+        "live",
+        "api",
+        "stomp",
+        "pg"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "users-spa",
+      "from": "users",
+      "to": "spa",
+      "label": "화면 조작"
+    },
+    {
+      "id": "spa-nginx",
+      "from": "spa",
+      "to": "nginx",
+      "label": "/api · /ws",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tunnel-nginx",
+      "from": "tunnel",
+      "to": "nginx",
+      "label": "HTTPS",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        550,
+        237
+      ]
+    },
+    {
+      "id": "nginx-api",
+      "from": "nginx",
+      "to": "api",
+      "label": "프록시",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-pg",
+      "from": "api",
+      "to": "pg",
+      "label": "JPA · SQL",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-live",
+      "from": "api",
+      "to": "live",
+      "label": "위치 보고·조회",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [
+        728,
+        237
+      ]
+    },
+    {
+      "id": "api-stomp",
+      "from": "api",
+      "to": "stomp",
+      "label": "발행·구독",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        780,
+        402
+      ]
+    },
+    {
+      "id": "spa-brouter",
+      "from": "spa",
+      "to": "brouter",
+      "label": "경로 계산",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "spa-kakao",
+      "from": "spa",
+      "to": "kakao",
+      "label": "/v2/local 프록시",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "api-claude",
+      "from": "api",
+      "to": "claude",
+      "label": "통계 숫자만",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "프론트엔드",
+      "items": [
+        "React 19 + Vite SPA, 지도는 Leaflet(OpenStreetMap 타일)",
+        "파티 도크가 5초마다 /api/me/status 로 상태 확인",
+        "BRouter 는 화면이 직접, Kakao 장소 검색은 /v2/local 프록시로 호출"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "백엔드",
+      "items": [
+        "Spring Boot 4 컨트롤러 15개 · JPA + Hibernate Spatial",
+        "위치 공유는 DB 대신 메모리(15초 만료), 채팅은 STOMP 브로커",
+        "AI 분석은 Claude API — 통계 숫자만 보내고 키는 .env 로만 읽음"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "배포",
+      "items": [
+        "Rocky Linux VM: Nginx · systemd(pedallink) · PostgreSQL · cloudflared",
+        "외부 공개는 Cloudflare Tunnel (주소가 매번 바뀜)",
+        "스키마 변경은 DB/migrations 005~014 (VM 은 ddl-auto=validate)"
+      ]
+    }
+  ]
+}

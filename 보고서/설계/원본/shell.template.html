@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PedalLink 설계 문서</title>
+<style>
+  :root {
+    --bg: #f5f7fa; --surface: #ffffff; --surface2: #f0f3f7; --line: #dde3ea; --ink: #142130; --muted: #5d6b7a; --faint: #8a96a3;
+    --accent: #0284c7; --pk: #b45309; --pkbg: #fef3c7; --fk: #0369a1; --fkbg: #e0f2fe; --lg: #6d28d9; --lgbg: #ede9fe;
+    --g-user: #0284c7; --g-course: #059669; --g-party: #ea580c; --g-crew: #7c3aed; --g-geo: #64748b; --g-ai: #db2777;
+    --edge: #94a3b8; --edge-hl: #0f172a; --shadow: 0 1px 2px rgba(15,23,42,.05), 0 6px 18px rgba(15,23,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1218; --surface: #161b23; --surface2: #1c232d; --line: #2a333f; --ink: #e6ebf1; --muted: #9aa6b4; --faint: #6c7886;
+      --accent: #38bdf8; --pk: #fbbf24; --pkbg: #3a2c0a; --fk: #7dd3fc; --fkbg: #0c2a3b; --lg: #c4b5fd; --lgbg: #2a2046;
+      --g-user: #38bdf8; --g-course: #34d399; --g-party: #fb923c; --g-crew: #a78bfa; --g-geo: #94a3b8; --g-ai: #f472b6;
+      --edge: #4b5767; --edge-hl: #e6ebf1; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1218; --surface: #161b23; --surface2: #1c232d; --line: #2a333f; --ink: #e6ebf1; --muted: #9aa6b4; --faint: #6c7886;
+    --accent: #38bdf8; --pk: #fbbf24; --pkbg: #3a2c0a; --fk: #7dd3fc; --fkbg: #0c2a3b; --lg: #c4b5fd; --lgbg: #2a2046;
+    --g-user: #38bdf8; --g-course: #34d399; --g-party: #fb923c; --g-crew: #a78bfa; --g-geo: #94a3b8; --g-ai: #f472b6;
+    --edge: #4b5767; --edge-hl: #e6ebf1; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", -apple-system, "Segoe UI", sans-serif; }
+
+  .top { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+         padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .top h1 { margin: 0; font-size: 1.15rem; letter-spacing: -.01em; }
+  .top .meta { color: var(--faint); font-size: .8rem; }
+  .tabs { display: flex; gap: 4px; margin-left: auto; }
+  .tabs button { border: 1px solid var(--line); background: var(--surface2); color: var(--muted); font: inherit; font-size: .88rem;
+                 font-weight: 700; padding: 8px 14px; border-radius: 10px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .themeBtn { border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: inherit; font-size: .8rem; padding: 7px 10px; border-radius: 10px; cursor: pointer; }
+
+  .panel { display: none; }
+  .panel.on { display: block; }
+  .frame { display: block; width: 100%; height: calc(100vh - 62px); border: 0; background: var(--bg); }
+
+  /* ER */
+  .erWrap { padding: 16px 20px 28px; }
+  .erHead { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline; margin-bottom: 12px; }
+  .erHead h2 { margin: 0; font-size: 1.05rem; }
+  .erHead p { margin: 0; color: var(--muted); font-size: .85rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 12px; color: var(--muted); font-size: .78rem; align-items: center; }
+  .legend .sw { display: inline-block; width: 26px; height: 0; border-top: 2px solid var(--edge-hl); vertical-align: middle; margin-right: 5px; }
+  .legend .sw.dash { border-top-style: dashed; }
+  .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .erScroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface2); }
+  .er { position: relative; display: flex; gap: 70px; padding: 24px 28px; width: max-content; }
+  .er svg { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+  .col { display: flex; flex-direction: column; gap: 26px; width: 214px; position: relative; z-index: 1; }
+
+  .tbl { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--gc); border-radius: 10px; box-shadow: var(--shadow); font-size: .72rem; transition: opacity .15s, box-shadow .15s; }
+  .tbl header { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 10px 2px; }
+  .tbl header strong { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .82rem; }
+  .tbl .grp { color: var(--gc); font-weight: 800; font-size: .68rem; }
+  .tbl .desc { margin: 0; padding: 0 10px 6px; color: var(--muted); font-size: .68rem; line-height: 1.35; }
+  .tbl ul { list-style: none; margin: 0; padding: 3px 0; border-top: 1px solid var(--line); }
+  .tbl li { display: flex; align-items: center; gap: 4px; padding: 1.5px 10px; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  .tbl li .cn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tbl li .ty { color: var(--faint); font-size: .64rem; }
+  .tbl .nn { color: #dc2626; margin-left: 1px; }
+  .b { font-size: .58rem; font-weight: 800; padding: 0 4px; border-radius: 4px; line-height: 1.5; }
+  .b.pk { background: var(--pkbg); color: var(--pk); }
+  .b.fk { background: var(--fkbg); color: var(--fk); }
+  .b.logical { background: var(--lgbg); color: var(--lg); }
+  .tbl footer { padding: 4px 10px 6px; border-top: 1px solid var(--line); color: var(--faint); font-size: .64rem; }
+  .g-user { --gc: var(--g-user); } .g-course { --gc: var(--g-course); } .g-party { --gc: var(--g-party); } .g-crew { --gc: var(--g-crew); } .g-geo { --gc: var(--g-geo); } .g-ai { --gc: var(--g-ai); }
+
+  .edge { fill: none; stroke: var(--edge); stroke-width: 1.4; opacity: .75; transition: opacity .15s, stroke .15s; }
+  .edge.logical { stroke-dasharray: 5 4; }
+  .end { fill: var(--edge); opacity: .75; }
+  .er.focus .tbl { opacity: .28; }
+  .er.focus .tbl.on { opacity: 1; box-shadow: 0 0 0 2px var(--gc), var(--shadow); }
+  .er.focus .edge, .er.focus .end { opacity: .08; }
+  .er.focus .edge.on { opacity: 1; stroke: var(--edge-hl); stroke-width: 2; }
+  .er.focus .end.on { opacity: 1; fill: var(--edge-hl); }
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; }
+  .note { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: .8rem; color: var(--muted); line-height: 1.5; }
+  .note strong { display: block; color: var(--ink); margin-bottom: 4px; font-size: .85rem; }
+  .note code { font-family: ui-monospace, Consolas, monospace; font-size: .75rem; color: var(--ink); }
+
+  @media (max-width: 640px) {
+    .top { padding: 10px 16px; }
+    .tabs { margin-left: 0; width: 100%; }
+    .tabs button { flex: 1; padding: 8px 6px; }
+    .erWrap { padding: 12px 16px 24px; }
+    .frame { height: calc(100vh - 110px); }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>PedalLink 설계 문서</h1>
+  <span class="meta"><!--META--></span>
+  <nav class="tabs" role="tablist" aria-label="설계 보기">
+    <button role="tab" aria-selected="true" data-tab="er">ER 관계도</button>
+    <button role="tab" aria-selected="false" data-tab="flow">데이터 흐름</button>
+    <button role="tab" aria-selected="false" data-tab="arch">아키텍처</button>
+    <button role="tab" aria-selected="false" data-tab="wf">워크플로</button>
+  </nav>
+  <button class="themeBtn" type="button" id="themeBtn" aria-label="밝게/어둡게">◐ 테마</button>
+</header>
+
+<section class="panel on" id="p-er" role="tabpanel">
+  <div class="erWrap">
+    <div class="erHead">
+      <h2>DB ER 관계도</h2>
+      <p><!--ER_SUMMARY--></p>
+    </div>
+    <div class="legend">
+      <span><span class="sw"></span>FK 제약 (DB 가 무결성 보장)</span>
+      <span><span class="sw dash"></span>논리 참조 (코드에서만 연결, FK 없음)</span>
+      <span><span class="b pk">PK</span> 기본키</span>
+      <span><span class="b fk">FK</span> 외래키</span>
+      <span><span class="b logical">ref</span> 논리 참조</span>
+      <span><span style="color:#dc2626">*</span> NOT NULL</span>
+      <!--LEGEND_GROUPS-->
+    </div>
+    <div class="erScroll">
+      <div class="er" id="er">
+        <svg id="erSvg" aria-hidden="true"></svg>
+        <!--ER_COLUMNS-->
+      </div>
+    </div>
+    <div class="notes">
+      <!--NOTES-->
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="p-flow" role="tabpanel"><iframe class="frame" title="데이터 흐름" data-src="flow"></iframe></section>
+<section class="panel" id="p-arch" role="tabpanel"><iframe class="frame" title="아키텍처" data-src="arch"></iframe></section>
+<section class="panel" id="p-wf" role="tabpanel"><iframe class="frame" title="워크플로" data-src="wf"></iframe></section>
+
+<script>
+  const RELS = /*RELS*/[];
+  const EMBED = { flow: "__FLOW__", arch: "__ARCH__", wf: "__WF__" };
+
+  // ── 테마 (보는 사람 편의 — 저장 실패해도 동작) ──
+  const root = document.documentElement;
+  try { const t = localStorage.getItem('pl-design-theme'); if (t) root.dataset.theme = t; } catch (e) {}
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('pl-design-theme', root.dataset.theme); } catch (e) {}
+  });
+
+  // ── 탭 (내장 다이어그램은 처음 열 때 풀어서 넣는다) ──
+  const decode = (b64) => new TextDecoder('utf-8').decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
+  function show(tab) {
+    document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+    document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('on', p.id === 'p-' + tab));
+    const frame = document.querySelector('#p-' + tab + ' iframe');
+    if (frame && !frame.srcdoc) frame.srcdoc = decode(EMBED[frame.dataset.src]);
+    if (tab === 'er') requestAnimationFrame(drawEdges);
+    try { history.replaceState(null, '', '#' + tab); } catch (e) {}
+  }
+  document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+
+  // ── ER 연결선: FK 컬럼 줄 → 대상 테이블 id(PK) 줄 ──
+  const er = document.getElementById('er');
+  const svg = document.getElementById('erSvg');
+  function rowOf(table, col) {
+    const t = document.getElementById('t-' + table);
+    return (t && (t.querySelector('li[data-col="' + col + '"]') || t.querySelector('header'))) || t;
+  }
+  function drawEdges() {
+    const base = er.getBoundingClientRect();
+    if (!base.width) return;
+    svg.setAttribute('width', er.scrollWidth); svg.setAttribute('height', er.scrollHeight);
+    svg.innerHTML = '';
+    const ns = 'http://www.w3.org/2000/svg';
+    RELS.forEach((r, i) => {
+      const a = rowOf(r.from, r.col).getBoundingClientRect();
+      const b = rowOf(r.to, 'id').getBoundingClientRect();
+      const ta = document.getElementById('t-' + r.from).getBoundingClientRect();
+      const tb = document.getElementById('t-' + r.to).getBoundingClientRect();
+      const ay = a.top + a.height / 2 - base.top, by = b.top + b.height / 2 - base.top;
+      let ax, bx, c1, c2;
+      if (Math.abs(ta.left - tb.left) < 5) {                 // 같은 열: 왼쪽으로 돌아 나가는 고리
+        ax = ta.left - base.left; bx = tb.left - base.left;
+        const out = 26 + (i % 3) * 8;
+        c1 = [ax - out, ay]; c2 = [bx - out, by];
+      } else if (tb.left > ta.left) {                          // 대상이 오른쪽
+        ax = ta.right - base.left; bx = tb.left - base.left;
+        const dx = Math.max(30, (bx - ax) / 2);
+        c1 = [ax + dx, ay]; c2 = [bx - dx, by];
+      } else {                                                 // 대상이 왼쪽
+        ax = ta.left - base.left; bx = tb.right - base.left;
+        const dx = Math.max(30, (ax - bx) / 2);
+        c1 = [ax - dx, ay]; c2 = [bx + dx, by];
+      }
+      const p = document.createElementNS(ns, 'path');
+      p.setAttribute('d', `M${ax},${ay} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${bx},${by}`);
+      p.setAttribute('class', 'edge ' + r.kind);
+      p.dataset.from = r.from; p.dataset.to = r.to;
+      const t1 = document.createElementNS(ns, 'title'); t1.textContent = `${r.from}.${r.col} → ${r.to}.id (${r.kind === 'fk' ? 'FK' : '논리 참조'})`;
+      p.appendChild(t1); svg.appendChild(p);
+      const dot = document.createElementNS(ns, 'circle');                  // 대상(1) 쪽 표시
+      dot.setAttribute('cx', bx); dot.setAttribute('cy', by); dot.setAttribute('r', 3.2);
+      dot.setAttribute('class', 'end'); dot.dataset.from = r.from; dot.dataset.to = r.to;
+      svg.appendChild(dot);
+    });
+  }
+  function focusTable(name) {
+    er.classList.toggle('focus', !!name);
+    const related = new Set(name ? [name] : []);
+    svg.querySelectorAll('.edge, .end').forEach((e) => {
+      const on = !!name && (e.dataset.from === name || e.dataset.to === name);
+      e.classList.toggle('on', on);
+      if (on) { related.add(e.dataset.from); related.add(e.dataset.to); }
+    });
+    document.querySelectorAll('.tbl').forEach((t) => t.classList.toggle('on', related.has(t.dataset.table)));
+  }
+  document.querySelectorAll('.tbl').forEach((t) => {
+    t.addEventListener('mouseenter', () => focusTable(t.dataset.table));
+    t.addEventListener('mouseleave', () => focusTable(null));
+    t.addEventListener('click', () => focusTable(er.classList.contains('focus') && t.classList.contains('on') && t.dataset.table === er.dataset.pinned ? null : (er.dataset.pinned = t.dataset.table)));
+  });
+  addEventListener('resize', () => requestAnimationFrame(drawEdges));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawEdges);
+  const start = (location.hash || '#er').slice(1);
+  show(['er', 'flow', 'arch', 'wf'].includes(start) ? start : 'er');
+</script>
+</body>
+</html>

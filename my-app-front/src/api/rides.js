@@ -13,11 +13,11 @@ export const saveRideRecord = ({ userId, distance, duration, partyId = null, rou
   api.post('/api/ride-records', { userId, distance, duration, partyId, routeId, routeName });
 
 // 프로필 AI 라이딩 리포트 → { available, rideCount, stale, insight: { level, summary, advice[], model, createdAt } | null }
-// GET 은 저장된 결과만 본다(Claude 호출 없음). POST 는 기록이 바뀌었을 때만 Claude 에 새로 물어본다.
+// GET 은 저장된 결과만 본다(AI 호출 없음). POST 는 기록이 바뀌었을 때만 Gemini 에 새로 물어본다.
 export const getRideInsight = (userId) => api.get(`/api/ride-records/insight?userId=${userId}`);
 export const analyzeRides = (userId) => api.post(`/api/ride-records/insight?userId=${userId}`);
 
 // 라이딩 통계 카드의 한마디 조언 → { available, stale, tip, createdAt }
-// GET 은 저장된 조언만 본다. stale(통계가 바뀜)이면 POST 로 Claude 가 새 조언을 쓴다.
+// GET 은 저장된 조언만 본다. stale(통계가 바뀜)이면 POST 로 Gemini 가 새 조언을 쓴다.
 export const getRideTip = (userId) => api.get(`/api/ride-records/tip?userId=${userId}`);
 export const refreshRideTip = (userId) => api.post(`/api/ride-records/tip?userId=${userId}`);

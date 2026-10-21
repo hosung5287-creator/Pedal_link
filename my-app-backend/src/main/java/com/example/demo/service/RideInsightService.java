@@ -1,12 +1,10 @@
 package com.example.demo.service;
 
-import com.anthropic.core.JsonValue;
-import com.anthropic.models.messages.JsonOutputFormat;
 import com.example.demo.dto.RideInsightResponse;
 import com.example.demo.entity.RideInsight;
 import com.example.demo.entity.RideRecord;
 import com.example.demo.repository.RideInsightRepository;
-import com.example.demo.service.ClaudeClient.AiException;
+import com.example.demo.service.GeminiClient.AiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,13 +20,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-// 프로필 "AI 라이딩 리포트" — 내 라이딩 기록 숫자를 Claude 에 보내 수준 한줄 요약과 조언을 받는다.
+// 프로필 "AI 라이딩 리포트" — 내 라이딩 기록 숫자를 Gemini 에 보내 수준 한줄 요약과 조언을 받는다.
 //
 // - 질문은 모든 사용자에게 같다(QUESTION). 사용자가 직접 입력하지 않는다.
-// - Claude 에는 숫자(거리·시간·상승고도·날짜·파티 여부)만 보낸다. 이름·이메일은 보내지 않는다.
-// - 그래프는 프론트가 실제 기록으로 그린다. Claude 는 글만 쓴다(숫자를 지어낼 일이 없게).
+// - Gemini 에는 숫자(거리·시간·상승고도·날짜·파티 여부)만 보낸다. 이름·이메일은 보내지 않는다.
+// - 그래프는 프론트가 실제 기록으로 그린다. AI 는 글만 쓴다(숫자를 지어낼 일이 없게).
 // - 결과는 ride_insights 에 저장해 두고, 기록이 그대로면 다시 부르지 않는다(비용).
-// - Claude 연결·오류 처리는 ClaudeClient 가 맡는다(API 키가 없으면 이 기능만 꺼진다).
+// - Gemini 연결·오류 처리는 GeminiClient 가 맡는다(API 키가 없으면 이 기능만 꺼진다).
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -69,40 +67,36 @@ public class RideInsightService {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    // Claude 가 채워 돌려줄 JSON 의 모양. 아래 OUTPUT_FORMAT 스키마와 같아야 한다.
-    // (SDK 의 클래스→스키마 자동 변환은 effort 설정과 같이 쓸 수 없어서 스키마를 직접 적는다)
+    // Gemini 가 채워 돌려줄 JSON 의 모양. 아래 OUTPUT_SCHEMA(Gemini responseSchema 형식)와 같아야 한다.
     public enum RiderLevel { 입문, 초급, 중급, 상급 }
 
     public record InsightOutput(RiderLevel level, String summary, List<String> advice) {
     }
 
-    private static final JsonOutputFormat OUTPUT_FORMAT = JsonOutputFormat.builder()
-            .schema(JsonOutputFormat.Schema.builder()
-                    .putAdditionalProperty("type", JsonValue.from("object"))
-                    .putAdditionalProperty("properties", JsonValue.from(Map.of(
-                            "level", Map.of(
-                                    "type", "string",
-                                    "enum", List.of("입문", "초급", "중급", "상급"),
-                                    "description", "라이딩 수준"),
-                            "summary", Map.of(
-                                    "type", "string",
-                                    "description", "이 사람의 라이딩 수준을 숫자를 넣어 한 문장(60자 안팎)으로 요약"),
-                            "advice", Map.of(
-                                    "type", "array",
-                                    "items", Map.of("type", "string"),
-                                    "description", "이 사람 데이터에 맞춘, 국가대표·프로 선수 훈련법 기반의 발전 조언 2~3개, 각각 1~2문장"))))
-                    .putAdditionalProperty("required", JsonValue.from(List.of("level", "summary", "advice")))
-                    .putAdditionalProperty("additionalProperties", JsonValue.from(false))
-                    .build())
-            .build();
+    private static final Map<String, Object> OUTPUT_SCHEMA = Map.of(
+            "type", "OBJECT",
+            "properties", Map.of(
+                    "level", Map.of(
+                            "type", "STRING",
+                            "enum", List.of("입문", "초급", "중급", "상급"),
+                            "description", "라이딩 수준"),
+                    "summary", Map.of(
+                            "type", "STRING",
+                            "description", "이 사람의 라이딩 수준을 숫자를 넣어 한 문장(60자 안팎)으로 요약"),
+                    "advice", Map.of(
+                            "type", "ARRAY",
+                            "items", Map.of("type", "STRING"),
+                            "description", "이 사람 데이터에 맞춘, 국가대표·프로 선수 훈련법 기반의 발전 조언 2~3개, 각각 1~2문장")),
+            "required", List.of("level", "summary", "advice"),
+            "propertyOrdering", List.of("level", "summary", "advice"));
 
     private final RideInsightRepository insightRepository;
-    private final ClaudeClient claude;
+    private final GeminiClient gemini;
 
-    // 같은 사용자가 버튼을 여러 번 눌러 Claude 를 중복 호출하지 않게
+    // 같은 사용자가 버튼을 여러 번 눌러 AI 를 중복 호출하지 않게
     private final Set<Long> running = ConcurrentHashMap.newKeySet();
 
-    // 저장된 분석 + 그 뒤로 기록이 바뀌었는지 (Claude 는 부르지 않는다)
+    // 저장된 분석 + 그 뒤로 기록이 바뀌었는지 (AI 는 부르지 않는다)
     public RideInsightResponse get(Long userId, List<RideRecord> records) {
         return response(records, insightRepository.findById(userId).orElse(null));
     }
@@ -112,7 +106,7 @@ public class RideInsightService {
         if (records.isEmpty()) {
             throw new AiException(400, "라이딩 기록이 생기면 분석할 수 있어요.");
         }
-        if (!claude.available()) {
+        if (!gemini.available()) {
             throw new AiException(503, "AI 분석이 아직 설정되지 않았어요.");
         }
         RideInsight saved = insightRepository.findById(userId).orElse(null);
@@ -134,7 +128,7 @@ public class RideInsightService {
             insight.setAdvice(JSON.writeValueAsString(advice));
             insight.setRideCount(records.size());
             insight.setLastRideId(lastRideId(records));
-            insight.setModel(ClaudeClient.MODEL);
+            insight.setModel(gemini.model());
             insight.setCreatedAt(LocalDateTime.now());
             insightRepository.save(insight);
             return response(records, insight);
@@ -144,8 +138,8 @@ public class RideInsightService {
     }
 
     private InsightOutput ask(String dataJson) {
-        String text = claude.askJson("AI 라이딩 리포트", SYSTEM_PROMPT,
-                QUESTION + "\n\n<riding_data>\n" + dataJson + "\n</riding_data>", OUTPUT_FORMAT);
+        String text = gemini.askJson("AI 라이딩 리포트", SYSTEM_PROMPT,
+                QUESTION + "\n\n<riding_data>\n" + dataJson + "\n</riding_data>", OUTPUT_SCHEMA);
         InsightOutput out;
         try {
             out = JSON.readValue(text, InsightOutput.class);
@@ -159,7 +153,7 @@ public class RideInsightService {
         return out;
     }
 
-    // Claude 에 보낼 숫자 — 프로필 통계 + 몇 가지 파생 지표 + 최근 기록 30건
+    // Gemini 에 보낼 숫자 — 프로필 통계 + 몇 가지 파생 지표 + 최근 기록 30건
     private String buildData(List<RideRecord> records, Map<String, Object> stats) {
         LocalDate today = LocalDate.now();
         double totalKm = records.stream().mapToDouble(r -> nz(r.getDistanceKm())).sum();
@@ -209,7 +203,7 @@ public class RideInsightService {
                 saved.getModel(),
                 saved.getCreatedAt());
         boolean stale = saved != null && isStale(saved, records);
-        return new RideInsightResponse(claude.available(), records.size(), stale, insight);
+        return new RideInsightResponse(gemini.available(), records.size(), stale, insight);
     }
 
     // 분석한 뒤로 기록이 추가·삭제됐는지

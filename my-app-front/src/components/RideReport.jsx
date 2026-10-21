@@ -5,7 +5,7 @@ import { getRideInsight, analyzeRides } from '../api/rides';
 import { errorMessage } from '../api/client';
 import { RideHeatmap, SpeedChart, CumulativeChart } from './RideCharts';
 
-// 프로필 "AI 라이딩 리포트" — Claude 가 쓴 수준 한줄 요약·조언 + 그래프 3개(탭).
+// 프로필 "AI 라이딩 리포트" — Gemini 가 쓴 수준 한줄 요약·조언 + 그래프 3개(탭).
 // 질문은 모든 사용자에게 같다(서버 RideInsightService.QUESTION). 그래프는 실제 기록으로 그린다.
 const QUESTION = '나의 프로필에서 라이딩통계을 확인후 나의 라이딩 수준을 한줄 요약과 앞으로 어떻게 하면 더욱 라이딩을 발전시킬 수 있나 데이터을 확인하고 그의 맞는 전세계의 국가대표의 자전거 라이딩의 조언해 줍니다.';
 
@@ -15,7 +15,8 @@ const TABS = [
   { id: 'total', label: '누적 거리' },
 ];
 
-const MODEL_LABEL = { 'claude-opus-5-5': 'Claude Opus 5.5' };
+// 저장된 모델 id → 읽기 쉬운 이름 (예: gemini-3.8-flash → Gemini 3.8 Flash)
+const modelLabel = (id) => (id || '').split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
 function fmtAnalyzed(iso) {
   const d = new Date(iso);
@@ -69,7 +70,7 @@ export default function RideReport({ userId, rides }) {
     <section className="accountCard rrCard" aria-labelledby="rr-title">
       <div className="rrHead">
         <h2 id="rr-title">AI 라이딩 리포트</h2>
-        <span className="rrBy">Claude 분석</span>
+        <span className="rrBy">Gemini 분석</span>
       </div>
 
       <div className="rrInsight" aria-live="polite">
@@ -87,7 +88,7 @@ export default function RideReport({ userId, rides }) {
               {insight.advice.map((a) => <li key={a}>{a}</li>)}
             </ul>
             <p className="rrMeta">
-              {fmtAnalyzed(insight.createdAt)} · {MODEL_LABEL[insight.model] || insight.model}
+              {fmtAnalyzed(insight.createdAt)} · {modelLabel(insight.model)}
               {state.stale && <span className="rrStale"> · 분석 뒤로 기록이 바뀌었어요</span>}
             </p>
           </>

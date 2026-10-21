@@ -10,3 +10,10 @@ spring.datasource.driver-class-name=org.postgresql.Driver
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# Gemini API (프로필 AI 기능) — 키는 my-app-backend/.env 의 GEMINI_API_KEY 또는 같은 이름의 환경변수로 넣는다.
+# 이 파일에 직접 적지 말 것. 없으면 AI 기능만 꺼지고 나머지는 그대로 동작한다. 모델은 GEMINI_MODEL(비우면 gemini-3.8-flash).
+spring.config.import=optional:file:./.env[.properties]
+gemini.api-key=${GEMINI_API_KEY:}
+gemini.model=${GEMINI_MODEL:}
+gemini.base-url=${GEMINI_BASE_URL:}

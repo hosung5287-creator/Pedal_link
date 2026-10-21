@@ -7,7 +7,7 @@ import com.example.demo.entity.RideRecord;
 import com.example.demo.entity.Route;
 import com.example.demo.repository.RideRecordRepository;
 import com.example.demo.repository.RouteRepository;
-import com.example.demo.service.ClaudeClient;
+import com.example.demo.service.GeminiClient;
 import com.example.demo.service.RideInsightService;
 import com.example.demo.service.RideTipService;
 import lombok.RequiredArgsConstructor;
@@ -98,36 +98,36 @@ public class RideRecordController {
         return statsOf(recordsOf(userId));
     }
 
-    // 프로필 AI 라이딩 리포트 — 저장된 분석과, 그 뒤로 기록이 바뀌었는지 (Claude 는 부르지 않는다)
+    // 프로필 AI 라이딩 리포트 — 저장된 분석과, 그 뒤로 기록이 바뀌었는지 (AI 는 부르지 않는다)
     @GetMapping("/insight")
     public RideInsightResponse insight(@RequestParam Long userId) {
         return rideInsightService.get(userId, recordsOf(userId));
     }
 
-    // [AI 분석 보기] — 기록이 그대로면 저장된 결과를, 바뀌었으면 Claude 에 새로 물어본다
+    // [AI 분석 보기] — 기록이 그대로면 저장된 결과를, 바뀌었으면 Gemini 에 새로 물어본다
     @PostMapping("/insight")
     public ResponseEntity<?> analyze(@RequestParam Long userId) {
         List<RideRecord> records = recordsOf(userId);
         try {
             return ResponseEntity.ok(rideInsightService.analyze(userId, records, statsOf(records)));
-        } catch (ClaudeClient.AiException e) {
+        } catch (GeminiClient.AiException e) {
             return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage()));
         }
     }
 
-    // 라이딩 통계 카드의 한마디 조언 — 저장된 조언과, 통계가 바뀌어 새로 만들 차례인지 (Claude 는 부르지 않는다)
+    // 라이딩 통계 카드의 한마디 조언 — 저장된 조언과, 통계가 바뀌어 새로 만들 차례인지 (AI 는 부르지 않는다)
     @GetMapping("/tip")
     public RideTipResponse tip(@RequestParam Long userId) {
         return rideTipService.get(userId, statsOf(recordsOf(userId)));
     }
 
-    // 통계가 바뀌었으면 Claude 가 새 한마디 조언을 쓴다 (프로필을 열 때 stale 이면 프론트가 부른다)
+    // 통계가 바뀌었으면 Gemini 가 새 한마디 조언을 쓴다 (프로필을 열 때 stale 이면 프론트가 부른다)
     @PostMapping("/tip")
     public ResponseEntity<?> refreshTip(@RequestParam Long userId) {
         List<RideRecord> records = recordsOf(userId);
         try {
             return ResponseEntity.ok(rideTipService.refresh(userId, records, statsOf(records)));
-        } catch (ClaudeClient.AiException e) {
+        } catch (GeminiClient.AiException e) {
             return ResponseEntity.status(e.getStatus()).body(Map.of("message", e.getMessage()));
         }
     }

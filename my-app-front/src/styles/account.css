@@ -136,7 +136,7 @@
   font-size: 0.86rem;
   font-weight: 700;
 }
-/* 한마디 조언을 Claude 가 새로 쓰는 동안 */
+/* 한마디 조언을 Gemini 가 새로 쓰는 동안 */
 .accountAchieve.isMaking { color: var(--muted); font-weight: 600; }
 
 /* 라이더 역량 — 가장 강한 항목이 항상 꽉 찬 막대(왼쪽→오른쪽)이고 나머지는 그에 비례한다 */

@@ -1,0 +1,249 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "PedalLink 라이딩 워크플로",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "course-prep",
+        "label": "코스 준비",
+        "focus": [
+          "login",
+          "planner",
+          "saveCourse"
+        ],
+        "note": "출발·경유·도착을 정하면 BRouter 로 경로를 계산하고, 지역(구)을 판정해 routes 에 코스로 저장한다."
+      },
+      {
+        "id": "join-gate",
+        "label": "참여 조건",
+        "focus": [
+          "recruit",
+          "gate",
+          "denied",
+          "riding"
+        ],
+        "note": "파티 신청·크루 인원 체크는 위치 공유 + 호스트/팀장 220m 안 (+ 크루는 유효한 토큰) 이어야 통과한다."
+      },
+      {
+        "id": "ride-record",
+        "label": "라이딩·기록",
+        "focus": [
+          "riding",
+          "record",
+          "result"
+        ],
+        "note": "라이딩을 마치면 기록을 저장하고, 통계가 바뀌면 프로필에서 AI 리포트·한마디 조언을 새로 만든다."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "user",
+      "label": "사용자 화면"
+    },
+    {
+      "id": "backend",
+      "label": "백엔드"
+    },
+    {
+      "id": "gate",
+      "label": "참여 조건",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "prep",
+      "label": "코스 준비",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "together",
+      "label": "함께 타기 · 출발",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "after",
+      "label": "기록 · 통계",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "login",
+    "planner",
+    "saveCourse",
+    "recruit",
+    "gate",
+    "riding",
+    "record",
+    "result"
+  ],
+  "nodes": [
+    {
+      "id": "login",
+      "lane": "user",
+      "col": 0,
+      "type": "external",
+      "label": "로그인",
+      "sublabel": "이메일 · 비밀번호",
+      "width": 132
+    },
+    {
+      "id": "planner",
+      "lane": "user",
+      "col": 1,
+      "type": "frontend",
+      "label": "코스 만들기",
+      "sublabel": "출발 · 경유 · 도착",
+      "width": 132
+    },
+    {
+      "id": "recruit",
+      "lane": "user",
+      "col": 2,
+      "type": "frontend",
+      "label": "함께 타기",
+      "sublabel": "파티 모집 · 크루 초대",
+      "width": 132
+    },
+    {
+      "id": "riding",
+      "lane": "user",
+      "col": 3,
+      "type": "frontend",
+      "label": "라이딩",
+      "sublabel": "실시간 위치 · 채팅",
+      "width": 132
+    },
+    {
+      "id": "result",
+      "lane": "user",
+      "col": 5,
+      "type": "frontend",
+      "label": "프로필 · 피드",
+      "sublabel": "통계 · AI 리포트 · 공유",
+      "width": 132
+    },
+    {
+      "id": "saveCourse",
+      "lane": "backend",
+      "col": 1,
+      "type": "backend",
+      "label": "코스 저장",
+      "sublabel": "routes · 구 판정 · 경유지",
+      "width": 132
+    },
+    {
+      "id": "record",
+      "lane": "backend",
+      "col": 4,
+      "type": "backend",
+      "label": "기록 저장",
+      "sublabel": "탄 거리만큼 상승고도",
+      "width": 132
+    },
+    {
+      "id": "gate",
+      "lane": "gate",
+      "col": 3,
+      "type": "security",
+      "label": "참여 조건 확인",
+      "sublabel": "위치 공유 · 220m · 토큰",
+      "width": 132
+    },
+    {
+      "id": "denied",
+      "lane": "gate",
+      "col": 4,
+      "type": "security",
+      "label": "참여 불가",
+      "sublabel": "사유 안내 · 강퇴",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "from": "login",
+      "to": "planner"
+    },
+    {
+      "from": "planner",
+      "to": "saveCourse",
+      "label": "저장",
+      "variant": "emphasis"
+    },
+    {
+      "from": "saveCourse",
+      "to": "recruit",
+      "label": "이 코스로",
+      "variant": "emphasis"
+    },
+    {
+      "from": "recruit",
+      "to": "gate",
+      "label": "신청 · 체크",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "from": "gate",
+      "to": "riding",
+      "label": "통과",
+      "variant": "emphasis"
+    },
+    {
+      "from": "gate",
+      "to": "denied",
+      "label": "거부",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "from": "riding",
+      "to": "record",
+      "label": "종료",
+      "variant": "emphasis"
+    },
+    {
+      "from": "record",
+      "to": "result",
+      "label": "통계 반영",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "코스 준비",
+      "items": [
+        "출발지를 먼저 정해야 경유지(최대 100곳)를 넣을 수 있다",
+        "지역은 지역 선택 우선, 없으면 출발점이 든 구",
+        "저장만 하면 비공개 — [게시물 올리기]를 해야 피드에 공개"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "참여 조건",
+      "items": [
+        "파티: 나·호스트 모두 위치 공유 + 220m 안",
+        "크루: 참여 확정 토큰(당일 23:59) + 팀장 220m 안",
+        "거부 사유를 보여주고, 방장이 강퇴한 파티는 다시 신청 불가"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "라이딩 · 기록",
+      "items": [
+        "크루 라이딩은 체크된 인원만 자동 이동, 종료하면 파티까지 끝남",
+        "상승고도는 탄 거리 비율만큼, km당 상승도 계산",
+        "통계가 바뀌면 프로필에서 Claude 가 AI 리포트·한마디 조언"
+      ]
+    }
+  ]
+}

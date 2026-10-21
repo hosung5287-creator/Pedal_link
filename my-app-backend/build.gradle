@@ -40,8 +40,6 @@ dependencies {
 	 // WebSocket (채팅)
 	 implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-	 // Claude API (프로필 AI 라이딩 리포트)
-	 implementation 'com.anthropic:anthropic-java:2.34.0'
 
     
 }

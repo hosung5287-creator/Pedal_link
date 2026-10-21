@@ -1,12 +1,10 @@
 package com.example.demo.service;
 
-import com.anthropic.core.JsonValue;
-import com.anthropic.models.messages.JsonOutputFormat;
 import com.example.demo.dto.RideTipResponse;
 import com.example.demo.entity.RideRecord;
 import com.example.demo.entity.RideTip;
 import com.example.demo.repository.RideTipRepository;
-import com.example.demo.service.ClaudeClient.AiException;
+import com.example.demo.service.GeminiClient.AiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,8 +22,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 // 프로필 라이딩 통계 카드의 "한마디 조언".
-// 횟수·거리·시간·상승고도·산악 완주가 지난번 조언 때와 달라지면, 프로필을 열 때 Claude 가 그 변화에 맞는 조언을 새로 한 문장 쓴다.
-// - 통계가 그대로면 저장된 조언을 그대로 보여주고 Claude 를 부르지 않는다(비용).
+// 횟수·거리·시간·상승고도·산악 완주가 지난번 조언 때와 달라지면, 프로필을 열 때 Gemini 가 그 변화에 맞는 조언을 새로 한 문장 쓴다.
+// - 통계가 그대로면 저장된 조언을 그대로 보여주고 AI 를 부르지 않는다(비용).
 // - 매번 다른 말이 나오게 최근 조언 5개를 같이 보내 겹치지 않게 한다.
 // - 조언이 없거나 API 키가 없으면 화면에 아무것도 보여주지 않는다.
 @Slf4j
@@ -54,17 +52,14 @@ public class RideTipService {
             - 숫자는 데이터에 있는 것만 쓰고 지어내지 마세요. 부상·건강 진단은 하지 않습니다.
             """;
 
-    private static final JsonOutputFormat OUTPUT_FORMAT = JsonOutputFormat.builder()
-            .schema(JsonOutputFormat.Schema.builder()
-                    .putAdditionalProperty("type", JsonValue.from("object"))
-                    .putAdditionalProperty("properties", JsonValue.from(Map.of(
-                            "tip", Map.of(
-                                    "type", "string",
-                                    "description", "통계 변화에 맞춘 조언 한 문장(60자 안팎)"))))
-                    .putAdditionalProperty("required", JsonValue.from(List.of("tip")))
-                    .putAdditionalProperty("additionalProperties", JsonValue.from(false))
-                    .build())
-            .build();
+    // Gemini 가 채워 돌려줄 JSON 의 모양 (Gemini responseSchema 형식)
+    private static final Map<String, Object> OUTPUT_SCHEMA = Map.of(
+            "type", "OBJECT",
+            "properties", Map.of(
+                    "tip", Map.of(
+                            "type", "STRING",
+                            "description", "통계 변화에 맞춘 조언 한 문장(60자 안팎)")),
+            "required", List.of("tip"));
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -76,24 +71,24 @@ public class RideTipService {
     }
 
     private final RideTipRepository tipRepository;
-    private final ClaudeClient claude;
+    private final GeminiClient gemini;
 
-    // 같은 사용자가 탭 두 개로 열어도 Claude 를 한 번만 부르게
+    // 같은 사용자가 탭 두 개로 열어도 AI 를 한 번만 부르게
     private final Set<Long> running = ConcurrentHashMap.newKeySet();
 
-    // 저장된 조언 + 새로 만들 차례인지 (Claude 는 부르지 않는다). stats: 프로필 통계와 같은 값
+    // 저장된 조언 + 새로 만들 차례인지 (AI 는 부르지 않는다). stats: 프로필 통계와 같은 값
     public RideTipResponse get(Long userId, Map<String, Object> stats) {
         RideTip saved = tipRepository.findById(userId).orElse(null);
         return response(saved, isStale(saved, snapshotOf(stats)));
     }
 
-    // 통계가 바뀌었으면 Claude 에 새 조언을 받아 저장한다. 그대로면 저장된 조언을 준다.
+    // 통계가 바뀌었으면 Gemini 에 새 조언을 받아 저장한다. 그대로면 저장된 조언을 준다.
     public RideTipResponse refresh(Long userId, List<RideRecord> records, Map<String, Object> stats) {
         Snapshot current = snapshotOf(stats);
         if (current.rideCount() == 0) {
             throw new AiException(400, "라이딩 기록이 생기면 조언을 드릴게요.");
         }
-        if (!claude.available()) {
+        if (!gemini.available()) {
             throw new AiException(503, "AI 기능이 아직 설정되지 않았어요.");
         }
         RideTip saved = tipRepository.findById(userId).orElse(null);
@@ -119,7 +114,7 @@ public class RideTipService {
             row.setTip(tip);
             row.setStats(JSON.writeValueAsString(current));
             row.setRecentTips(JSON.writeValueAsString(recent));
-            row.setModel(ClaudeClient.MODEL);
+            row.setModel(gemini.model());
             row.setCreatedAt(LocalDateTime.now());
             tipRepository.save(row);
             return response(row, false);
@@ -129,8 +124,8 @@ public class RideTipService {
     }
 
     private String ask(String dataJson) {
-        String text = claude.askJson("한마디 조언", SYSTEM_PROMPT,
-                QUESTION + "\n\n<riding_stats>\n" + dataJson + "\n</riding_stats>", OUTPUT_FORMAT);
+        String text = gemini.askJson("한마디 조언", SYSTEM_PROMPT,
+                QUESTION + "\n\n<riding_stats>\n" + dataJson + "\n</riding_stats>", OUTPUT_SCHEMA);
         try {
             TipOutput out = JSON.readValue(text, TipOutput.class);
             if (out.tip() == null || out.tip().isBlank()) throw new AiException(502, "AI 응답을 읽지 못했어요.");
@@ -142,7 +137,7 @@ public class RideTipService {
         }
     }
 
-    // Claude 에 보낼 숫자 — 지금 통계, 지난번 통계, 그 차이, 가장 최근 라이딩, 최근 조언
+    // Gemini 에 보낼 숫자 — 지금 통계, 지난번 통계, 그 차이, 가장 최근 라이딩, 최근 조언
     private String buildData(Snapshot current, Snapshot previous, List<String> previousTips, List<RideRecord> records) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("today", LocalDate.now().toString());
@@ -174,7 +169,7 @@ public class RideTipService {
     }
 
     private RideTipResponse response(RideTip saved, boolean stale) {
-        return new RideTipResponse(claude.available(), stale,
+        return new RideTipResponse(gemini.available(), stale,
                 saved == null ? null : saved.getTip(),
                 saved == null ? null : saved.getCreatedAt());
     }

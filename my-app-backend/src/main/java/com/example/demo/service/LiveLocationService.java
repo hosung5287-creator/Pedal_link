@@ -2,9 +2,11 @@ package com.example.demo.service;
 
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 // 위치 공유 중인 사용자의 실시간 위치 (메모리 보관 — 서버를 재시작하면 비어 있다).
@@ -21,8 +23,37 @@ public class LiveLocationService {
 
     private final Map<Long, LiveLocation> locations = new ConcurrentHashMap<>();
 
+    // 시연 모드(DemoService) 전용 — 평소에는 비어 있다.
+    // serverOwned: 가상 라이더. 위치는 서버만 넣고, 그 계정으로 로그인한 기기가 보낸 위치는 받지 않는다.
+    // pausedUntil: 순간 이동 직후 잠깐 기기 위치를 받지 않는다 (다른 화면이 순간 속도를 엉뚱하게 계산하지 않게).
+    private final Set<Long> serverOwned = ConcurrentHashMap.newKeySet();
+    private final Map<Long, Long> pausedUntil = new ConcurrentHashMap<>();
+
+    /** 기기가 보낸 위치 (LocationController) */
     public void report(Long userId, String name, double lat, double lng) {
+        if (serverOwned.contains(userId)) return;
+        Long until = pausedUntil.get(userId);
+        if (until != null) {
+            if (until > System.currentTimeMillis()) return;
+            pausedUntil.remove(userId, until);
+        }
+        put(userId, name, lat, lng);
+    }
+
+    /** 서버가 직접 넣는 위치 — 시연 모드 가상 라이더 */
+    public void put(Long userId, String name, double lat, double lng) {
         locations.put(userId, new LiveLocation(userId, name, lat, lng, System.currentTimeMillis()));
+    }
+
+    public void setServerOwned(Collection<Long> userIds) {
+        serverOwned.clear();
+        serverOwned.addAll(userIds);
+    }
+
+    /** ms 동안 이 사용자의 위치를 내리고, 기기에서 오는 위치도 받지 않는다 */
+    public void pause(Long userId, long ms) {
+        pausedUntil.put(userId, System.currentTimeMillis() + ms);
+        locations.remove(userId);
     }
 
     public void remove(Long userId) {

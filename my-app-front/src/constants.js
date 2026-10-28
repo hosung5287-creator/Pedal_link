@@ -177,6 +177,9 @@ export const text = {
   rideSaveQueued: '기록 저장에 실패했어요. 다음 접속 때 자동으로 다시 저장할게요.',
   rideSaveFailed: '기록을 저장하지 못했어요.',
   rideEndFailed: '라이딩을 종료하지 못했어요. 다시 눌러주세요.',
+  // 파티 라이딩 중 파티원 이탈·합류 알림 — josa 는 이름 받침에 맞춘 '이'/'가'
+  rideRiderAway: (name, josa) => `${name}${josa} 이탈하였습니다`,
+  rideRiderJoined: (name, josa) => `${name}${josa} 합류하였습니다`,
   routeSaveNotReady: '경로 계산이 끝난 뒤에 저장할 수 있어요.',
   partyRideBanner: '파티 라이딩 중 — 멤버 위치만 표시됩니다',
   partyRideExit: '파티 나가기',
@@ -883,6 +886,34 @@ export const partyDock = {
   readyWaiting: '준비 중',
   kickedNotice: (title) => `'${title}' 파티에서 방장이 내보냈어요.`,
   kickedOk: '확인',
+};
+
+// 시연 모드 패널 (백엔드 DEMO_ENABLED=true + 발표자 계정 DEMO_PRESENTER_EMAILS 로 로그인하면 왼쪽 아래)
+export const demoPanel = {
+  title: '시연 모드',
+  pill: '시연',
+  fold: '시연 패널 접기',
+  intro: '가상 라이더 3명(민수·지영·현우)을 내가 팀장인 크루(가장 최근 것, 없으면 \'시연 크루\'를 새로 만듦)에 넣고 위치 공유를 켭니다. 내 위치는 가장 최근에 저장한 코스의 출발 지점이 됩니다.',
+  prepare: '시연 준비',
+  preparing: '준비 중…',
+  needRoute: '먼저 코스를 하나 저장해 주세요. 그 코스의 출발 지점이 내 위치가 됩니다.',
+  idle: (crew) => `크루 > '${crew}'에서 이번주 라이딩을 열고 민수·지영·현우를 초대하세요. 날짜는 오늘이어야 인원 체크를 할 수 있어요.`,
+  recruiting: '초대받은 라이더가 차례로 참여해요. 모두 참여하면 인원 체크를 시작하세요.',
+  checking: '일괄 체크를 누른 뒤 라이딩을 시작하세요.',
+  riding: (done, total) => `라이딩 중 · ${done} / ${total} km`,
+  done: '라이딩이 끝났어요. 다시 하려면 이번주 라이딩을 새로 여세요.',
+  modes: { formation: '대열', late: '늦게 출발', stray: '이탈 중', away: '이탈', returning: '복귀 중', joining: '합류 중' },
+  atStart: '출발 지점',
+  coming: '오는 중',
+  standby: '대기',
+  notInRide: '불참',
+  arrived: '도착',
+  stray: '민수 이탈',
+  back: '민수 복귀',
+  join: '현우 합류',
+  finish: '도착 지점으로',
+  login: (email, password) => `다른 기기에서 함께 보기: ${email} / ${password}`,
+  failed: '요청을 처리하지 못했어요.',
 };
 
 // 파티 룸(채팅+멤버목록+방장 제어판 오버레이) 전용 텍스트

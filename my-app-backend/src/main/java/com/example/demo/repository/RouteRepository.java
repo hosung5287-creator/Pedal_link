@@ -22,6 +22,9 @@ public interface RouteRepository extends JpaRepository<Route, Long> {
 
     List<Route> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    // 시연 모드 — 발표자가 가장 최근에 만든 코스 (출발 지점에 가상 위치를 둔다)
+    Optional<Route> findFirstByUserIdOrderByCreatedAtDesc(Long userId);
+
     // 목록에 필요한 칸만 — 경로 좌표(bike_path·shortest_path)는 크기가 커서 읽지 않는다
     interface RouteSummary {
         Long getId();

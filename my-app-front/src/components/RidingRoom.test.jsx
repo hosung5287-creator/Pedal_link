@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import L from 'leaflet';
 import RidingRoom from './RidingRoom';
 import { rideSessionKey, __resetRideMemory } from '../utils/rideRecords';
 import { text } from '../constants';
@@ -109,4 +110,87 @@ test('종료 요청 중에는 ‹ 닫기 버튼이 비활성화된다', async ()
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: '라이딩 종료' })); });
   expect(screen.getByRole('button', { name: '파티창으로' })).toBeDisabled();
   await act(async () => { resolveStop({ ...party, rideStartedAt: null }); });
+});
+
+// ── 파티원 이탈·합류 알림 ──
+// 지도 거리는 위도 차이로만 잰다 (1e-5도 = 1m). 내 위치는 위도 37.5.
+const riderAt = (userId, name, m) => ({ userId, name, lat: 37.5 + m * 1e-5, lng: 127 });
+const useLatDistance = () => {
+  L.map.mock.results.at(-1).value.distance.mockImplementation((a, b) => Math.abs(a[0] - b[0]) * 1e5);
+};
+const alertText = /이탈하였습니다|합류하였습니다/;
+
+test('대열에 있던 파티원이 250m 밖으로 나가면 이탈, 다시 50m 안으로 오면 합류 알림 — 처음 보일 때는 알리지 않는다', async () => {
+  vi.useFakeTimers();
+  try {
+    setShare(true);
+    render(<RidingRoom party={party} user={host} onClose={vi.fn()} />);
+    useLatDistance();
+    act(() => watchCb({ coords: { latitude: 37.5, longitude: 127 }, timestamp: Date.now() }));
+
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(2, '민수', 20)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3100); });
+    expect(screen.queryByText(alertText)).toBeNull();
+
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(2, '민수', 300)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(screen.getByText('민수가 이탈하였습니다')).toBeInTheDocument();
+
+    // 50~250m 사이는 그대로 (알림 없음), 50m 안으로 와야 합류
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(2, '민수', 120)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(2, '민수', 30)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(screen.getByText('민수가 합류하였습니다')).toBeInTheDocument();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(4100); });
+    expect(screen.queryByText(alertText)).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('처음부터 멀리 있던 파티원은 50m 안으로 오면 합류 알림 — 받침 있는 이름은 "이", 동시에 오면 차례로 뜬다', async () => {
+  vi.useFakeTimers();
+  try {
+    setShare(true);
+    render(<RidingRoom party={party} user={host} onClose={vi.fn()} />);
+    useLatDistance();
+    act(() => watchCb({ coords: { latitude: 37.5, longitude: 127 }, timestamp: Date.now() }));
+
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(3, '지영', 150), riderAt(4, '현우', 400)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3100); });
+    expect(screen.queryByText(alertText)).toBeNull();
+
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(3, '지영', 40), riderAt(4, '현우', 20)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(screen.getByText('지영이 합류하였습니다')).toBeInTheDocument();
+    expect(screen.queryByText('현우가 합류하였습니다')).toBeNull();
+
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(3, '지영', 40), riderAt(4, '현우', 20)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
+    expect(screen.getByText('현우가 합류하였습니다')).toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('위치가 잠깐 안 보였다가 다시 보이면 처음 보는 것처럼 다뤄 알림을 띄우지 않는다', async () => {
+  vi.useFakeTimers();
+  try {
+    setShare(true);
+    render(<RidingRoom party={party} user={host} onClose={vi.fn()} />);
+    useLatDistance();
+    act(() => watchCb({ coords: { latitude: 37.5, longitude: 127 }, timestamp: Date.now() }));
+
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(2, '민수', 20)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3100); });
+    api.getOtherLocations.mockResolvedValueOnce([]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    api.getOtherLocations.mockResolvedValueOnce([riderAt(2, '민수', 900)]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(screen.queryByText(alertText)).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
 });

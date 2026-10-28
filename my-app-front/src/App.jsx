@@ -13,6 +13,8 @@ import MapPage from './pages/MapPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import PartyDock from './components/PartyDock';
+import DemoPanel from './components/DemoPanel';
+import { setDemoUser } from './utils/demoGeo';
 import MobileNav from './components/MobileNav';
 import CrewPage from './pages/CrewPage';
 import SignupPage from './pages/SignupPage';
@@ -37,6 +39,8 @@ function App() {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
   });
+  // 시연 모드 가상 위치는 이 탭에 로그인한 계정 기준 — 같은 브라우저 다른 탭의 로그인과 섞이지 않게
+  useEffect(() => { setDemoUser(user); }, [user]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -160,6 +164,8 @@ function App() {
       <MobileNav currentPath={currentPath} user={user} onNavigate={moveTo} onLogout={handleLogout} />
       {/* 파티 소속/모집중일 때 뜨는 플로팅 도크 (지도 포함 전 화면 우측 하단) */}
       {user && <PartyDock user={user} onMoveParty={moveParty} />}
+      {/* 시연 패널 (왼쪽 아래) — 서버가 이 계정을 시연 발표자로 볼 때만 그린다 */}
+      {user && <DemoPanel key={user.id} user={user} />}
     </>
   );
 }

@@ -14,6 +14,18 @@ import { text } from '../constants';
 
 const letterOf = (name) => (name || '?').trim().charAt(0);
 
+// 파티원 이탈·합류 알림 — 개인 라이딩 지오펜스와 같은 거리 (나와 250m 넘게 떨어지면 이탈, 50m 안으로 오면 합류)
+const RIDER_JOIN_M = 50;
+const RIDER_AWAY_M = 250;
+const RIDER_ALERT_MS = 4000;
+
+// 이름 뒤 주격 조사 — 받침이 있으면 '이', 없으면 '가' (한글로 끝나지 않으면 '이(가)')
+const subjectJosa = (name) => {
+  const code = (name || '').trim().slice(-1).charCodeAt(0) - 0xac00;
+  if (!(code >= 0 && code <= 11171)) return '이(가)';
+  return code % 28 ? '이' : '가';
+};
+
 // 기록 저장 결과 → 요약 팝업 안내 문구
 const SAVE_NOTE = {
   queued: text.rideSaveQueued,
@@ -69,6 +81,24 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
   const [geoError, setGeoError] = useState('');
   const [summary, setSummary] = useState(null); // 종료 후 기록 팝업
   const [endError, setEndError] = useState('');
+
+  // 이탈·합류 알림 — 여러 명이 겹쳐도 하나씩 차례로 띄운다
+  const riderStatesRef = useRef(new Map()); // userId -> 'in' | 'out' (나와의 거리로 본 대열 안/밖)
+  const alertQueueRef = useRef([]);
+  const alertTimerRef = useRef(null);
+  const alertSeqRef = useRef(0);
+  const [riderAlert, setRiderAlert] = useState(null); // { key, name, away }
+  const showNextAlert = () => {
+    const next = alertQueueRef.current.shift();
+    setRiderAlert(next || null);
+    alertTimerRef.current = next ? setTimeout(showNextAlert, RIDER_ALERT_MS) : null;
+  };
+  const pushRiderAlertRef = useRef(null);
+  pushRiderAlertRef.current = (info) => {
+    alertQueueRef.current.push({ ...info, key: ++alertSeqRef.current });
+    if (!alertTimerRef.current) showNextAlert();
+  };
+  useEffect(() => () => clearTimeout(alertTimerRef.current), []);
 
   // 지도 초기화
   useEffect(() => {
@@ -169,6 +199,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
   useEffect(() => {
     let cancelled = false;
     const markers = otherMarkersRef.current;
+    const riderStates = riderStatesRef.current;
 
     const timer = setInterval(async () => {
       const pos = lastPosRef.current;
@@ -208,13 +239,29 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
           }
           otherSpeedRef.current.set(o.userId, { lat: o.lat, lng: o.lng, time: now, speedKmh });
           list.push({ userId: o.userId, name: o.name, speedKmh });
+
+          // 이탈·합류 — 처음 보일 때는 알리지 않고 상태만 기억한다 (출발할 때 모두에게 합류 알림이 뜨지 않게).
+          // 50~250m 사이에서는 상태를 바꾸지 않아 경계에서 알림이 반복되지 않는다.
+          const dist = map.distance([pos.lat, pos.lng], [o.lat, o.lng]);
+          const state = riderStates.get(o.userId);
+          if (!state) {
+            riderStates.set(o.userId, dist <= RIDER_JOIN_M ? 'in' : 'out');
+          } else if (state === 'in' && dist > RIDER_AWAY_M) {
+            riderStates.set(o.userId, 'out');
+            pushRiderAlertRef.current({ name: o.name, away: true });
+          } else if (state === 'out' && dist <= RIDER_JOIN_M) {
+            riderStates.set(o.userId, 'in');
+            pushRiderAlertRef.current({ name: o.name, away: false });
+          }
         }
 
+        // 위치가 안 보이게 된 사람(공유 끔·접속 끊김)은 지우고, 다시 보이면 처음 보는 것처럼 다룬다
         for (const [id, marker] of markers) {
           if (!seen.has(id)) {
             marker.remove();
             markers.delete(id);
             otherSpeedRef.current.delete(id);
+            riderStates.delete(id);
           }
         }
 
@@ -230,6 +277,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
       markers.forEach((m) => m.remove());
       markers.clear();
       otherSpeedRef.current.clear();
+      riderStates.clear();
     };
   }, [party.id, user.id, user.name]);
 
@@ -357,6 +405,16 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
         </header>
 
         {geoError && <p className="rrGeoError">{geoError}</p>}
+        {riderAlert && (
+          <div key={riderAlert.key} className={`rrProxToast${riderAlert.away ? ' isLeaving' : ''}`} role="status">
+            <span className="rrAvatar" aria-hidden="true">{letterOf(riderAlert.name)}</span>
+            <div className="rrProxText">
+              <strong>
+                {(riderAlert.away ? text.rideRiderAway : text.rideRiderJoined)(riderAlert.name, subjectJosa(riderAlert.name))}
+              </strong>
+            </div>
+          </div>
+        )}
         {!shareOn && (
           <div className="rrShareOff" role="status">
             <span>{text.rideLocShareOff}</span>

@@ -17,3 +17,9 @@ spring.config.import=optional:file:./.env[.properties]
 gemini.api-key=${GEMINI_API_KEY:}
 gemini.model=${GEMINI_MODEL:}
 gemini.base-url=${GEMINI_BASE_URL:}
+
+# 시연 모드 — 가상 라이더 3명(민수·지영·현우)으로 크루 라이딩을 보여준다. 시연할 때만 .env 에 DEMO_ENABLED=true.
+# 꺼져 있으면(기본) 시연 API·스케줄러가 만들어지지 않는다(/api/demo/status 만 enabled:false 로 답함). 배포 서버에는 켜지 말 것.
+demo.enabled=${DEMO_ENABLED:false}
+# 시연 패널을 띄울 발표자 계정 (콤마로 여러 개). 비우면 가상 라이더가 아닌 모든 계정에 뜬다.
+demo.presenter-emails=${DEMO_PRESENTER_EMAILS:}

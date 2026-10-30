@@ -5,9 +5,12 @@ import com.example.demo.dto.FeedResponse;
 import com.example.demo.dto.FeedSummaryResponse;
 import com.example.demo.service.FeedService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +43,7 @@ public class FeedController {
         return feedService.getSummary(userId);
     }
 
-    // 게시물 올리기 — 저장된 내 경로에 문구·해시태그를 붙인다
+    // 게시물 올리기 — 저장된 내 경로에 문구·해시태그·사진(data URL)을 붙인다
     @PostMapping("/routes/{routeId}/post")
     public ResponseEntity<?> publish(@PathVariable Long routeId,
                                      @RequestBody Map<String, String> body) {
@@ -49,13 +52,25 @@ public class FeedController {
             return ResponseEntity.badRequest().body(Map.of("message", "로그인이 필요합니다"));
         }
         try {
-            return ResponseEntity.ok(feedService.publish(
-                    routeId, Long.valueOf(rawUserId), body.get("description"), body.get("tags"), body.get("region")));
+            return ResponseEntity.ok(feedService.publish(routeId, Long.valueOf(rawUserId),
+                    body.get("description"), body.get("tags"), body.get("region"), body.get("photo")));
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
+    }
+
+    // 게시물 사진 — 피드 카드의 photoUrl. 주소에 사진을 바꾼 시각(v)이 붙어 있어 오래 캐시해도 된다.
+    @GetMapping("/routes/{routeId}/photo")
+    public ResponseEntity<byte[]> getPhoto(@PathVariable Long routeId) {
+        return feedService.getPhoto(routeId)
+                .map(p -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(p.getContentType()))
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
+                        .header("X-Content-Type-Options", "nosniff")
+                        .body(p.getData()))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // 북마크(저장) 토글 — 다른 사람의 코스를 내 저장 목록에 담거나 뺀다 → { bookmarked }

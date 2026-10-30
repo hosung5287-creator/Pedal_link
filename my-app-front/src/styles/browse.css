@@ -705,6 +705,72 @@
   background: var(--surface-2);
 }
 
+/* 사진이 있는 게시물 — 사진 → 코스 지도를 옆으로 넘겨 본다 (스크롤 스냅, 한 장씩 멈춘다) */
+.feedSlides { position: relative; }
+.feedSlidesTrack {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  /* 지도(Leaflet) 층이 화살표·점 위로 올라오지 않게 이 안에 가둔다 */
+  isolation: isolate;
+}
+.feedSlidesTrack::-webkit-scrollbar { display: none; }
+.feedSlide {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.feedSlideWait { aspect-ratio: 4 / 3; background: var(--surface-2); }
+
+.feedSlideNav {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0 0 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-50%);
+  box-shadow: 0 4px 12px rgba(12, 27, 39, 0.18);
+}
+.feedSlideNav.isPrev { left: 10px; }
+.feedSlideNav.isNext { right: 10px; }
+.feedSlideNav:hover { border-color: var(--mint); color: var(--mint-dark); }
+/* 손가락으로 넘기는 기기에서는 화살표를 숨긴다 */
+@media (hover: none) {
+  .feedSlideNav { display: none; }
+}
+
+.feedSlideDots {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  display: flex;
+  gap: 6px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.feedSlideDots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(12, 27, 39, 0.25);
+  transition: width 0.2s, background 0.2s;
+}
+.feedSlideDots i.isOn { width: 18px; background: #ffffff; }
+
 .feedMediaBar {
   display: flex;
   align-items: center;

@@ -4,7 +4,7 @@ import BrandLogo from '../components/BrandLogo';
 
 import { useEffect, useRef, useState } from 'react';
 import { text, GU_LIST, userProfile } from '../constants';
-import { getFeedPage, getFeedSummary, toggleBookmark, toggleLike } from '../api/feed';
+import { feedPhotoSrc, getFeedPage, getFeedSummary, toggleBookmark, toggleLike } from '../api/feed';
 import RouteMapThumbnail from '../components/RouteMapThumbnail';
 import ComposePostModal from '../components/ComposePostModal';
 import FeedSidebar from '../components/FeedSidebar';
@@ -76,6 +76,49 @@ function BookmarkIcon({ filled }) {
   );
 }
 
+// 사진이 있는 게시물 — 사진 → 코스 지도를 옆으로 넘겨 본다 (폰은 손가락, PC 는 트랙패드나 화살표 버튼).
+// 지도는 처음 넘길 때 그린다 — 사진 카드마다 지도 타일을 미리 받지 않게.
+function FeedSlides({ photo, path }) {
+  const trackRef = useRef(null);
+  const [index, setIndex] = useState(0);
+  const [mapShown, setMapShown] = useState(false);
+
+  // 지금 몇 번째 장인지는 스크롤 위치로 정한다 — 손가락으로 넘겨도, 버튼으로 넘겨도 같다
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el?.clientWidth) return;
+    if (el.scrollLeft > 0) setMapShown(true);
+    setIndex(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  const go = (i) => {
+    const el = trackRef.current;
+    if (i > 0) setMapShown(true);
+    setIndex(i);
+    el?.scrollTo?.({ left: i * el.clientWidth, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="feedSlides" role="group" aria-label={text.browseSlides}>
+      <div className="feedSlidesTrack" ref={trackRef} onScroll={onScroll}>
+        <div className="feedSlide"><img className="feedPhoto" src={photo} alt="" loading="lazy" /></div>
+        <div className="feedSlide">
+          {mapShown ? <RouteMapThumbnail path={path} /> : <div className="feedSlideWait" />}
+        </div>
+      </div>
+      {index > 0 && (
+        <button type="button" className="feedSlideNav isPrev" onClick={() => go(0)} aria-label={text.browseSlidePhoto}>‹</button>
+      )}
+      {index < 1 && (
+        <button type="button" className="feedSlideNav isNext" onClick={() => go(1)} aria-label={text.browseSlideMap}>›</button>
+      )}
+      <span className="feedSlideDots" aria-hidden="true">
+        <i className={index === 0 ? 'isOn' : ''} />
+        <i className={index === 1 ? 'isOn' : ''} />
+      </span>
+    </div>
+  );
+}
+
 // isMine: 내가 올린 게시물이면 저장 버튼을 숨긴다(내 코스는 이미 저장된 경로 목록에 있다)
 function FeedCard({ item, isLoggedIn, isMine, onLike, onBookmark, onLoginNeeded, onOpenRoute, onOpenAuthor }) {
   // 작성 모달로 쓴 태그가 있으면 그걸 쓰고, 없으면 데이터에서 유도한다
@@ -109,8 +152,8 @@ function FeedCard({ item, isLoggedIn, isMine, onLike, onBookmark, onLoginNeeded,
         {tags.length > 0 && <p className="feedTags">{tags.map(t => `#${t}`).join(' ')}</p>}
 
         <div className="feedMedia">
-          {item.photo
-            ? <img className="feedPhoto" src={item.photo} alt="" loading="lazy" />
+          {item.photoUrl
+            ? <FeedSlides photo={feedPhotoSrc(item.photoUrl)} path={item.path} />
             : <RouteMapThumbnail path={item.path} />}
 
           {/* 미디어 하단 바 — 코스 이름·거리 + 지도로 보기 (레퍼런스의 "Billie · Template | Copy") */}
@@ -123,7 +166,7 @@ function FeedCard({ item, isLoggedIn, isMine, onLike, onBookmark, onLoginNeeded,
                 {item.timeMin != null ? ` · ${formatDuration(item.timeMin)}` : ''}
               </span>
             </span>
-            {/* 코스 만들기 화면에 이 코스를 바로 연다 — 거기서 [라이딩 시작] 을 누를 수 있다 */}
+            {/* 코스 만들기 화면에 이 코스를 바로 연다 */}
             <button type="button" className="feedMediaBtn" onClick={() => onOpenRoute(item.id)}>
               {text.browseOpenMap}
             </button>

@@ -7,9 +7,11 @@ import com.example.demo.dto.PointDto;
 import com.example.demo.entity.Route;
 import com.example.demo.entity.RouteBookmark;
 import com.example.demo.entity.RouteLike;
+import com.example.demo.entity.RoutePhoto;
 import com.example.demo.entity.User;
 import com.example.demo.repository.RouteBookmarkRepository;
 import com.example.demo.repository.RouteLikeRepository;
+import com.example.demo.repository.RoutePhotoRepository;
 import com.example.demo.repository.RouteRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,14 +20,17 @@ import org.locationtech.jts.geom.LineString;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,12 +41,18 @@ public class FeedService {
     private final RouteRepository routeRepository;
     private final RouteLikeRepository routeLikeRepository;
     private final RouteBookmarkRepository routeBookmarkRepository;
+    private final RoutePhotoRepository routePhotoRepository;
     private final UserRepository userRepository;
 
     // 썸네일에 쓸 좌표 개수 상한 — 이보다 많으면 일정 간격으로 솎아낸다
     private static final int THUMBNAIL_POINTS = 60;
     private static final int MAX_PAGE_SIZE = 50;   // 피드 한 페이지 최대 개수
     private static final int SIDEBAR_LIMIT = 5;    // 사이드바 순위 개수
+    // 게시물 사진 — 화면이 300KB 안팎으로 줄여 보내므로 1MB 면 넉넉하다
+    private static final int MAX_PHOTO_BYTES = 1024 * 1024;
+    private static final Set<String> PHOTO_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
+
+    private record Photo(String contentType, byte[] data) {}
 
     /**
      * 둘러보기 피드. 최신 경로부터.
@@ -102,6 +113,10 @@ public class FeedService {
         Set<Long> bookmarkedByViewer = viewerId == null
                 ? Set.of()
                 : new HashSet<>(routeBookmarkRepository.findRouteIdsByUserIdAndRouteIdIn(viewerId, routeIds));
+        Map<Long, LocalDateTime> photoUpdatedAt = new HashMap<>();
+        for (Object[] row : routePhotoRepository.findUpdatedAtByRouteIdIn(routeIds)) {
+            photoUpdatedAt.put((Long) row[0], (LocalDateTime) row[1]);
+        }
 
         return routes.stream()
                 .map(route -> {
@@ -110,6 +125,7 @@ public class FeedService {
                             likeCounts.getOrDefault(route.getId(), 0L),
                             likedByViewer.contains(route.getId()));
                     card.setBookmarked(bookmarkedByViewer.contains(route.getId()));
+                    card.setPhotoUrl(photoUrl(route.getId(), photoUpdatedAt.get(route.getId())));
                     return card;
                 })
                 .collect(Collectors.toList());
@@ -175,17 +191,20 @@ public class FeedService {
     }
 
     /**
-     * 게시물 올리기 — 이미 저장된 내 경로에 문구와 해시태그를 붙이고 피드에 공개한다(published_at).
+     * 게시물 올리기 — 이미 저장된 내 경로에 문구·해시태그·사진을 붙이고 피드에 공개한다(published_at).
      * 이 프로젝트에서 "게시물"은 별도 테이블이 아니라 경로에 딸린 내용이다. 저장만 한 코스는 피드에 나오지 않는다.
+     * @param photo 화면이 줄여 보낸 data URL("data:image/jpeg;base64,..."). 없으면 사진을 뺀다 —
+     *              글쓰기 화면은 다시 올릴 때 예전 내용을 불러오지 않고 문구·태그처럼 새로 덮어쓴다.
      */
     @Transactional
-    public FeedResponse publish(Long routeId, Long userId, String description, String rawTags, String region) {
+    public FeedResponse publish(Long routeId, Long userId, String description, String rawTags, String region, String photo) {
         Route route = routeRepository.findById(routeId)
                 .orElseThrow(() -> new IllegalArgumentException("경로를 찾을 수 없습니다"));
 
         if (route.getUserId() == null || !route.getUserId().equals(userId)) {
             throw new SecurityException("본인이 저장한 경로만 올릴 수 있습니다");
         }
+        Photo picked = parsePhoto(photo);   // 잘못된 사진이면 아무것도 바꾸기 전에 멈춘다
 
         route.setDescription(trimToNull(description, 500));
         route.setTags(normalizeTags(rawTags));
@@ -198,10 +217,55 @@ public class FeedService {
         if (route.getPublishedAt() == null) route.setPublishedAt(LocalDateTime.now());
         routeRepository.save(route);
 
+        LocalDateTime photoAt = null;
+        if (picked == null) {
+            routePhotoRepository.deleteById(routeId);
+        } else {
+            RoutePhoto p = routePhotoRepository.findById(routeId).orElseGet(RoutePhoto::new);
+            p.setRouteId(routeId);
+            p.setContentType(picked.contentType());
+            p.setData(picked.data());
+            p.setUpdatedAt(LocalDateTime.now());
+            photoAt = routePhotoRepository.save(p).getUpdatedAt();
+        }
+
         String authorName = userRepository.findById(userId).map(User::getName).orElse("익명 라이더");
-        return toCard(route, authorName,
+        FeedResponse card = toCard(route, authorName,
                 routeLikeRepository.countByRouteId(routeId),
                 routeLikeRepository.findByRouteIdAndUserId(routeId, userId).isPresent());
+        card.setPhotoUrl(photoUrl(routeId, photoAt));
+        return card;
+    }
+
+    /** 게시물 사진 (피드 카드의 photoUrl 이 가리키는 곳) */
+    @Transactional(readOnly = true)
+    public Optional<RoutePhoto> getPhoto(Long routeId) {
+        return routePhotoRepository.findById(routeId);
+    }
+
+    // "data:image/jpeg;base64,...." → 형식·바이트. 비어 있으면 null (사진 없음)
+    private Photo parsePhoto(String photo) {
+        if (photo == null || photo.isBlank()) return null;
+        // base64 는 3바이트를 4글자로 쓴다 — 풀기 전에 길이로 먼저 거른다
+        if (photo.length() > MAX_PHOTO_BYTES / 3 * 4 + 100) throw new IllegalArgumentException("사진이 너무 커요 (1MB 까지)");
+        int comma = photo.indexOf(',');
+        String head = comma > 0 ? photo.substring(0, comma) : "";
+        String type = head.startsWith("data:") && head.endsWith(";base64") ? head.substring(5, head.length() - 7) : "";
+        if (!PHOTO_TYPES.contains(type)) throw new IllegalArgumentException("사진은 JPEG·PNG·WebP 만 올릴 수 있어요");
+        byte[] data;
+        try {
+            data = Base64.getDecoder().decode(photo.substring(comma + 1));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("사진을 읽지 못했어요");
+        }
+        if (data.length == 0) throw new IllegalArgumentException("사진을 읽지 못했어요");
+        if (data.length > MAX_PHOTO_BYTES) throw new IllegalArgumentException("사진이 너무 커요 (1MB 까지)");
+        return new Photo(type, data);
+    }
+
+    // 사진 주소 — 바꾼 시각(v)을 붙여 사진을 바꾸면 주소도 바뀐다. 사진이 없으면 null
+    private String photoUrl(Long routeId, LocalDateTime updatedAt) {
+        return updatedAt == null ? null : "/api/routes/" + routeId + "/photo?v=" + Timestamp.valueOf(updatedAt).getTime();
     }
 
     /** "#야경 #초보코스" / "야경, 초보코스" 무엇으로 써도 "야경,초보코스" 로 정리한다 */

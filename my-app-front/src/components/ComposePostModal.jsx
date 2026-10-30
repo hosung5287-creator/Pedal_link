@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { text } from '../constants';
 import { getRoutes } from '../api/routes';
 import { publishPost } from '../api/feed';
+import { errorMessage } from '../api/client';
 import { compressImage, formatBytes, MAX_UPLOAD_BYTES } from '../utils/image';
 
 // 저장된 내 경로 하나를 골라 문구·해시태그를 붙여 피드에 올리는 모달.
@@ -77,7 +78,10 @@ export default function ComposePostModal({ user, onClose, onPublished }) {
       onPublished(card);
       onClose();
     } catch (err) {
-      setError(err.status === 403 ? '본인이 저장한 경로만 올릴 수 있습니다.' : text.browseComposeFailed);
+      // 400 은 서버가 이유를 알려 준다 (사진 형식·크기 등)
+      setError(err.status === 403 ? '본인이 저장한 경로만 올릴 수 있습니다.'
+        : err.status === 400 ? errorMessage(err, text.browseComposeFailed)
+        : text.browseComposeFailed);
       setSubmitting(false);
     }
   };

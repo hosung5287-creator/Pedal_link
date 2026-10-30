@@ -46,7 +46,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *     (현우는 코스 뒤쪽에서 오는 중 — 220m 안이라 인원 체크는 된다)
  *  3) 라이딩을 시작하면 발표자의 가상 위치가 코스를 따라 약 20km/h 로 가고, 라이더가 대열로 따라간다
  *  4) 시연 패널: 민수 이탈 → 민수 복귀, 현우 합류(늦게 출발해 뒤따라오던 현우가 따라붙는다), 도착 지점으로
- *     복귀·합류하는 동안은 그룹이 멈춰 기다린다 — 뒤에서 따라잡기만 하면 수십 초가 걸려서
+ *     이탈은 6초 만에 대열 뒤쪽 300m 로 간다 (차츰 빨라졌다가 서서히 선다).
+ *     복귀·합류는 그룹이 먼저 멈춰 서고(다른 화면에 멈춘 라이더가 빨간 마커로 보일 만큼 기다린다),
+ *     라이더를 대열 자리로 옮기면 다시 출발한다 — 뒤에서 따라잡기만 하면 수십 초가 걸려서.
+ *     다른 화면은 3초마다 받은 위치 사이를 미끄러지듯 이어 보여 줘서 순간 이동으로 보이지 않는다.
  *
  * 라이더 위치는 서버가 LiveLocationService 에 바로 넣는다 (실제 기기가 보낸 위치와 같은 곳).
  * 라이더 계정으로 다른 기기에서 로그인해도 그 기기가 보낸 위치는 받지 않는다 — 위치는 서버 한 곳에서만 나온다.
@@ -64,10 +67,10 @@ public class DemoService {
     public static final String CREW_NAME = "시연 크루";
 
     private static final double CRUISE_MS = 5.65;      // 그룹 속도 약 20km/h
-    private static final double STRAY_MS = 9.7;        // 이탈하며 반대쪽으로 갈 때 약 35km/h
-    private static final double CATCH_UP_MS = 11.5;    // 복귀·합류하며 따라붙을 때 약 41km/h
-    private static final double AWAY_HOLD_M = 262;     // 라이딩 화면의 이탈 기준(250m) 바깥 — 여기까지 가면 그 거리를 유지한다
-    private static final double REGROUP_M = 30;        // 따라붙는 라이더가 자기 자리에서 이만큼 안으로 오면 그룹이 다시 출발한다
+    private static final double STRAY_M = 300;         // 이탈 — 자기 대열 자리에서 뒤쪽 비스듬히 이만큼 (라이딩 화면의 이탈 기준 250m 바깥)
+    private static final double STRAY_S = 6;           // 그 자리까지 가는 시간. 간 뒤에는 그 거리를 유지하며 따라온다
+    private static final double REGROUP_BRAKE = 2.8;   // 복귀·합류 때 그룹이 서는 감속(m/s²) — 20km/h 에서 2초 남짓
+    private static final double REGROUP_HOLD_S = 4;    // 다 선 뒤 이만큼 있다가 라이더가 들어온다 — 다른 화면(3초마다 위치를 받음)에 멈춘 표시가 뜰 시간
     private static final double LATE_GAP_M = 150;      // 늦게 출발한 현우가 선두 뒤로 떨어져 따라오는 거리
     private static final double SKIP_LEFT_M = 150;     // [도착 지점으로] — 도착까지 이만큼 남기고 옮긴다
     private static final double JUMP_M = 40;           // 한 번(1초)에 이보다 많이 움직이면 순간 이동으로 본다 (가장 빠른 라이더도 12m 안팎)
@@ -304,11 +307,17 @@ public class DemoService {
                     require(minsu.active, "민수가 이번 라이딩에 없어요.");
                     require(minsu.mode == Mode.FORMATION, "민수가 대열에 있을 때만 이탈시킬 수 있어요.");
                     minsu.mode = Mode.STRAY;
-                    minsu.strayBearing = (s.heading + 145) % 360;   // 뒤쪽 비스듬히 — 그룹과 반대로 가서 빨리 멀어진다
+                    holdOffset(s, minsu);   // 지금 자리에서 출발해
+                    minsu.fromN = minsu.offN;
+                    minsu.fromE = minsu.offE;
+                    double b = Math.toRadians(s.heading + 145);   // 뒤쪽 비스듬히 — 그룹과 반대로 가서 빨리 멀어진다
+                    minsu.offN = STRAY_M * Math.cos(b);
+                    minsu.offE = STRAY_M * Math.sin(b);
                     minsu.strayT = 0;
                 }
                 case "return" -> {
                     require(minsu.mode == Mode.STRAY || minsu.mode == Mode.AWAY, "민수가 이탈했을 때만 복귀시킬 수 있어요.");
+                    if (minsu.mode == Mode.STRAY) holdOffset(s, minsu);   // 아직 멀어지던 중이면 그 자리에서 그룹과 함께 선다
                     minsu.mode = Mode.RETURNING;
                 }
                 case "join" -> {
@@ -412,13 +421,13 @@ public class DemoService {
         s.progress = 0;
         s.speed = 0;
         s.simT = 0;
+        s.stoppedT = 0;
         usePath(s, e.getRouteId() == null ? null : routeRepository.findById(e.getRouteId()).orElse(null));
         for (Rider r : s.riders) {
             String st = memberStatus(e.getId(), r.userId);
             r.active = st != null && !"declined".equals(st);
             r.answered = !"invited".equals(st);
             r.mode = isLateRider(r) ? Mode.LATE : Mode.FORMATION;
-            r.catchingUp = false;
         }
     }
 
@@ -448,10 +457,10 @@ public class DemoService {
         s.progress = elapsed > 10 && s.path != null ? Math.min(s.path.length, elapsed * CRUISE_MS) : 0;
         s.speed = s.progress > 0 ? CRUISE_MS : 0;
         s.simT = Math.max(0, elapsed);
+        s.stoppedT = 0;
         for (Rider r : s.riders) {
             r.active = "checked".equals(memberStatus(e.getId(), r.userId));
             r.mode = isLateRider(r) && s.progress == 0 ? Mode.LATE : Mode.FORMATION;
-            r.catchingUp = false;
         }
     }
 
@@ -498,13 +507,14 @@ public class DemoService {
     private void ride(Session s, double dt, long now) {
         if (s.path == null) return;
         s.simT += dt;
-        // 복귀·합류하는 라이더가 있으면 그룹이 멈춰 기다린다. 도착이 가까우면 천천히 멈춘다.
-        boolean waitForSomeone = s.riders.stream().anyMatch(r -> r.active && r.catchingUp);
+        // 복귀·합류하는 라이더가 있으면 그룹이 서서 기다린다. 도착이 가까우면 천천히 멈춘다.
+        boolean regroup = s.riders.stream().anyMatch(r -> r.active && (r.mode == Mode.RETURNING || r.mode == Mode.JOINING));
         double left = s.path.length - s.progress;
-        double target = waitForSomeone ? 0 : Math.min(cruise(s.simT), Math.sqrt(2 * 1.2 * left));
-        double maxDelta = (target > s.speed ? 1.0 : 1.6) * dt;
+        double target = regroup ? 0 : Math.min(cruise(s.simT), Math.sqrt(2 * 1.2 * left));
+        double maxDelta = (target > s.speed ? 1.0 : regroup ? REGROUP_BRAKE : 1.6) * dt;
         s.speed = Math.max(0, s.speed + Math.max(-maxDelta, Math.min(maxDelta, target - s.speed)));
         s.progress = Math.min(s.path.length, s.progress + s.speed * dt);
+        s.stoppedT = regroup && s.speed == 0 ? s.stoppedT + dt : 0;
         setLeader(s, s.path.pointAt(s.progress), headingAt(s.path, s.progress, s.heading), now);
 
         for (Rider r : s.riders) {
@@ -514,38 +524,55 @@ public class DemoService {
                 case FORMATION -> moveToward(r, slot, s.speed + 2.5, dt);
                 case LATE -> moveToward(r, side(s.path, s.progress - LATE_GAP_M, r.def.side()), s.speed + 1, dt);
                 case STRAY -> {
-                    double[] p = offset(r.lat, r.lng, r.strayBearing, STRAY_MS * dt);
+                    // 대열 자리에서 떨어진 거리를 출발 때 → 목표까지 STRAY_S 동안 늘린다 (차츰 빨라졌다가 서서히 선다, 그룹은 계속 달린다)
+                    r.strayT += dt;
+                    double k = Math.min(1, r.strayT / STRAY_S);
+                    double f = k * k * (3 - 2 * k);
+                    double[] p = shift(slot, r.fromN + (r.offN - r.fromN) * f, r.fromE + (r.offE - r.fromE) * f);
+                    if (distanceM(r.lat, r.lng, p[0], p[1]) > 0.3) r.heading = bearing(r.lat, r.lng, p[0], p[1]);
                     r.lat = p[0];
                     r.lng = p[1];
-                    r.heading = r.strayBearing;
-                    r.strayT += dt;
-                    // 충분히 멀어지면 그 거리를 유지하며 따라온다 (코스가 휘어 잘 안 멀어져도 45초면 멈춘다)
-                    if (nearestOther(s, r) >= AWAY_HOLD_M || r.strayT > 45) {
-                        r.mode = Mode.AWAY;
-                        r.offN = (r.lat - slot[0]) * M_PER_DEG;
-                        r.offE = (r.lng - slot[1]) * M_PER_DEG * Math.cos(Math.toRadians(slot[0]));
-                    }
+                    r.dashing = true;
+                    if (k == 1) r.mode = Mode.AWAY;
                 }
                 case AWAY -> moveToward(r, shift(slot, r.offN, r.offE), s.speed + 2.5, dt);
                 case RETURNING, JOINING -> {
-                    moveToward(r, slot, CATCH_UP_MS, dt);
-                    if (distanceM(r.lat, r.lng, slot[0], slot[1]) < 3) r.mode = Mode.FORMATION;
+                    if (s.stoppedT < REGROUP_HOLD_S) {
+                        // 그룹이 다 서서 잠깐 있을 때까지는 있던 자리(이탈한 자리 · 뒤따라오던 자리)에서 함께 선다
+                        double[] wait = r.mode == Mode.JOINING
+                                ? side(s.path, s.progress - LATE_GAP_M, r.def.side())
+                                : shift(slot, r.offN, r.offE);
+                        moveToward(r, wait, s.speed + 2.5, dt);
+                    } else {
+                        // 대열 자리로 한 번에 옮긴다 — 다른 화면이 서 있던 자리에서 여기까지 미끄러지듯 이어 보여 준다
+                        // (몇 번에 나눠 오면 중간 위치를 받은 화면에서 오다가 멈칫한다). 숨기지 않아 합류 알림이 뜬다.
+                        r.lat = slot[0];
+                        r.lng = slot[1];
+                        r.heading = s.heading;
+                        r.dashing = true;
+                        r.mode = Mode.FORMATION;
+                    }
                 }
             }
-            r.catchingUp = (r.mode == Mode.RETURNING || r.mode == Mode.JOINING)
-                    && distanceM(r.lat, r.lng, slot[0], slot[1]) > REGROUP_M;
             publish(s, r, now, true);
         }
+    }
+
+    // 지금 자리를 자기 대열 자리에서 떨어진 거리로 기억한다 — 그 거리를 유지하며 그룹을 따라간다
+    private static void holdOffset(Session s, Rider r) {
+        double[] slot = slotOf(s, r);
+        r.offN = (r.lat - slot[0]) * M_PER_DEG;
+        r.offE = (r.lng - slot[1]) * M_PER_DEG * Math.cos(Math.toRadians(slot[0]));
     }
 
     // [도착 지점으로] — 도착 150m 앞으로 옮기고 모두 대열로. 남은 길은 평소처럼 달려 도착한다.
     private void skipToFinish(Session s, long now) {
         s.progress = s.path.length - SKIP_LEFT_M;
         setLeader(s, s.path.pointAt(s.progress), headingAt(s.path, s.progress, s.heading), now);
+        s.stoppedT = 0;
         for (Rider r : s.riders) {
             if (!r.active) continue;
             r.mode = Mode.FORMATION;
-            r.catchingUp = false;
             double[] slot = slotOf(s, r);
             r.lat = slot[0];
             r.lng = slot[1];
@@ -574,9 +601,11 @@ public class DemoService {
 
     // 라이더 위치를 내준다 — 화면용 가상 위치는 늘, 다른 사람 지도(LiveLocation)에는 report 일 때만
     private void publish(Session s, Rider r, long now, boolean report) {
+        boolean dash = r.dashing;   // 이번 한 번만 — 이탈하거나 대열로 들어온 움직임은 내리지 않는다 (순간 속도는 라이딩 화면이 걸러 낸다)
+        r.dashing = false;
         if (r.published && distanceM(r.pubLat, r.pubLng, r.lat, r.lng) > JUMP_M) {
             r.jumps++;
-            if (s.phase == Phase.RIDING) {
+            if (s.phase == Phase.RIDING && !dash) {
                 r.hiddenUntil = now + HIDE_MS;
                 liveLocations.pause(r.userId, HIDE_MS);
             }
@@ -593,16 +622,6 @@ public class DemoService {
     private static double[] slotOf(Session s, Rider r) {
         double sway = Math.sin(s.simT / 4 + r.def.gap()) * 0.8 * Math.min(1, s.speed / CRUISE_MS);
         return side(s.path, s.progress - r.def.gap(), r.def.side() + sway);
-    }
-
-    // 이 라이더와 가장 가까운 사람(발표자 + 대열에 있는 라이더)까지 거리 — 모든 화면에서 이탈 기준을 넘었는지 본다
-    private static double nearestOther(Session s, Rider me) {
-        double best = distanceM(me.lat, me.lng, s.lat, s.lng);
-        for (Rider r : s.riders) {
-            if (r == me || !r.active || !r.placed || r.mode != Mode.FORMATION) continue;
-            best = Math.min(best, distanceM(me.lat, me.lng, r.lat, r.lng));
-        }
-        return best;
     }
 
     private static void moveToward(Rider r, double[] target, double maxSpeed, double dt) {
@@ -630,9 +649,10 @@ public class DemoService {
         Mode mode = Mode.FORMATION;
         boolean placed;
         double lat, lng, heading;
-        double offN, offE;       // AWAY — 자기 대열 자리에서 떨어진 거리(m, 북·동)
-        double strayBearing, strayT;
-        boolean catchingUp;      // 복귀·합류 중 — 그룹이 기다린다
+        double offN, offE;       // 자기 대열 자리에서 떨어진 거리(m, 북·동) — STRAY 는 가는 곳, AWAY·복귀 대기는 있는 곳
+        double fromN, fromE;     // STRAY — 출발할 때 대열 자리에서 떨어져 있던 거리
+        double strayT;           // STRAY — 출발한 뒤 지난 시간(초)
+        boolean dashing;         // 이번 주기에 크게 움직임(이탈·대열로 들어옴) — publish 가 순간 이동으로 보지 않게
         boolean published;
         double pubLat, pubLng;
         int jumps;
@@ -655,6 +675,7 @@ public class DemoService {
         Path path;
         Long pathRouteId;
         double progress, speed, simT;   // 선두(발표자)가 코스를 따라 간 거리(m) · 속도(m/s) · 라이딩 경과(초)
+        double stoppedT;                // 복귀·합류를 기다리며 서 있은 시간(초)
         boolean placed;
         double lat, lng, heading;
         int jumps;

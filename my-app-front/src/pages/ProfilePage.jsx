@@ -283,15 +283,6 @@ export default function ProfilePage({ user, onMoveHome, onMoveBrowse, onMovePart
             </ul>
           )}
         </section>
-
-        <section className="accountCard">
-          <h2>{account.profileActivityTitle}</h2>
-          <ul className="accountList">
-            {account.profileActivity.map((label) => (
-              <li key={label}>{label}<span className="accountSoon">{account.soon}</span></li>
-            ))}
-          </ul>
-        </section>
       </main>
     </div>
   );

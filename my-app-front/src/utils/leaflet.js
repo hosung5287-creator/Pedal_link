@@ -69,6 +69,18 @@ export function makeOtherUserIcon() {
   });
 }
 
+// 협동 라이딩 화면의 다른 라이더 — 달리는 동안 흰색, 멈춰 있으면 빨간색 (합류를 기다리며 선 것도 보이게)
+export function makeRiderIcon(stopped = false) {
+  const look = stopped ? 'background:#ef4444;border:2.5px solid #fff;' : 'background:#fff;border:2.5px solid #0c1b27;';
+  return L.divIcon({
+    html: `<div style="width:16px;height:16px;${look}border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+    className: '',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -10],
+  });
+}
+
 // 경유지 색 — 지도 우클릭 메뉴의 "경유지로 추가" 버튼·패널 점과 같은 어두운 노랑
 export const WAYPOINT_COLOR = '#ca8a04';
 

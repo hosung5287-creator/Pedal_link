@@ -5,6 +5,7 @@ import com.example.demo.entity.Route;
 import com.example.demo.entity.RouteBookmark;
 import com.example.demo.entity.User;
 import com.example.demo.repository.RouteBookmarkRepository;
+import com.example.demo.repository.RoutePhotoRepository;
 import com.example.demo.repository.RouteRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.RegionService;
@@ -37,6 +38,7 @@ public class RouteService {
 
     private final RouteRepository routeRepository;
     private final RouteBookmarkRepository routeBookmarkRepository;
+    private final RoutePhotoRepository routePhotoRepository;
     private final UserRepository userRepository;
     private final RegionService regionService;
 
@@ -157,6 +159,7 @@ public class RouteService {
             .filter(r -> userId.equals(r.getUserId()))
             .map(Route::getId)
             .toList();
+        if (!own.isEmpty()) routePhotoRepository.deleteByRouteIdIn(own);   // 게시물 사진도 같이
         routeRepository.deleteAllById(own);
         int unsaved = routeBookmarkRepository.deleteByUserIdAndRouteIdIn(userId, ids);
         return Map.of("deleted", own.size(), "unsaved", unsaved);

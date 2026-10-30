@@ -11,8 +11,7 @@ import { WAYPOINT_COLOR, makeTileLayer, drawMarkers, drawRoutes, requestBrouterR
 import { getCycleways, getRoutes, getRouteById, saveRoute as saveRouteApi, deleteRoutes as deleteRoutesApi } from '../api/routes';
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { useLocationShare } from '../hooks/useLocationShare';
-import { getParty, endParty, startPartyRide } from '../api/parties';
-import { useMapRide } from '../hooks/useMapRide';
+import { getParty } from '../api/parties';
 import UserProfileModal from '../components/UserProfileModal';
 
 const GEOFENCE_RADIUS_M = 50;
@@ -21,8 +20,6 @@ const GEOFENCE_EXIT_M = 250;
 const MAX_WAYPOINTS = 100;
 // 지도 이름표를 눌러 프로필을 볼 수 있는 거리 — 파티 모집 범위(백엔드 PartyService.PARTY_RANGE_M)와 같은 값
 const PROFILE_RANGE_M = 220;
-// 경유지 목록 비교용 — 좌표만 본다(이름은 같은 곳이어도 달라질 수 있어서)
-const pointsKey = (list) => (list || []).map((p) => `${p.lat},${p.lng}`).join('|');
 
 // 사용자 ID 가져오기 — 로그인한 경우 DB ID, 비로그인 시 세션 스토리지에 임의 생성
 function getLiveId(user) {
@@ -100,24 +97,10 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
   const [routeStats, setRouteStats] = useState(null);
   // 파티 라이딩 모드 — /map?partyId=N 으로 들어왔을 때만 채워진다
   const [party, setParty] = useState(null);
-  // 팔로우 모드 — 지도 중심이 내 위치를 계속 따라간다 (라이딩 중에만 켠다)
+  // 팔로우 모드 — 지도 중심이 내 위치를 계속 따라간다 ("내 위치로"를 누르면 켜고, 지도를 끌면 끈다)
   const [following, setFollowing] = useState(false);
   // 위치 공유는 파티 도크와 공유하는 상태 (localStorage + 이벤트 동기화)
   const [locationShareEnabled, setLocationShare] = useLocationShare(user?.id);
-
-  // 라이딩 관련 상태
-  // 라이딩(시간·거리·기록 저장) — 페이지를 떠나면 GPS·타이머 정리와 기록 저장까지 훅이 맡는다
-  // 탄 코스 — 파티 라이딩이면 파티 코스, 아니면 지도에 불러온 저장 코스. 없으면 자유주행.
-  // 코스가 붙어야 백엔드가 상승고도(탄 거리 비율만큼)를 계산한다. 기록을 확정하는 순간에 읽는다.
-  const ride = useMapRide({
-    userId: user?.id,
-    partyId: party?.id ?? null,
-    getCourse: () => (party?.routeId ? { id: party.routeId, routeName: party.routeName } : loadedCourseRef.current),
-  });
-  const { isRiding, rideTime, rideDistance } = ride;
-  // 함께 타는 사람 HUD — 파티 라이딩 중일 때만 채워진다
-  const [otherRiders, setOtherRiders] = useState([]);
-  const [mySpeedKmh, setMySpeedKmh] = useState(0);
 
   const mapNodeRef = useRef(null);
   const mapRef = useRef(null);
@@ -133,9 +116,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
   const selectedRegionRef = useRef(selectedRegion);
   const bikeRouteRef = useRef([]);
   const shortestRouteRef = useRef([]);
-  // 지금 지도에 올린 경로가 "저장된 코스"면 그 정보 — 라이딩 기록에 코스를 붙여야 상승고도가 계산된다.
-  // { id, routeName, fromLat, fromLng, toLat, toLng, waypoints }. 출발·도착점을 직접 바꾸면 아래 effect 가 비운다.
-  const loadedCourseRef = useRef(null);
   // 경로 계산 세대 — 새 계산·초기화·저장 경로 불러오기·언마운트 때 올려서 늦게 온 이전 응답을 버린다
   const routeReqIdRef = useRef(0);
   // 저장된 경로를 불러와 세팅한 출발/도착/경유지 객체 — 이 조합이면 BRouter 로 다시 계산하지 않는다
@@ -149,9 +129,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
   const headingRef = useRef(0);
   const otherMarkersRef = useRef(new Map());
   const othersInsideRef = useRef(new Map());
-  const otherSpeedRef = useRef(new Map()); // userId -> { lat, lng, time, speedKmh } — HUD 속도 계산용
-
-  // 라이딩 관련 ref
 
   useEffect(() => { followingRef.current = following; }, [following]);
   useEffect(() => { startPointRef.current = startPoint; }, [startPoint]);
@@ -164,31 +141,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
       .then(data => setCyclewayData(data))
       .catch(() => {});
   }, []);
-
-  // 참가자 자동 출발 —
-  // 호스트가 시작하면 party.rideStartedAt 이 채워진다. 참가자 화면은 그걸 폴링으로
-  // 감지해 자기 타이머를 시작한다(거리는 각자 기기가 자기 GPS 로 측정).
-  // 서버가 남의 거리를 알 수 없으므로 "같이 출발"만 신호로 맞추는 방식이다.
-  useEffect(() => {
-    if (!partyId || !party) return;
-    const isHost = user?.id === party.hostId;
-    if (isHost || isRiding || party.rideStartedAt) return;   // 호스트/이미 주행중/이미 시작됨 제외
-
-    const timer = setInterval(async () => {
-      try {
-        const p = await getParty(partyId);
-        if (p.rideStartedAt) {
-          setParty(p);
-          handleRideStart();
-          showToast('호스트가 라이딩을 시작했습니다.');
-        }
-      } catch { /* 다음 주기에 재시도 */ }
-    }, 5000);
-
-    return () => clearInterval(timer);
-    // handleRideStart 는 party 를 참조해 매번 새로 만들어지므로 의존성에서 뺀다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [partyId, party?.hostId, party?.rideStartedAt, isRiding, user?.id]);
 
   // ── 파티 라이딩 모드 ─────────────────────────────
   // /map?partyId=N 으로 들어오면 파티에 걸린 코스를 지도에 그린다.
@@ -329,16 +281,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
         const prev = lastPosRef.current;
         lastPosRef.current = { lat: latitude, lng: longitude };
 
-        // 함께 타는 사람 HUD용 내 속도 — 직전 위치와의 이동거리/시간으로 추정
-        if (prev?.time) {
-          const dt = (pos.timestamp - prev.time) / 1000;
-          if (dt >= 1) {
-            const moved = calculateDistance(prev.lat, prev.lng, latitude, longitude);
-            setMySpeedKmh((moved / dt) * 3.6);
-          }
-        }
-        lastPosRef.current.time = pos.timestamp;
-
         // ── 진행 방향(heading) 결정 ──
         // 1순위: 기기가 준 heading. 단 정지 중이면 null 이 오는 경우가 많다.
         // 2순위: 직전 좌표와의 방위각. 단 GPS 흔들림으로 제자리에서도 값이 튀므로
@@ -372,7 +314,7 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
           currentLocMarkerRef.current.setLatLng([latitude, longitude]);
           geofenceCircleRef.current?.setLatLng([latitude, longitude]);
 
-          // 라이딩 중에는 화살표가 진행 방향을 가리키게 아이콘을 갈아끼운다
+          // 팔로우 중에는 화살표가 진행 방향을 가리키게 아이콘을 갈아끼운다
           if (followingRef.current) {
             currentLocMarkerRef.current.setIcon(makeHeadingIcon(headingRef.current));
           }
@@ -414,7 +356,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
     return R * 2 * Math.asin(Math.sqrt(a));
   };
 
-  // 라이딩 시작
   // "내 위치로" — 지도를 내 위치로 옮기고 팔로우를 다시 켠다
   const recenter = useCallback(() => {
     const pos = lastPosRef.current;
@@ -426,61 +367,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
     setFollowing(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleRideStart = useCallback(() => {
-    setFollowing(true);   // 라이딩 중에는 지도가 내 위치를 따라간다
-    // 파티 라이딩이면 경로 설정 패널을 접어서 지도+HUD 위주 화면으로 바꾼다
-    if (party) setPanelOpen(false);
-
-    // 호스트가 시작하면 서버에 알려 참가자 화면도 같이 출발하게 한다
-    if (party && user?.id === party.hostId && !party.rideStartedAt) {
-      startPartyRide(party.id, user.id)
-        .then(setParty)
-        .catch(() => {});
-    }
-    ride.start();
-    // party/user 는 라이딩 시작 시점의 최신 값을 봐야 해서 의존성에 넣는다
-    // (예전엔 []였는데, 그러면 party 가 항상 첫 렌더의 null 로 고정돼
-    //  호스트가 지도에서 직접 시작해도 서버에 알림이 안 갔다)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [party, user?.id]);
-
-  // 라이딩 종료
-  const handleRideStop = useCallback(async () => {
-    setFollowing(false);
-    // 방향 화살표를 원래의 현재위치 아이콘으로 되돌린다
-    currentLocMarkerRef.current?.setIcon(makeCurrentLocationIcon());
-
-    // GPS·타이머를 멈추고 주행 기록을 저장한다(실패하면 보류 큐에 남아 자동 재시도)
-    const stopped = await ride.stop();
-    const result = stopped?.result;
-    if (result?.kind === 'saved') {
-      showToast(`주행 기록 저장됨! ${(stopped.distanceM / 1000).toFixed(2)}km · ${stopped.durationMin}분`);
-    } else if (result?.kind === 'queued') {
-      showToast(text.rideSaveQueued, 'error');
-    } else if (result) {
-      showToast(text.rideSaveFailed, 'error');
-    }
-
-    // 위치 공유는 사용자 설정을 그대로 둔다(자동으로 끄지 않는다)
-
-    // 파티 라이딩이었고 내가 호스트면 파티도 종료한다.
-    // 참가자는 본인 라이딩만 끝나고 파티 상태는 건드리지 않는다 (호스트 권한).
-    if (party && user?.id === party.hostId) {
-      try {
-        const ended = await endParty(party.id, user.id);
-        setParty(ended);
-        showToast(text.rideEndedParty);
-      } catch {
-        showToast('파티 종료에 실패했습니다.', 'error');
-      }
-    } else if (party) {
-      showToast(text.rideEndedSolo);
-    }
-
-  // party 는 라이딩 종료 시점의 값만 필요해 의존성에서 뺀다 (매번 콜백 재생성 방지)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, party]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -531,19 +417,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
           const dist = map.distance([myPos.lat, myPos.lng], [o.lat, o.lng]);
           marker.setTooltipContent(proxBubbleHtml(o.name, dist));   // B: 말풍선 거리 갱신
 
-          // 함께 타는 사람 HUD용 속도 — 직전 폴링 위치와의 이동거리/시간으로 추정
-          const now = Date.now();
-          const prevSpeed = otherSpeedRef.current.get(o.userId);
-          let speedKmh = prevSpeed?.speedKmh ?? 0;
-          if (prevSpeed) {
-            const dt = (now - prevSpeed.time) / 1000;
-            if (dt >= 1) {
-              const moved = map.distance([prevSpeed.lat, prevSpeed.lng], [o.lat, o.lng]);
-              speedKmh = (moved / dt) * 3.6;
-            }
-          }
-          otherSpeedRef.current.set(o.userId, { lat: o.lat, lng: o.lng, time: now, speedKmh });
-
           const wasInside = insideMap.get(o.userId) || false;
           const isInside = wasInside ? dist <= GEOFENCE_EXIT_M : dist <= GEOFENCE_RADIUS_M;
           // 왼쪽 패널 상태줄에는 더 이상 접근/이탈 문구를 쓰지 않는다.
@@ -565,15 +438,8 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
             marker.remove();
             markers.delete(id);
             insideMap.delete(id);
-            otherSpeedRef.current.delete(id);
           }
         }
-
-        setOtherRiders(others.map((o) => ({
-          userId: o.userId,
-          name: o.name,
-          speedKmh: otherSpeedRef.current.get(o.userId)?.speedKmh ?? 0,
-        })));
       } catch {
         // 오류는 다음 폴링에서 재시도
       }
@@ -585,8 +451,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
       markers.forEach(m => m.remove());
       markers.clear();
       insideMap.clear();
-      otherSpeedRef.current.clear();
-      setOtherRiders([]);
     };
     // user 객체는 매 렌더마다 새로 생성되므로 안정적인 user?.id 에만 의존 (의도된 것)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -666,14 +530,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
   }, []);
 
   useEffect(() => {
-    // 출발·도착점이 불러온 코스와 달라졌으면(지도 클릭·검색·초기화) 더 이상 그 코스가 아니다
-    const course = loadedCourseRef.current;
-    const onCourse = course
-      && startPoint?.lat === course.fromLat && startPoint?.lng === course.fromLng
-      && endPoint?.lat === course.toLat && endPoint?.lng === course.toLng
-      && pointsKey(waypoints) === pointsKey(course.waypoints);
-    if (!onCourse) loadedCourseRef.current = null;
-
     // 경유지 마커 팝업의 삭제 버튼 → 그 경유지를 빼고 다시 계산
     drawMarkers(startPoint, endPoint, markerLayerRef.current, waypoints, (i) => removeWaypointRef.current(i));
     const loaded = loadedPairRef.current;
@@ -836,15 +692,7 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
       waypoints: viaSnap,
     };
     try {
-      const saved = await saveRouteApi(body);
-      // 방금 저장한 경로로 바로 달려도 코스 라이딩으로 기록되게 한다
-      if (saved?.id) {
-        loadedCourseRef.current = {
-          id: saved.id, routeName: body.routeName,
-          fromLat: body.fromLat, fromLng: body.fromLng, toLat: body.toLat, toLng: body.toLng,
-          waypoints: body.waypoints,
-        };
-      }
+      await saveRouteApi(body);
       setSaveModalOpen(false);
       showToast('경로가 저장되었습니다');
       // 저장 직후 목록을 다시 받아둔다. 이게 없으면 목록 패널이 열려 있을 때
@@ -913,12 +761,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
           return;
       }
 
-      // 출발·도착점을 바꾸기 전에 기록해야 위 effect 가 "같은 코스"로 알아본다
-      loadedCourseRef.current = {
-        id, routeName: data.routeName,
-        fromLat: data.fromLat, fromLng: data.fromLng, toLat: data.toLat, toLng: data.toLng,
-        waypoints: data.waypoints || [],
-      };
       applySavedRoute(data);
       setShowRouteList(false);
       showToast(text.routeLoaded(data.routeName));
@@ -1250,36 +1092,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
                 </label>
               </div>
 
-
-              {/* 라이딩 섹션 */}
-              <div className="plannerRideBox">
-                {/* 시작/종료를 각각 두고, 지금 할 수 없는 쪽은 비활성으로 둔다 */}
-                <div className="plannerRideAction">
-                  <button
-                    type="button"
-                    onClick={handleRideStart}
-                    disabled={isRiding}
-                    className="plannerRideBtn"
-                  >
-                    {text.rideStart}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRideStop}
-                    disabled={!isRiding}
-                    className="plannerRideBtn isRiding"
-                  >
-                    {text.rideStop}
-                  </button>
-                </div>
-                {isRiding && (
-                  <div className="plannerRideStats">
-                    <div>시간: {Math.floor(rideTime / 60)}:{(rideTime % 60).toString().padStart(2, '0')}</div>
-                    <div>거리: {(rideDistance / 1000).toFixed(2)}km</div>
-                  </div>
-                )}
-              </div>
-
               {/* 경로 목록 패널 */}
               {showRouteList && (
                 <div className="routeListPanel">
@@ -1355,24 +1167,6 @@ export default function MapPage({ user: userProp, partyId, routeId, onBackHome, 
         </button>
 
         <div className="leafletMap" ref={mapNodeRef} />
-
-        {/* 함께 타는 사람 HUD — 파티 라이딩 중(isRiding)에만 지도 위에 얇게 뜬다 */}
-        {isRiding && party && (
-          <div className="ridersHud" aria-label="함께 타는 사람">
-            <div className="ridersHudRow isMe">
-              <span className="ridersHudAvatar" aria-hidden="true">{(user?.name || '?').trim().charAt(0)}</span>
-              <span className="ridersHudName">{user?.name || '나'} <em>나</em></span>
-              <span className="ridersHudSpeed">{mySpeedKmh.toFixed(1)} km/h</span>
-            </div>
-            {otherRiders.map((r) => (
-              <div key={r.userId} className="ridersHudRow">
-                <span className="ridersHudAvatar" aria-hidden="true">{(r.name || '?').trim().charAt(0)}</span>
-                <span className="ridersHudName">{r.name}</span>
-                <span className="ridersHudSpeed">{r.speedKmh.toFixed(1)} km/h</span>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* A: 근접/이탈 순간 상단에 뜨는 알림 토스트 */}
         {profileTarget && (

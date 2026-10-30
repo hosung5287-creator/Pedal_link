@@ -1,6 +1,9 @@
 // 둘러보기 피드 관련 백엔드 호출.
 // 백엔드 컨트롤러: FeedController (/api/feed, /api/routes/{id}/like)
-import { api } from './client';
+import { api, API_BASE } from './client';
+
+// 피드 카드의 photoUrl("/api/routes/12/photo?v=…") → <img> 에 넣을 주소. 사진이 없으면 null
+export const feedPhotoSrc = (photoUrl) => (photoUrl ? `${API_BASE}${photoUrl}` : null);
 
 // 피드 목록. userId 를 주면 "내가 좋아요한 것"이 liked=true 로 표시된다.
 export const getFeed = (userId) =>

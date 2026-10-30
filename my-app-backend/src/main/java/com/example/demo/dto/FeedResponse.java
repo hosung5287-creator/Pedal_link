@@ -31,6 +31,9 @@ public class FeedResponse {
     // 썸네일용 경로 좌표 (원본을 그대로 주면 무거워서 서버에서 솎아낸다)
     private List<PointDto> path;
 
+    // 게시물 사진 주소 (/api/routes/{id}/photo?v=…) — 사진이 없으면 null. 사진 자체는 따로 받는다.
+    private String photoUrl;
+
     private long likeCount;
     private boolean liked;           // 요청한 유저가 좋아요를 눌렀는지
     private boolean bookmarked;      // 요청한 유저가 내 저장 목록에 담았는지

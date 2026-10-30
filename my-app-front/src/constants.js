@@ -113,7 +113,7 @@ export const text = {
   routeDeleteSavedNote: '(저장한 코스는 저장만 취소)',
   routeDeleteDone: (deleted, unsaved) =>
     [deleted ? `${deleted}개 삭제` : '', unsaved ? `${unsaved}개 저장 취소` : ''].filter(Boolean).join(', ') + '했어요',
-  routeLoaded: (name) => `'${name || '코스'}' 코스를 불러왔어요. 라이딩 시작을 누르면 출발해요.`,
+  routeLoaded: (name) => `'${name || '코스'}' 코스를 불러왔어요.`,
   partyMakeButton: '링크 만들기',
   partyCreateSub: '저장한 코스를 골라 같이 탈 사람을 모아보세요.',
   partyCreateFailed: '링크를 만들지 못했습니다.',
@@ -168,10 +168,6 @@ export const text = {
   partyDeleteFailed: '삭제하지 못했습니다.',
   partyRideStartFailed: '라이딩을 시작하지 못했습니다.',
   partyLoadFailed: '파티 목록을 불러오지 못했습니다. 서버 상태를 확인해 주세요.',
-  rideStart: '라이딩 시작',
-  rideStop: '라이딩 종료',
-  rideEndedParty: '라이딩을 종료하고 파티를 마감했습니다.',
-  rideEndedSolo: '라이딩을 종료했습니다.',
   rideLocShareOff: '위치 공유가 꺼져 있어 다른 라이더에게 내 위치가 보이지 않아요.',
   rideLocShareTurnOn: '켜기',
   rideSaveQueued: '기록 저장에 실패했어요. 다음 접속 때 자동으로 다시 저장할게요.',
@@ -220,6 +216,10 @@ export const text = {
   browseUnsavedToast: '저장을 취소했어요.',
   browseSaveFailed: '저장하지 못했어요. 다시 시도해 주세요.',
   browseOpenMap: '지도로 보기',
+  // 사진이 있는 게시물 — 사진 → 코스 지도를 옆으로 넘겨 본다
+  browseSlides: '게시물 사진과 코스 지도',
+  browseSlidePhoto: '사진 보기',
+  browseSlideMap: '코스 지도 보기',
   browsePreparing: '준비 중인 기능입니다',
   browseCompose: '게시물 올리기',
   browseComposeTitle: '게시물 올리기',
@@ -739,8 +739,6 @@ export const homeFooter = {
 // ── 계정 페이지 (프로필/설정 뼈대) ──────────────────
 export const account = {
   memberFallback: 'PedalLink 회원',
-  profileActivityTitle: '내 활동',
-  profileActivity: ['내 코스', '참여한 파티'],
   settingsAccountTitle: '계정',
   soon: '준비 중',
   // 설정 — 이메일/비밀번호 변경 · 위치 공유 (형식 오류 문구는 회원가입 text.signup* 를 같이 쓴다)

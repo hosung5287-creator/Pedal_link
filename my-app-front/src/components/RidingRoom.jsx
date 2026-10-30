@@ -2,7 +2,7 @@ import '../styles/ridingroom.css';
 
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { makeTileLayer, makeCurrentLocationIcon, makeOtherUserIcon, makeHeadingIcon, bearingBetween, drawRoutes } from '../utils/leaflet';
+import { makeTileLayer, makeCurrentLocationIcon, makeRiderIcon, makeHeadingIcon, bearingBetween, drawRoutes } from '../utils/leaflet';
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { getRouteById } from '../api/routes';
 import { stopPartyRide, getParty } from '../api/parties';
@@ -18,6 +18,13 @@ const letterOf = (name) => (name || '?').trim().charAt(0);
 const RIDER_JOIN_M = 50;
 const RIDER_AWAY_M = 250;
 const RIDER_ALERT_MS = 4000;
+// 파티원 마커 — 이보다 느리면 멈춘 것(빨간색), 이보다 빠르면 위치가 튄 것으로 보고 앞의 속도를 둔다
+const RIDER_STOP_KMH = 3;
+const RIDER_MAX_KMH = 80;
+// 파티원 위치는 3초마다 받는다 — 마커는 받은 자리까지 다음 위치가 올 때쯤 닿게 미끄러지듯 옮긴다 (한 번에 옮기면 순간 이동처럼 보인다)
+const POLL_MS = 3000;
+const GLIDE_EASE_M = 40;   // 서 있다가 이보다 크게 움직이면(대열로 들어옴) 천천히 출발해 천천히 붙는다
+const GLIDE_MAX_M = 1000;  // 이보다 멀리 옮겨지면(도착 지점으로 건너뜀) 미끄러지지 않고 바로 옮긴다
 
 // 이름 뒤 주격 조사 — 받침이 있으면 '이', 없으면 '가' (한글로 끝나지 않으면 '이(가)')
 const subjectJosa = (name) => {
@@ -201,6 +208,49 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     const markers = otherMarkersRef.current;
     const riderStates = riderStatesRef.current;
 
+    // 마커 미끄러짐 — 지금 보이는 자리에서 받은 자리까지. 이탈·합류 알림은 마커가 기준 거리를 넘을 때
+    // (늦어도 닿을 때·다음 위치가 올 때) 띄운다.
+    const glides = new Map(); // userId -> { from, to, start, ms, ease, notice }
+    let frame = 0;
+    const endGlide = (id) => {
+      const g = glides.get(id);
+      glides.delete(id);
+      if (g?.notice) pushRiderAlertRef.current(g.notice);
+    };
+    const passed = (notice, at) => {
+      const me = lastPosRef.current;
+      if (!me || !mapRef.current) return false;
+      const d = mapRef.current.distance([me.lat, me.lng], at);
+      return notice.away ? d > RIDER_AWAY_M : d <= RIDER_JOIN_M;
+    };
+    const step = () => {
+      const now = Date.now();
+      for (const [id, g] of glides) {
+        const k = Math.min(1, (now - g.start) / g.ms);
+        const f = g.ease ? k * k * (3 - 2 * k) : k;
+        const at = [g.from[0] + (g.to[0] - g.from[0]) * f, g.from[1] + (g.to[1] - g.from[1]) * f];
+        markers.get(id)?.setLatLng(at);
+        if (g.notice && passed(g.notice, at)) {
+          pushRiderAlertRef.current(g.notice);
+          g.notice = null;
+        }
+        if (k === 1) endGlide(id);
+      }
+      frame = glides.size ? requestAnimationFrame(step) : 0;
+    };
+    const glideTo = (map, id, marker, to, ms, ease) => {
+      endGlide(id);
+      const at = marker.getLatLng();
+      const from = [at.lat, at.lng];
+      const far = map.distance(from, to);
+      if (far < 0.5 || far > GLIDE_MAX_M) {
+        marker.setLatLng(to);
+        return;
+      }
+      glides.set(id, { from, to, start: Date.now(), ms, ease });
+      if (!frame) frame = requestAnimationFrame(step);
+    };
+
     const timer = setInterval(async () => {
       const pos = lastPosRef.current;
       const map = mapRef.current;
@@ -219,45 +269,62 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
         for (const o of others) {
           seen.add(o.userId);
 
-          let marker = markers.get(o.userId);
-          if (!marker) {
-            marker = L.marker([o.lat, o.lng], { icon: makeOtherUserIcon(), zIndexOffset: 900 }).addTo(map);
-            markers.set(o.userId, marker);
-          } else {
-            marker.setLatLng([o.lat, o.lng]);
-          }
-
+          // 처음 보일 때는 흰색 — 한 번 더 받아 봐야 멈췄는지 안다
           const now = Date.now();
           const prevSpeed = otherSpeedRef.current.get(o.userId);
           let speedKmh = prevSpeed?.speedKmh ?? 0;
+          let stopped = prevSpeed?.stopped ?? false;
+          let moved = 0;
           if (prevSpeed) {
+            moved = map.distance([prevSpeed.lat, prevSpeed.lng], [o.lat, o.lng]);
             const dt = (now - prevSpeed.time) / 1000;
             if (dt >= 1) {
-              const moved = map.distance([prevSpeed.lat, prevSpeed.lng], [o.lat, o.lng]);
-              speedKmh = (moved / dt) * 3.6;
+              const kmh = (moved / dt) * 3.6;
+              if (kmh <= RIDER_MAX_KMH) {
+                speedKmh = kmh;
+                stopped = kmh < RIDER_STOP_KMH;
+              } else {
+                stopped = false; // 크게 움직였다(대열로 들어옴·이탈) — 속도 글자는 앞의 값을 두지만 멈춘 건 아니다
+              }
             }
           }
-          otherSpeedRef.current.set(o.userId, { lat: o.lat, lng: o.lng, time: now, speedKmh });
+          otherSpeedRef.current.set(o.userId, { lat: o.lat, lng: o.lng, time: now, speedKmh, stopped });
           list.push({ userId: o.userId, name: o.name, speedKmh });
+
+          let marker = markers.get(o.userId);
+          if (!marker) {
+            marker = L.marker([o.lat, o.lng], { icon: makeRiderIcon(stopped), zIndexOffset: 900 }).addTo(map);
+            markers.set(o.userId, marker);
+          } else {
+            if (stopped !== prevSpeed?.stopped) marker.setIcon(makeRiderIcon(stopped));
+            const ms = prevSpeed ? Math.min(POLL_MS, Math.max(300, now - prevSpeed.time)) : POLL_MS;
+            glideTo(map, o.userId, marker, [o.lat, o.lng], ms, !!prevSpeed?.stopped && moved > GLIDE_EASE_M);
+          }
 
           // 이탈·합류 — 처음 보일 때는 알리지 않고 상태만 기억한다 (출발할 때 모두에게 합류 알림이 뜨지 않게).
           // 50~250m 사이에서는 상태를 바꾸지 않아 경계에서 알림이 반복되지 않는다.
           const dist = map.distance([pos.lat, pos.lng], [o.lat, o.lng]);
           const state = riderStates.get(o.userId);
+          let notice = null;
           if (!state) {
             riderStates.set(o.userId, dist <= RIDER_JOIN_M ? 'in' : 'out');
           } else if (state === 'in' && dist > RIDER_AWAY_M) {
             riderStates.set(o.userId, 'out');
-            pushRiderAlertRef.current({ name: o.name, away: true });
+            notice = { name: o.name, away: true };
           } else if (state === 'out' && dist <= RIDER_JOIN_M) {
             riderStates.set(o.userId, 'in');
-            pushRiderAlertRef.current({ name: o.name, away: false });
+            notice = { name: o.name, away: false };
           }
+          // 마커가 아직 그 자리로 가는 중이면 기준 거리를 넘을 때 띄운다
+          const glide = glides.get(o.userId);
+          if (notice && glide) glide.notice = notice;
+          else if (notice) pushRiderAlertRef.current(notice);
         }
 
         // 위치가 안 보이게 된 사람(공유 끔·접속 끊김)은 지우고, 다시 보이면 처음 보는 것처럼 다룬다
         for (const [id, marker] of markers) {
           if (!seen.has(id)) {
+            endGlide(id);
             marker.remove();
             markers.delete(id);
             otherSpeedRef.current.delete(id);
@@ -269,11 +336,13 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
       } catch {
         // 다음 폴링에서 재시도
       }
-    }, 3000);
+    }, POLL_MS);
 
     return () => {
       cancelled = true;
       clearInterval(timer);
+      cancelAnimationFrame(frame);
+      glides.clear();
       markers.forEach((m) => m.remove());
       markers.clear();
       otherSpeedRef.current.clear();

@@ -1,0 +1,113 @@
+/* 파티·크루 탭 체험 — 실제 탭 화면을 프레임 안에 담는다. 넘치면 안에서 스크롤 */
+.ppl,
+.cpl { box-sizing: border-box; height: 100%; padding: 8px 20px 12px; overflow: auto; overscroll-behavior: contain; background: var(--wash); color: var(--ink); }
+.fsPanel.isWash .ppl,
+.fsPanel.isWash .cpl { background: var(--surface); }
+.ppl { padding-top: 0; padding-bottom: 4px; }
+.ppl .partyViewSwitch { margin-bottom: 8px; }
+.ppl .partyCardMeta { gap: 3px; }
+.ppl .partyPending { margin-top: 8px; padding-top: 8px; }
+.ppl { position: relative; }
+.ppl .pplAgain { position: absolute; top: 26px; right: 130px; z-index: 1; }
+.ppl .partyGrid,
+.cpl .crewGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ppl .partyCardMedia { position: relative; height: 110px; }
+
+.pplThumb { display: block; width: 100%; height: 100%; }
+.pplThumb path,
+.pplRoute path { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pplRouteCase { stroke: var(--surface); stroke-width: 7; }
+.pplRouteLine { stroke: var(--mint); stroke-width: 4; }
+
+.pplAgain,
+.pplReset { flex: none; padding: 5px 10px; border: 0; border-radius: 8px; font: inherit; font-size: 0.76rem; font-weight: 800; cursor: pointer; }
+.pplAgain { background: transparent; color: var(--muted); }
+.pplAgain:hover { color: var(--ink); }
+.pplReset { background: var(--mint); color: var(--surface); }
+.pplReset:hover { background: var(--mint-dark); }
+.pplAgain:focus-visible,
+.pplReset:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+
+/* 처음 누를 곳 알려주기 */
+.pplNudge { animation: pplNudge 1.6s ease-in-out infinite; }
+@keyframes pplNudge { 50% { box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.22); } }
+
+/* 라이딩 시작 후 — 지도 위로 함께 달린다 */
+.ppl:has(> .pplStage) { display: flex; padding: 20px; }
+.pplStage { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-width: 0; }
+.pplMap { position: relative; width: 90%; aspect-ratio: 1720 / 900; overflow: hidden; border-radius: 12px; }
+.pplMap > img,
+.pplRoute { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pplMap > img { object-fit: fill; }
+.pplStart { position: absolute; width: 34px; height: 34px; margin: -38px 0 0 -17px; border: 2px solid var(--mint-dark); border-radius: 50% 50% 50% 4px; background: var(--surface); color: var(--mint-dark); box-shadow: 0 4px 12px rgba(20, 51, 75, 0.14); }
+.pplStart svg { width: 24px; height: 22px; margin: 4px; }
+.pplStart span { position: absolute; top: -26px; left: 50%; translate: -50% 0; padding: 3px 8px; border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.pplRider { position: absolute; z-index: 2; display: grid; place-items: center; width: 32px; height: 32px; margin: -16px 0 0 -16px; border: 2px solid var(--surface); border-radius: 50%; background: var(--mint); color: var(--surface); font-size: 13px; font-weight: 800; box-shadow: 0 3px 10px rgba(12, 27, 39, 0.28); }
+.pplCountDim { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; background: rgba(12, 27, 39, 0.45); }
+.pplCount { color: var(--surface); font-size: clamp(56px, 10vw, 130px); font-weight: 900; line-height: 1; text-shadow: 0 6px 30px rgba(12, 27, 39, 0.45); }
+.pplCount.isGo { color: var(--sun, #ffcc4d); }
+.pplStageFoot { width: 90%; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; }
+.pplStageFoot p { margin: 0; color: var(--ink); font-size: 0.95rem; font-weight: 800; }
+
+.pplCredit { position: absolute; right: 4px; bottom: 3px; z-index: 4; padding: 0 3px; background: rgba(255, 255, 255, 0.86); color: var(--muted); font-size: 9px; text-decoration: none; }
+
+/* 크루 상세 — 멤버와 예정된 라이딩 두 칸 */
+.cplCols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.cpl .crewCardCover { height: 150px; }
+
+/* 넓은 화면 — 카드 4장을 2×2로. 사진·지도는 카드 왼쪽, 글은 오른쪽 */
+@media (min-width: 1024px) {
+  .ppl:not(:has(> .pplStage)),
+  .cpl:not(:has(> .crewDetail)) { display: flex; flex-direction: column; padding: 0 12px 8px; }
+  .ppl .partySection,
+  .ppl .partyRoomSection { flex: 1; min-height: 0; }
+  .ppl .partyGrid,
+  .cpl .crewGrid { flex: 1; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .ppl .partyGrid { height: 100%; }
+  .ppl .partyViewSwitch,
+  .cpl .crewTabs { margin-bottom: 8px; }
+
+  .ppl .partyCard { display: grid; grid-template-columns: 38% minmax(0, 1fr); column-gap: 12px; row-gap: 2px; align-content: space-between; min-width: 0; padding: 8px 12px 8px 0; overflow: hidden; }
+  .ppl .partyCard > * { grid-column: 2; min-width: 0; }
+  .ppl .partyCard > .partyCardMedia { grid-column: 1; grid-row: 1 / span 6; align-self: stretch; height: auto; margin: -8px 0; border-radius: 18px 0 0 18px; }
+  .ppl .partyCardHead { margin: 0; }
+  .ppl .partyCardHead h3 { font-size: 0.92rem; }
+  .ppl .partyCardRoute { margin: 0; font-size: 0.74rem; }
+  .ppl .partyCardMeta { gap: 0; margin: 0; font-size: 0.74rem; }
+  .ppl .partyCardMeta > div { gap: 6px; }
+  .ppl .partyPending { margin-top: 2px; padding-top: 3px; }
+  .ppl .partyPending h4 { margin: 0; font-size: 0.72rem; }
+  .ppl .partyPending ul { gap: 0; margin: 0; }
+  .ppl .partyPending li { padding-block: 0; font-size: 0.74rem; }
+  .ppl .partyPendingActions button { min-height: 0; padding: 1px 8px; font-size: 0.68rem; line-height: 1.5; }
+  .ppl .partyCard.isMine .partyCardMeta > div:last-child { display: none; }
+  .ppl .partyViewSwitch button:not(.partyViewAction) { padding-block: 8px; }
+  .ppl .partyPrimaryBtn,
+  .ppl .partyRideBtn { min-height: 0; margin-top: 4px; padding-block: 6px; font-size: 0.8rem; }
+  .ppl .partyCardMediaTag { font-size: 0.66rem; }
+  .ppl .pplCredit { display: none; }
+  .pplStage .pplCredit { display: block; }
+
+  .cpl .crewCard { flex-direction: row; min-width: 0; }
+  .cpl .crewCardCover { flex: 0 0 38%; width: auto; height: auto; }
+  .cpl .crewCardBody { flex: 1; min-width: 0; padding: 8px 12px; }
+  .cpl .crewCardName { font-size: 0.95rem; }
+  .cpl .crewJoinBtn { margin-top: auto; padding-block: 7px; }
+}
+
+/* 좁은 화면 — 카드 한 줄 */
+@media (max-width: 767px) {
+  .ppl,
+  .cpl { height: auto; padding: 4px 12px 14px; overflow: visible; }
+  .ppl:has(> .pplStage) { padding: 12px; }
+  .pplMap,
+  .pplStageFoot { width: 100%; }
+  .ppl .pplAgain { top: 14px; right: 8px; }
+  .ppl .partyGrid,
+  .cpl .crewGrid,
+  .cplCols { grid-template-columns: 1fr; }
+  .pplRider { width: 26px; height: 26px; margin: -13px 0 0 -13px; font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pplNudge { animation: none; }
+}

@@ -1,0 +1,195 @@
+/* 메인 홈 히어로 아래 — 색은 PedalLink 그대로(하늘색 버튼·흰색/연한 판), 틀과 연출은 LTX 참고.
+   모든 섹션이 같은 틀(FeatureSplit): 왼쪽 큰 제목·설명·버튼 2개, 오른쪽 큰 화면.
+   여백은 LTX 실측값: 화면 --lx-media(32px, 모바일 16px), 글자 --lx-pad(폭의 3%).
+   /home-old 에 영향 없도록 전부 .homeDraft 안으로 묶었다. */
+.homeDraft { --lx-pad: clamp(16px, 3vw, 58px); --lx-media: 32px; }
+@media (max-width: 767px) { .homeDraft { --lx-media: 16px; } }
+
+.homeDraft main .lxContent { position: relative; z-index: 1; background: var(--surface); }
+
+/* 소개 — 큰 PedalLink + 한 줄 + 메뉴 */
+.lxIntro { padding: clamp(72px, 9vw, 150px) var(--lx-pad) clamp(28px, 3vw, 40px); background: var(--wash); text-align: center; }
+.homeDraft main .lxIntro h2 { margin: 0; color: var(--ink); font-size: clamp(3rem, 8vw, 7.5rem); font-weight: 700; line-height: 1.02; letter-spacing: -0.05em; }
+.homeDraft main .lxIntro p { margin: 18px 0 0; color: var(--muted); font-size: clamp(1rem, 1.35vw, 1.2rem); line-height: 1.55; word-break: keep-all; }
+
+/* 섹션 메뉴 — 따라오는 알약 */
+.homeDraft main .lxGroup { position: relative; background: var(--wash); }
+.lxMenu {
+  position: sticky;
+  top: 76px;
+  z-index: 30;
+  display: flex;
+  width: max-content;
+  max-width: calc(100% - var(--lx-media) * 2);
+  margin: 0 auto clamp(40px, 5vw, 72px);
+  padding: 4px;
+  gap: 2px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(20, 51, 75, 0.08);
+  scrollbar-width: none;
+}
+.lxMenuItem { flex-shrink: 0; padding: 11px clamp(14px, 2vw, 26px); border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 0.95rem; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background-color 0.15s, color 0.15s; }
+.lxMenuItem:hover { color: var(--ink); }
+.lxMenuItem.isActive { background: var(--mint); color: var(--surface); }
+.lxMenuItem:focus-visible { outline: 2px solid var(--mint); outline-offset: -2px; }
+
+/* ── 공통 틀 ─────────────────────────── */
+.fsPanel { background: var(--surface); }
+.fsPanel.isWash { background: var(--wash); }
+.fsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.56fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 3vw, 48px);
+  padding-block: clamp(56px, 7vw, 110px);
+}
+.fsText { padding-left: var(--lx-pad); }
+.homeDraft main .fsText h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(2.4rem, 5vw, 4.8rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.05em;
+  word-break: keep-all;
+}
+.homeDraft main .fsText p { margin: 18px 0 0; max-width: 520px; color: var(--muted); font-size: clamp(1rem, 1.3vw, 1.15rem); line-height: 1.55; word-break: keep-all; }
+.fsBtns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.fsBtn {
+  padding: 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.fsBtn:hover { border-color: var(--mint); }
+.fsBtn.isPrimary { border-color: var(--mint); background: var(--mint); color: var(--surface); }
+.fsBtn.isPrimary:hover { border-color: var(--mint-dark); background: var(--mint-dark); }
+.fsBtn:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+.fsBtn > span { display: inline-block; transition: translate 0.18s; }
+.fsBtn:hover > span { translate: 2px -2px; }
+
+/* 오른쪽 화면 — 16:9, 모서리 8px, 오른쪽 32px */
+.fsMedia { min-width: 0; margin-right: var(--lx-media); }
+.fsFrame,
+.homeDraft main .fsMedia .cvdFrame { aspect-ratio: 16 / 9; max-height: calc(100vh - 220px); width: 100%; overflow: hidden; border-radius: 8px; }
+
+/* 영상 — 카드 장식 없이 */
+.homeDraft main .fsMedia .cvd { border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+
+/* 매칭 시연·피드 — 틀에 꽉 차게 */
+.homeDraft main .fsFrame .mld { aspect-ratio: auto; height: 100%; min-height: 0; border-radius: 0; box-shadow: none; }
+.homeDraft main .fsFrame .feedMarquee { height: 100%; border: 0; border-radius: 0; background: var(--wash); }
+.homeDraft main .fsPanel.isWash .fsFrame .feedMarquee { background: var(--surface); }
+.homeDraft main .fsFrame .fmViewport { height: 100%; min-height: 100%; }
+.homeDraft main .fsFrame .fmTrack { box-sizing: border-box; max-width: 620px; margin-inline: auto; background: var(--surface); }
+.homeDraft main .fsFrame .feedMarquee { display: block; }
+
+/* AI 리포트 시연 — 프로필의 통계·역량·리포트 카드를 프레임에 꽉 채운다 */
+.rrd { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: minmax(min-content, 0.42fr) minmax(0, 1fr); gap: 8px; box-sizing: border-box; height: 100%; padding: 2px; overflow: auto; background: transparent; }
+.rrd .accountCard { display: flex; flex-direction: column; box-sizing: border-box; margin: 0; padding: 12px 16px; }
+.rrd .accountCard h2 { margin: 0 0 8px; font-size: 0.95rem; }
+.rrd .accountStats { flex: 1; align-items: center; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.rrd .accountStat { min-width: 0; text-align: center; }
+.rrd .accountStat strong { font-size: 1.15rem; }
+.rrd .accountStat span { font-size: 0.68rem; word-break: keep-all; }
+.rrd .accountAbilityList { flex: 1; justify-content: space-evenly; gap: 3px; }
+.rrd .accountAbilityRow { gap: 8px; font-size: 0.78rem; }
+.rrdMain { grid-column: 1 / -1; min-height: 0; }
+.rrd .rrHead { margin-bottom: 6px; }
+.rrdTitle { color: var(--ink); font-size: 0.95rem; font-weight: 800; }
+.rrd .rrInsight { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr); align-items: center; gap: 12px; padding: 8px 14px; }
+.rrd .rrSummary { margin: 0; font-size: 0.86rem; }
+.rrd .rrAdvice { font-size: 0.76rem; line-height: 1.4; }
+.rrd .rrTabs { margin: 6px 0; }
+.rrd .rrTabs button { padding: 6px 12px; font-size: 0.82rem; }
+.rrd .rcChart { gap: 4px; }
+.rrd .rcTotals { display: none; }
+.rrd .rrPanel { display: flex; flex: 1; flex-direction: column; justify-content: center; min-height: 0; }
+.rrd .rcPlot { width: 100%; max-width: var(--rrd-plot, 410px); margin-inline: auto; }
+@media (max-width: 1023px) {
+  .rrd { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; overflow: visible; }
+  .rrd .accountStats { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
+  .rrd .rrInsight { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 시작 카드 3장 — 오른쪽 화면 자리에 */
+.lxCards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; height: 100%; }
+.lxCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 18px clamp(16px, 1.6vw, 26px) 22px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wash);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.18s;
+}
+.lxCard:hover { background: var(--accent-soft); }
+.lxCard:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+.lxCardTag { padding: 5px 12px; border-radius: 999px; background: var(--surface); color: var(--mint-dark); font-size: 0.74rem; font-weight: 800; white-space: nowrap; }
+.lxCardArt { width: 100%; align-self: center; margin: 16px 0; color: var(--mint-dark); }
+.lxCardTitle { font-size: clamp(1.4rem, 2vw, 1.9rem); font-weight: 700; letter-spacing: -0.04em; }
+.lxCardText { margin: 8px 0 16px; color: var(--muted); font-size: 0.92rem; line-height: 1.45; word-break: keep-all; }
+.lxCardCta { display: flex; justify-content: space-between; width: 100%; margin-top: auto; color: var(--mint-dark); font-size: 0.92rem; font-weight: 700; }
+.lxCardCta > span { transition: translate 0.18s; }
+.lxCard:hover .lxCardCta > span { translate: 4px 0; }
+
+/* 푸터 — 원래 색, 폭만 꽉 */
+.homeDraft main .siteFooterInner { width: 100%; padding-inline: var(--lx-pad); box-sizing: border-box; }
+.homeDraft main .siteFooterCopy { padding-inline: var(--lx-pad); }
+
+/* ── 연출 ───────────────────────────── */
+/* 네비 — 화면 위에 고정. 히어로 위 투명, 지나면 흰 반투명 판 + 뒤 흐림 */
+.hdTopbar { position: fixed; inset: 0 0 auto; z-index: 60; transition: background-color 0.2s; }
+.hdTopbar .navbar { width: 100%; padding-inline: var(--lx-pad); box-sizing: border-box; transition: padding 0.2s; }
+.hdTopbar.isSolid { background: rgba(255, 255, 255, 0.76); backdrop-filter: blur(25px); box-shadow: 0 1px 0 var(--line); }
+.hdTopbar.isSolid .navbar { padding-block: 10px; }
+.hdTopbar.isSolid .brand,
+.hdTopbar.isSolid .navLinks a,
+.hdTopbar.isSolid .userMenuTrigger { color: var(--ink); }
+.hdTopbar.isSolid .brandLogo { color: var(--mint); }
+.hdTopbar.isSolid .signupLink { border-color: var(--line); color: var(--ink); }
+.hdHero { padding-top: 92px; } /* 고정 네비 높이만큼 — 제목이 이전과 같은 자리에 오게 */
+
+/* 판 겹침 — 스크롤하면 멈추고, 다음 판이 덮는다. 조건은 CoverPanel.jsx 의 STACK_QUERY 와 같게 */
+.lxMark { display: block; height: 0; }
+@media (min-width: 1024px) and (min-height: 760px) {
+  .lxPanel { position: sticky; top: 0; display: flex; align-items: center; min-height: 100vh; }
+  .lxPanelInner { width: 100%; }
+  .homeDraft main .lxPanel .fsGrid { padding-block: 92px 32px; }
+  /* 메뉴 아래로 내용이 오게 */
+  .homeDraft main .lxGroup .lxPanel .fsGrid { padding-top: 136px; }
+}
+
+/* 푸터 — 본문 뒤에 붙어 있다가 맨 아래에서 드러난다 */
+.homeDraft main .siteFooter { position: sticky; bottom: 0; z-index: 0; }
+
+/* 좁은 화면 — 글 위, 화면 아래 */
+@media (max-width: 1023px) {
+  .fsGrid { grid-template-columns: 1fr; }
+  .fsText { padding-right: var(--lx-pad); }
+  .fsMedia { margin-left: var(--lx-media); }
+  .fsFrame, .homeDraft main .fsMedia .cvdFrame { max-height: none; }
+  .fsFrame.isTall { aspect-ratio: auto; height: 560px; }
+  .homeDraft main .fsFrame.isPlay { aspect-ratio: auto; height: auto; overflow: visible; }
+  .lxCards { grid-template-columns: 1fr; height: auto; }
+  .fsFrame.isCards { aspect-ratio: auto; height: auto; overflow: visible; }
+  .lxCardArt { width: min(100%, 240px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lxCard, .lxCardCta > span, .lxMenuItem, .fsBtn, .fsBtn > span, .hdTopbar, .hdTopbar .navbar { transition: none; }
+}

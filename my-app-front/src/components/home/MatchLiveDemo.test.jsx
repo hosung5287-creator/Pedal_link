@@ -58,3 +58,44 @@ test('다시 보기 버튼과 출처 링크는 그림(role=img) 밖에 있다', 
   expect(stage.contains(screen.getByRole('button', { name: t.replayAria }))).toBe(false);
   expect(stage.contains(screen.getByRole('link', { name: t.credit }))).toBe(false);
 });
+
+test('라이더 칩에 마우스를 올리면 칩·핀이 함께 강조되고 핀에 이름·거리가 뜬다', () => {
+  render(<MatchLiveDemo />);
+  const [, soyeon] = t.riders;
+  const row = screen.getByText(soyeon.name).closest('li');
+  fireEvent.pointerEnter(row);
+  expect(row).toHaveClass('isHover');
+  expect(document.querySelector('.mldPin.isHover')).toBeInTheDocument();
+  expect(screen.getByText(`${soyeon.name} · ${soyeon.far}`)).toBeInTheDocument();
+  fireEvent.pointerLeave(row);
+  expect(row).not.toHaveClass('isHover');
+});
+
+// jsdom 에는 PointerEvent 가 없어 좌표가 전달되도록 만들어 준다
+class TestPointerEvent extends MouseEvent {
+  constructor(type, init) { super(type, init); this.pointerType = init?.pointerType ?? 'mouse'; }
+}
+
+test('지도에 마우스를 올리면 민재가 커서를 따라가고, 원 안에서만 근처 알림이 뜬다', () => {
+  window.PointerEvent = TestPointerEvent;
+  render(<MatchLiveDemo />);
+  const map = document.querySelector('.mldMap');
+  map.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 500 });
+
+  // 원 밖 (나는 500,190 / 반지름 190)
+  fireEvent.pointerMove(map, { clientX: 950, clientY: 450 });
+  expect(screen.queryByText(t.nearAlert)).toBeNull();
+  expect(minjaeRow()).not.toHaveClass('isNear');
+  expect(document.querySelector('.mldPin.isCursor')).toBeInTheDocument();
+
+  // 원 안
+  fireEvent.pointerMove(map, { clientX: 500, clientY: 285 });
+  expect(screen.getByText(t.nearAlert)).toBeInTheDocument();
+  expect(minjaeRow()).toHaveClass('isNear');
+  expect(screen.getByText(`${t.riders[0].name} · 25m`)).toBeInTheDocument();
+
+  // 벗어나면 커서 해제
+  fireEvent.pointerLeave(map);
+  expect(document.querySelector('.mldPin.isCursor')).toBeNull();
+  delete window.PointerEvent;
+});

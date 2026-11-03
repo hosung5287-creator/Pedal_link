@@ -36,7 +36,6 @@ const clampTip = (left, width) => Math.min(Math.max(left, TIP_HALF), Math.max(TI
 // 칸 색은 그날 탄 거리 — 한 번이라도 탔으면 가장 연한 초록부터 칠한다(0km 기록도 "탄 날").
 const CELL = 10;
 const GAP = 2;
-const STEP = CELL + GAP;
 const WEEKS = 53;
 const HM_LEFT = 2; // 요일 라벨은 스크롤 밖에 따로 고정한다 (가로로 밀어도 보이게)
 const HM_RIGHT = 18; // 맨 오른쪽 달 이름이 잘리지 않을 여유
@@ -46,7 +45,8 @@ const GRASS = ['#6cc477', '#3aa652', '#1f8540', '#0f5a29']; // 단계색 (datavi
 const GRASS_STEPS = [10, 30, 60]; // km 경계: ~10 / 10~30 / 30~60 / 60~
 const grassLevel = (km) => GRASS_STEPS.filter((s) => km >= s).length;
 
-export function RideHeatmap({ rides }) {
+export function RideHeatmap({ rides, cell = CELL }) {
+  const STEP = cell + GAP;
   const scrollRef = useRef(null);
   const [tip, setTip] = useState(null);
 
@@ -97,7 +97,7 @@ export function RideHeatmap({ rides }) {
     const el = scrollRef.current;
     const wrapW = DAY_COL + (el ? el.clientWidth : width);
     setTip({
-      left: clampTip(DAY_COL + HM_LEFT + c.col * STEP + CELL / 2 - (el ? el.scrollLeft : 0), wrapW),
+      left: clampTip(DAY_COL + HM_LEFT + c.col * STEP + cell / 2 - (el ? el.scrollLeft : 0), wrapW),
       top: 4 + HM_TOP + c.row * STEP, // 4 = .rcHeatScroll 위 여백
       title: fmtLong(c.date),
       body: c.count ? `${c.count}회 · ${fmtKm(c.km)}km` : '기록 없음',
@@ -117,7 +117,7 @@ export function RideHeatmap({ rides }) {
       <div className="rcHeatWrap">
         <svg className="rcSvg rcHeatDays" width={DAY_COL} height={height} aria-hidden="true">
           {[1, 3, 5].map((row) => (
-            <text key={row} x={0} y={HM_TOP + row * STEP + CELL - 1} className="rcAxisText">{DAY_LABELS[row]}</text>
+            <text key={row} x={0} y={HM_TOP + row * STEP + cell - 1} className="rcAxisText">{DAY_LABELS[row]}</text>
           ))}
         </svg>
         <div className="rcHeatScroll" ref={scrollRef} onScroll={() => setTip(null)}>
@@ -136,8 +136,8 @@ export function RideHeatmap({ rides }) {
                 key={c.col * 7 + c.row}
                 x={HM_LEFT + c.col * STEP}
                 y={HM_TOP + c.row * STEP}
-                width={CELL}
-                height={CELL}
+                width={cell}
+                height={cell}
                 rx={2}
                 className={c.count ? 'rcGrass' : 'rcGrass isEmpty'}
                 fill={c.count ? GRASS[grassLevel(c.km)] : undefined}

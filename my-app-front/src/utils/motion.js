@@ -11,6 +11,12 @@ export const fadeUp = {
   },
 };
 
+// 흐릿했다가 또렷해지는 등장 (LTX 카드 묶음과 같은 값)
+export const blurIn = {
+  hidden: { filter: 'blur(16px)' },
+  show: { filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.215, 0.61, 0.355, 1] } },
+};
+
 // 자식들을 약간의 시차를 두고 순차 등장시키는 컨테이너
 export const stagger = {
   hidden: {},

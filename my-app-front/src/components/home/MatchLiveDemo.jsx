@@ -6,6 +6,17 @@ import './match-live-demo.css';
 const t = homeMatch.demo;
 const letterOf = (name) => (name || '?').trim().charAt(0);
 
+// 지도에서 '나'와 반경의 위치 — match-live-demo.css 의 .mldMe·.mldRadius 와 같은 값
+const ME = { x: 0.5, y: 0.38 };
+const RADIUS_OF_WIDTH = 0.19; // 원 지름 = 지도 폭의 38%
+const RADIUS_M = 50;
+
+// 커서와 '나' 사이 거리(px) → 표시할 거리(m). 원 안은 0~50m, 밖은 멀수록 크게 늘어난다
+const metersOf = (distance, radius) => {
+  if (distance <= radius) return Math.max(1, Math.round((distance / radius) * RADIUS_M));
+  return Math.round((RADIUS_M + ((distance - radius) / radius) * 180) / 10) * 10;
+};
+
 // 라이더 핀 위치(지도 영역 기준 %) — 민재는 반경 밖에서 안으로 다가온다
 const PINS = [
   { from: { left: '84%', top: '12%' }, to: { left: '61%', top: '31%' } },
@@ -26,6 +37,27 @@ function Scene({ reduced }) {
     transition: { duration: reduced ? 0 : 0.45, delay: reduced ? 0 : delay },
   });
   const [minjae] = t.riders;
+  // 라이더 핀·칩을 올리면 서로 강조
+  const [hovered, setHovered] = useState(null);
+  // 지도 위에 마우스를 올리면 민재가 커서가 된다 — { left, top(%), meters, inside }. 벗어나면 null
+  const [tracked, setTracked] = useState(null);
+  const [touched, setTouched] = useState(false); // 한 번이라도 조작했으면 자동 시연의 지연을 건너뛴다
+  const onMapMove = (event) => {
+    if (event.pointerType === 'touch') return;
+    const box = event.currentTarget.getBoundingClientRect();
+    const px = event.clientX - box.left;
+    const py = event.clientY - box.top;
+    const radius = box.width * RADIUS_OF_WIDTH;
+    const distance = Math.hypot(px - box.width * ME.x, py - box.height * ME.y);
+    setTouched(true);
+    setTracked({
+      left: `${(px / box.width) * 100}%`,
+      top: `${(py / box.height) * 100}%`,
+      meters: metersOf(distance, radius),
+      inside: distance <= radius,
+    });
+  };
+  const onMapLeave = () => { setTracked(null); setHovered(null); };
   // 민재가 반경 안으로 들어온 순간(3.3초)부터 브랜드 색(하늘)으로 강조된다
   const [near, setNear] = useState(reduced);
   useEffect(() => {
@@ -41,12 +73,21 @@ function Scene({ reduced }) {
     return () => clearTimeout(id);
   }, [reduced]);
 
+  const isNear = tracked ? tracked.inside : near;
+  const distOf = (r, i) => {
+    if (i === 0 && tracked) return `${tracked.meters}m`;
+    return i === 0 && isNear && r.near ? r.near : r.far;
+  };
+  const showAlert = tracked ? tracked.inside : true;
+  const showMatched = !tracked && (matched || touched);
+  const showJoin = tracked ? tracked.inside : !showMatched;
+
   return (
     <>
-      <div className="mldMap" aria-hidden="true">
+      <div className="mldMap" aria-hidden="true" onPointerMove={onMapMove} onPointerLeave={onMapLeave}>
         <img src="/images/home/map-match.jpg" alt="" width="1720" height="900" />
 
-        <motion.div className="mldRadius" {...at(0.4)}>
+        <motion.div className={`mldRadius${tracked?.inside ? ' isInside' : ''}`} {...at(0.4)}>
           {!reduced && (
             <motion.span
               className="mldPulse"
@@ -67,24 +108,30 @@ function Scene({ reduced }) {
           return (
             <motion.div
               key={r.name}
-              className={`mldPin${moving && near ? ' isNear' : ''}`}
+              className={`mldPin${moving && isNear ? ' isNear' : ''}${hovered === i ? ' isHover' : ''}${moving && tracked ? ' isCursor' : ''}`}
+              onPointerEnter={() => setHovered(i)}
+              onPointerLeave={() => setHovered(null)}
               initial={reduced ? false : { opacity: 0, scale: 0.6, ...pin.from }}
-              animate={{ opacity: 1, scale: 1, ...(moving ? pin.to : pin.from) }}
+              animate={{ opacity: 1, scale: 1, ...(moving ? (tracked ? { left: tracked.left, top: tracked.top } : pin.to) : pin.from) }}
               transition={reduced ? { duration: 0 } : {
-                opacity: { delay: appear, duration: 0.35 },
-                scale: { delay: appear, type: 'spring', stiffness: 260, damping: 18 },
-                left: { delay: 2, duration: 1.4, ease: 'easeInOut' },
-                top: { delay: 2, duration: 1.4, ease: 'easeInOut' },
+                opacity: { delay: touched ? 0 : appear, duration: 0.35 },
+                scale: { delay: touched ? 0 : appear, type: 'spring', stiffness: 260, damping: 18 },
+                // 커서를 따라갈 땐 바로, 벗어나면 제자리로 부드럽게 돌아간다
+                left: tracked ? { duration: 0 } : { delay: touched ? 0 : 2, duration: touched ? 0.5 : 1.4, ease: 'easeInOut' },
+                top: tracked ? { duration: 0 } : { delay: touched ? 0 : 2, duration: touched ? 0.5 : 1.4, ease: 'easeInOut' },
               }}
             >
               {letterOf(r.name)}
+              {(hovered === i || (moving && tracked)) && <span className="mldPinTip">{r.name} · {distOf(r, i)}</span>}
             </motion.div>
           );
         })}
 
-        <motion.div className="mldAlert" {...at(3.5)}>
-          <span className="mldAlertDot" />{t.nearAlert}
-        </motion.div>
+        {showAlert && (
+          <motion.div className="mldAlert" {...at(touched ? 0 : 3.5)}>
+            <span className="mldAlertDot" />{t.nearAlert}
+          </motion.div>
+        )}
       </div>
 
       <div className="mldPanel">
@@ -94,11 +141,19 @@ function Scene({ reduced }) {
         </div>
         <ul className="mldList">
           {t.riders.map((r, i) => (
-            <motion.li key={r.name} className={i === 0 && near ? 'isNear' : ''} {...at(0.8 + i * 0.3)}>
+            <motion.li
+              key={r.name}
+              className={`${i === 0 && isNear ? 'isNear' : ''}${hovered === i ? ' isHover' : ''}`}
+              onPointerEnter={() => setHovered(i)}
+              onPointerLeave={() => setHovered(null)}
+              {...at(0.8 + i * 0.3)}
+            >
               <span className="mldAvatar" aria-hidden="true">{letterOf(r.name)}</span>
               <span className="mldName">{r.name}</span>
               <span className="mldDist">
-                {i === 0 && r.near ? (
+                {i === 0 && (tracked || touched) ? (
+                  <span className={isNear ? 'mldDistLive isNear' : 'mldDistLive'}>{distOf(r, i)}</span>
+                ) : i === 0 && r.near ? (
                   <>
                     <motion.span
                       className="mldDistFar"
@@ -125,19 +180,19 @@ function Scene({ reduced }) {
         {/* 매칭 전엔 버튼만, 매칭되면 같은 자리에서 완료 배지로 바뀐다 */}
         <div className="mldAction">
           <AnimatePresence mode="wait" initial={false}>
-            {matched ? (
+            {showMatched ? (
               <motion.p key="matched" className="mldMatched"
                 initial={reduced ? false : { opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: reduced ? 0 : 0.3 }}>
                 <span className="mldMatchedIcon" aria-hidden="true">✓</span>{t.matched}
               </motion.p>
-            ) : (
-              <motion.div key="join" {...at(3.9)} exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}>
-                <motion.div className="mldJoin" animate={reduced ? undefined : PULSE} transition={PULSE_JOIN}>
+            ) : showJoin ? (
+              <motion.div key="join" {...at(touched ? 0 : 3.9)} exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}>
+                <motion.div className="mldJoin" animate={reduced || touched ? undefined : PULSE} transition={PULSE_JOIN}>
                   {minjae.name} · {t.joinBtn}
                 </motion.div>
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
         </div>
       </div>

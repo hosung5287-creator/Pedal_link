@@ -18,6 +18,7 @@ import com.example.demo.repository.RouteRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.LiveLocationService.LiveLocation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,7 @@ import java.util.UUID;
  *  3) 라이딩 당일 팀장이 인원 체크 시작 → 응답 안 한 사람은 불참 처리
  *  4) 팀장과 CHECK_RANGE_M 안 + 유효한 토큰이면 체크 (사람별·일괄)
  *  5) 라이딩 시작 → 팀장 + 체크된 인원으로 파티를 만들어 라이딩 화면으로 (체크 못 한 사람은 합류 불가)
+ * 시연 모드에서 발표자가 연 라이딩은 가상 라이더가 열자마자 참여하고, 날짜와 상관없이 인원 체크를 시작할 수 있다.
  */
 @Service
 @RequiredArgsConstructor
@@ -57,6 +59,8 @@ public class CrewRideService {
     private final SimpMessagingTemplate messaging;
     private final LiveLocationService liveLocations;
     private final PartyService partyService;
+    // 시연 모드일 때만 있다 (DEMO_ENABLED=true) — 배포 서버에서는 늘 비어 있어 아래 규칙이 그대로다
+    private final ObjectProvider<DemoService> demo;
 
     // ───────── 조회 ─────────
 
@@ -127,6 +131,12 @@ public class CrewRideService {
             event.getMembers().add(m);
         }
         event.setMaxMembers(event.getMembers().size() + 1);
+        // 시연 — 가상 라이더는 기다리지 않고 바로 참여한다 (초대 카드가 처음부터 "참여"로 보인다)
+        if (isDemoPresenter(req.getLeaderId())) {
+            for (CrewEventMember m : event.getMembers()) {
+                if (DemoService.isDemoRider(m.getUser().getEmail())) accept(m, event);
+            }
+        }
         CrewEvent saved = eventRepository.save(event);
         crew.getEvents().add(saved);
 
@@ -168,19 +178,24 @@ public class CrewRideService {
         }
         CrewEventMember m = eventMemberRepository.findByEvent_IdAndUser_Id(eventId, userId)
                 .orElseThrow(() -> new RuntimeException("초대받지 않은 라이딩이에요."));
-        m.setRespondedAt(LocalDateTime.now());
         if (accept) {
-            m.setStatus("accepted");
-            m.setToken(UUID.randomUUID().toString());
-            // 토큰은 라이딩 날짜 당일 23:59:59 까지
-            m.setTokenExpiresAt(event.getStartAt().toLocalDate().atTime(23, 59, 59));
+            accept(m, event);
         } else {
+            m.setRespondedAt(LocalDateTime.now());
             m.setStatus("declined");
             m.setToken(null);
             m.setTokenExpiresAt(null);
         }
         eventMemberRepository.save(m);
         return toResponse(event, userId);
+    }
+
+    // 참여 — 토큰은 라이딩 날짜 당일 23:59:59 까지
+    private static void accept(CrewEventMember m, CrewEvent event) {
+        m.setRespondedAt(LocalDateTime.now());
+        m.setStatus("accepted");
+        m.setToken(UUID.randomUUID().toString());
+        m.setTokenExpiresAt(event.getStartAt().toLocalDate().atTime(23, 59, 59));
     }
 
     // ───────── 3) 인원 체크 시작 ─────────
@@ -192,7 +207,8 @@ public class CrewRideService {
         if (!"recruiting".equals(event.getStatus())) {
             throw new RuntimeException("이미 인원 체크를 시작했거나 끝난 라이딩이에요.");
         }
-        if (!LocalDate.now().equals(event.getStartAt().toLocalDate())) {
+        // 시연 — 발표자는 다음 날 이후로 연 라이딩도 바로 체크한다 (토큰은 라이딩 날짜까지라 체크도 된다)
+        if (!LocalDate.now().equals(event.getStartAt().toLocalDate()) && !isDemoPresenter(leaderId)) {
             throw new RuntimeException("인원 체크는 라이딩 당일에만 시작할 수 있어요.");
         }
         // 응답하지 않은 사람은 불참 처리
@@ -304,7 +320,8 @@ public class CrewRideService {
 
     // ───────── 내부 ─────────
 
-    private Optional<CrewEvent> findActive(Long crewId) {
+    /** 크루의 진행 중인 라이딩 (크루당 하나) — 시연 모드(DemoService)도 같은 규칙으로 찾는다 */
+    public Optional<CrewEvent> findActive(Long crewId) {
         LocalDate today = LocalDate.now();
         return eventRepository.findByCrew_IdOrderByStartAtDesc(crewId).stream()
                 .filter(e -> {
@@ -351,6 +368,12 @@ public class CrewRideService {
         r.setMembers(members);
         r.setMyStatus(myStatus);
         return r;
+    }
+
+    // 시연 모드가 켜져 있고 이 사람이 시연 발표자인지
+    private boolean isDemoPresenter(Long userId) {
+        DemoService d = demo.getIfAvailable();
+        return d != null && "presenter".equals(d.roleOf(userId));
     }
 
     private void requireLeader(Crew crew, Long userId) {

@@ -12,6 +12,11 @@ const chain = (at) => {
   // 마커 — 지금 보이는 자리를 돌려준다
   o.setLatLng = vi.fn((ll) => { at = ll; return o; });
   o.getLatLng = () => ({ lat: at[0], lng: at[1] });
+  // 마커 툴팁(프로필 미리보기)
+  let tip = null;
+  o.bindTooltip = vi.fn(() => { tip = {}; return o; });
+  o.getTooltip = () => tip;
+  o.setTooltipContent = vi.fn(() => o);
   return o;
 };
 vi.mock('leaflet', () => ({
@@ -21,6 +26,7 @@ vi.mock('../utils/leaflet', () => ({
   makeTileLayer: () => chain(),
   makeCurrentLocationIcon: () => ({}),
   makeRiderIcon: (stopped) => ({ stopped }),
+  makeOtherUserIcon: () => ({ near: true }),
   makeHeadingIcon: () => ({}),
   bearingBetween: () => 0,
   drawRoutes: vi.fn(),
@@ -32,8 +38,14 @@ const api = vi.hoisted(() => ({
   stopPartyRide: vi.fn(),
   getParty: vi.fn().mockResolvedValue({ id: 7, rideStartedAt: '2026-10-03T01:00:00' }),
   saveRideRecord: vi.fn().mockResolvedValue({}),
+  getPublicProfile: vi.fn(),
 }));
 vi.mock('../api/locations', () => ({ reportLocation: api.reportLocation, getOtherLocations: api.getOtherLocations }));
+vi.mock('../api/users', () => ({ getPublicProfile: api.getPublicProfile }));
+
+// 위치 폴링 — 라이딩 화면은 3초마다 파티원(partyId 있음)과 위치 공유 중인 전체(partyId 없음)를 한 번씩 받는다.
+// 폴링 한 번에 받을 { members, near } 를 차례로 쌓아 두면, 파티원 호출이 하나씩 꺼내고 전체 호출은 같은 묶음을 돌려준다.
+const feed = { queue: [], now: { members: [], near: [] } };
 vi.mock('../api/routes', () => ({ getRouteById: vi.fn().mockResolvedValue({}) }));
 vi.mock('../api/parties', () => ({ stopPartyRide: api.stopPartyRide, getParty: api.getParty }));
 vi.mock('../api/rides', () => ({ saveRideRecord: api.saveRideRecord }));
@@ -50,6 +62,16 @@ beforeEach(() => {
   __resetRideMemory();
   Object.values(api).forEach((f) => f.mockClear());
   api.stopPartyRide.mockReset();
+  feed.queue.length = 0;
+  feed.now = { members: [], near: [] };
+  api.getOtherLocations.mockImplementation((userId, partyId) => {
+    if (partyId != null) {
+      feed.now = feed.queue.shift() || { members: [], near: [] };
+      return Promise.resolve(feed.now.members);
+    }
+    return Promise.resolve([...feed.now.members, ...feed.now.near]);
+  });
+  api.getPublicProfile.mockResolvedValue({ gender: 'female', age: 27, region: '서울 마포구', bikeInfo: '로드', bio: '혼자 달리다 같이 탈 사람을 찾고 있어요.' });
   Object.defineProperty(navigator, 'geolocation', {
     configurable: true,
     value: { watchPosition: vi.fn((cb) => { watchCb = cb; return 5; }), clearWatch: vi.fn() },
@@ -123,9 +145,9 @@ const useLatDistance = () => {
 };
 const alertText = /이탈하였습니다|합류하였습니다/;
 const wait = (ms) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
-// 다음 폴링(3초마다)에 받을 위치를 정해 두고 ms 만큼 흘려보낸다
-const poll = async (riders, ms = 3000) => {
-  api.getOtherLocations.mockResolvedValueOnce(riders);
+// 다음 폴링(3초마다)에 받을 위치(파티원 riders, 파티 밖 near)를 정해 두고 ms 만큼 흘려보낸다
+const poll = async (riders, ms = 3000, near = []) => {
+  feed.queue.push({ members: riders, near });
   await wait(ms);
 };
 
@@ -265,6 +287,46 @@ test('위치가 잠깐 안 보였다가 다시 보이면 처음 보는 것처럼
     await poll([]);
     await poll([riderAt(2, '민수', 900)]);
     expect(screen.queryByText(alertText)).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('파티 밖 라이더는 220m 안에 들어오면 주황 핀으로 보이고, 핀에 마우스를 올리면 간단한 프로필이 뜬다 — 파티에 들어오면 파티원 핀으로 바뀐다', async () => {
+  vi.useFakeTimers();
+  try {
+    setShare(true);
+    render(<RidingRoom party={party} user={host} onClose={vi.fn()} />);
+    useLatDistance();
+    act(() => watchCb({ coords: { latitude: 37.5, longitude: 127 }, timestamp: Date.now() }));
+    const nearPins = () => L.marker.mock.calls.map((c, i) => (c[1]?.icon?.near ? L.marker.mock.results[i].value : null)).filter(Boolean);
+
+    await wait(100);
+    await poll([riderAt(2, '민수', 20)], 3000, [riderAt(9, '서연', 300)]);   // 300m — 아직 근처가 아니다
+    expect(nearPins()).toHaveLength(0);
+
+    await poll([riderAt(2, '민수', 20)], 3000, [riderAt(9, '서연', 200)]);   // 200m — 주황 핀
+    expect(nearPins()).toHaveLength(1);
+    const pin = nearPins()[0];
+    expect(pin.bindTooltip).toHaveBeenCalledWith('', expect.objectContaining({ className: 'rrProfileTooltip' }));
+    expect(api.getPublicProfile).toHaveBeenCalledWith(9);
+    await wait(0);
+    const card = pin.setTooltipContent.mock.calls.at(-1)[0];
+    expect(card).toContain('서연');
+    expect(card).toContain('서울 마포구');
+    expect(card).toContain('혼자 달리다 같이 탈 사람을 찾고 있어요.');
+    expect(screen.queryByText('서연')).toBeNull();   // 함께 타는 사람 목록에는 넣지 않는다
+
+    // 파티원 핀도 같은 미리보기 (거리와 상관없이)
+    const memberPin = L.marker.mock.results[L.marker.mock.calls.findIndex((c) => c[1]?.icon && 'stopped' in c[1].icon)].value;
+    expect(memberPin.bindTooltip).toHaveBeenCalled();
+    expect(api.getPublicProfile).toHaveBeenCalledWith(2);
+
+    // 매칭을 수락해 파티에 들어왔다 — 주황 핀은 지우고 파티원 핀·목록으로
+    await poll([riderAt(2, '민수', 20), riderAt(9, '서연', 150)], 3000, []);
+    expect(pin.remove).toHaveBeenCalled();
+    expect(screen.getByText('서연')).toBeInTheDocument();
+    expect(api.getPublicProfile.mock.calls.filter((c) => c[0] === 9)).toHaveLength(1);   // 한 번 받은 프로필은 다시 받지 않는다
   } finally {
     vi.useRealTimers();
   }

@@ -1,17 +1,23 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.ChatMessage;
 import com.example.demo.dto.CrewRequest;
 import com.example.demo.entity.Crew;
+import com.example.demo.entity.CrewChatMessageEntity;
 import com.example.demo.entity.CrewEvent;
 import com.example.demo.entity.CrewEventMember;
 import com.example.demo.entity.CrewMember;
 import com.example.demo.entity.Party;
+import com.example.demo.entity.PartyMember;
 import com.example.demo.entity.Route;
 import com.example.demo.entity.User;
+import com.example.demo.repository.CrewChatMessageRepository;
 import com.example.demo.repository.CrewEventMemberRepository;
 import com.example.demo.repository.CrewEventRepository;
 import com.example.demo.repository.CrewMemberRepository;
 import com.example.demo.repository.CrewRepository;
+import com.example.demo.repository.MatchRequestRepository;
+import com.example.demo.repository.PartyMemberRepository;
 import com.example.demo.repository.PartyRepository;
 import com.example.demo.repository.RouteRepository;
 import com.example.demo.repository.UserRepository;
@@ -21,13 +27,13 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.LineString;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,16 +48,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * 시연 모드 — 자전거를 실제로 타지 않고 크루 라이딩을 처음부터 끝까지 보여주기 위한 가상 라이더 3명.
  *  1) [시연 준비] → 라이더 계정(민수·지영·현우)을 만들어 발표자가 팀장인 크루(가장 최근 것)에 넣는다.
  *     이끄는 크루가 없으면 "시연 크루"를 새로 만든다.
- *  2) 발표자가 이번주 라이딩을 열면 초대받은 라이더가 한 명씩 참여하고 출발 지점 근처에 선다
- *     (현우는 코스 뒤쪽에서 오는 중 — 220m 안이라 인원 체크는 된다)
+ *  2) 발표자가 이번주 라이딩을 열면 초대받은 라이더가 바로 참여하고(CrewRideService.open) 출발 지점 근처에 선다
+ *     (현우는 코스 뒤쪽에서 오는 중 — 220m 안이라 인원 체크는 된다). 날짜가 오늘이 아니어도 인원 체크를 시작할 수 있다.
  *  3) 라이딩을 시작하면 발표자의 가상 위치가 코스를 따라 약 20km/h 로 가고, 라이더가 대열로 따라간다
  *  4) 시연 패널: 민수 이탈 → 민수 복귀, 현우 합류(늦게 출발해 뒤따라오던 현우가 따라붙는다), 도착 지점으로
  *     이탈은 6초 만에 대열 뒤쪽 300m 로 간다 (차츰 빨라졌다가 서서히 선다).
  *     복귀·합류는 그룹이 먼저 멈춰 서고(다른 화면에 멈춘 라이더가 빨간 마커로 보일 만큼 기다린다),
  *     라이더를 대열 자리로 옮기면 다시 출발한다 — 뒤에서 따라잡기만 하면 수십 초가 걸려서.
  *     다른 화면은 3초마다 받은 위치 사이를 미끄러지듯 이어 보여 줘서 순간 이동으로 보이지 않는다.
+ *  5) 파티 추가 — 라이딩 중에 누르면 개인 라이딩 중인 크루 밖 라이더(서연)가 그룹 앞 250m 에서 마주 온다.
+ *     근처 라이더 범위(220m, 3초 안)에 들어오면 발표자에게 매칭 신청을 보낸다 → 발표자가 [수락]하면 크루에 가입하고
+ *     이 라이딩 멤버·파티에 들어와 합류와 같이 들어온다 (그룹이 섰다가 대열 자리로). [거절]하면 그대로 지나간다.
+ *     답이 없으면 그룹 앞에서 같은 방향으로 함께 가며 기다린다. 라이딩이 끝나면 크루에서 다시 뺀다 (리허설을 되풀이할 수 있게).
  *
  * 라이더 위치는 서버가 LiveLocationService 에 바로 넣는다 (실제 기기가 보낸 위치와 같은 곳).
+ * 크루 멤버 라이더(민수·지영·현우)는 시연 중 늘 위치 공유 중이다 — 라이딩을 열기 전·빠졌을 때는 출발 지점, 끝난 뒤에는 도착한 자리.
  * 라이더 계정으로 다른 기기에서 로그인해도 그 기기가 보낸 위치는 받지 않는다 — 위치는 서버 한 곳에서만 나온다.
  * 발표자 위치는 넣지 않는다 — 발표자 화면이 /api/demo/position 을 GPS 대신 읽어 평소처럼 보낸다.
  * 상태는 메모리에만 둔다. 서버를 다시 켜면 발표자 화면의 첫 요청 때 라이더가 들어 있는 크루로 다시 만든다.
@@ -72,6 +83,13 @@ public class DemoService {
     private static final double REGROUP_BRAKE = 2.8;   // 복귀·합류 때 그룹이 서는 감속(m/s²) — 20km/h 에서 2초 남짓
     private static final double REGROUP_HOLD_S = 4;    // 다 선 뒤 이만큼 있다가 라이더가 들어온다 — 다른 화면(3초마다 위치를 받음)에 멈춘 표시가 뜰 시간
     private static final double LATE_GAP_M = 150;      // 늦게 출발한 현우가 선두 뒤로 떨어져 따라오는 거리
+    // [파티 추가] — 개인 라이딩 중인 서연이 그룹 앞에서 코스를 거슬러 다가온다
+    private static final double NEAR_START_M = 240;    // 처음 나타나는 곳 — 발표자와 직선으로 이만큼. 근처 라이더 범위(220m) 바로 밖이라 마주 달려 3초 안에 들어온다
+    private static final double MEET_MS = 7.5;         // 다가오는 속도 약 27km/h
+    private static final double MEET_STOP_M = 70;      // 그룹 앞 이만큼에서 서서 합류를 기다린다 (합류 알림 기준 50m 바깥)
+    private static final double MEET_LANE_M = 3;       // 마주 오는 쪽 차선 — 코스 중심선에서 왼쪽으로
+    private static final double MEET_ROOM_M = 250;     // 나타날 자리 뒤로 도착까지 이만큼은 남아야 한다
+    private static final double PASS_BEHIND_M = 300;   // 거절당하고 지나간 서연이 그룹 뒤로 이만큼 멀어지면 지도에서 내린다
     private static final double SKIP_LEFT_M = 150;     // [도착 지점으로] — 도착까지 이만큼 남기고 옮긴다
     private static final double JUMP_M = 40;           // 한 번(1초)에 이보다 많이 움직이면 순간 이동으로 본다 (가장 빠른 라이더도 12m 안팎)
     private static final long HIDE_MS = 5000;          // 라이딩 중 순간 이동하면 그 사람 위치를 잠깐 내린다 — 다른 화면이 순간 속도를 엉뚱하게 계산하지 않게
@@ -85,12 +103,16 @@ public class DemoService {
             new RiderDef("minsu", "민수", "minsu" + DEMO_DOMAIN, 15, 1.5),
             new RiderDef("jiyoung", "지영", "jiyoung" + DEMO_DOMAIN, 28, -1.5),
             new RiderDef("hyunwoo", "현우", "hyunwoo" + DEMO_DOMAIN, 40, 1.0));
+    // [파티 추가]로 라이딩 중에 들어오는 라이더 — 크루 멤버가 아니라서 초대·인원 체크와 상관없다
+    private static final RiderDef GUEST = new RiderDef("seoyeon", "서연", "seoyeon" + DEMO_DOMAIN, 10, -1.5);
 
     /** 화면이 GPS 대신 받는 가상 위치. t 는 측정 시각(ms), jumps 는 순간 이동 횟수 (바뀌면 화면이 그 이동을 거리로 세지 않는다) */
     public record Fix(double lat, double lng, double heading, long t, int jumps) {}
 
     private enum Phase { IDLE, WAITING, RIDING, DONE }
-    private enum Mode { FORMATION, LATE, STRAY, AWAY, RETURNING, JOINING }
+    private enum Mode { FORMATION, LATE, STRAY, AWAY, RETURNING, JOINING, MEETING, PACING }
+    // 서연이 발표자에게 보낸 매칭 신청 — 신청 전 · 답을 기다림 · 수락(라이딩에 합류) · 거절(지나감)
+    private enum Match { NONE, PENDING, ACCEPTED, REJECTED }
 
     private final UserRepository userRepository;
     private final CrewRepository crewRepository;
@@ -98,9 +120,14 @@ public class DemoService {
     private final CrewEventRepository eventRepository;
     private final CrewEventMemberRepository eventMemberRepository;
     private final PartyRepository partyRepository;
+    private final PartyMemberRepository partyMemberRepository;
     private final RouteRepository routeRepository;
     private final CrewService crewService;
     private final CrewRideService crewRideService;
+    private final MatchService matchService;
+    private final MatchRequestRepository matchRequestRepository;
+    private final CrewChatMessageRepository crewChatRepository;
+    private final SimpMessagingTemplate messaging;
     private final LiveLocationService liveLocations;
     private final BCryptPasswordEncoder passwordEncoder;
 
@@ -174,6 +201,9 @@ public class DemoService {
 
         List<Rider> sim = new ArrayList<>();
         for (int i = 0; i < RIDERS.size(); i++) sim.add(new Rider(RIDERS.get(i), riders.get(i).getId()));
+        Long guestId = ensureRider(GUEST).getId();
+        sim.add(new Rider(GUEST, guestId));
+        leaveCrew(crew.getId(), guestId);   // 서연은 매칭으로만 크루에 들어온다 — 지난 리허설에 남은 가입을 지운다
         Session s = new Session(leaderId, crew.getId(), crew.getName(), sim);
         replaceSession(s);
         // 코스·가상 위치를 바로 만들어 둔다 — 다음 주기(1초)까지 기다리면 화면이 그 사이 "위치 없음"을 받아 진짜 GPS 로 돌아간다
@@ -198,6 +228,18 @@ public class DemoService {
             u.setPassword(passwordEncoder.encode(DEMO_PASSWORD));
         }
         u.setLocationShareEnabled(true);
+        // 라이딩 화면에서 마커에 마우스를 올리면 보이는 간단한 프로필 — 비어 있을 때만 채운다
+        String[] p = switch (d.key()) {
+            case "minsu" -> new String[]{"퇴근길에 한강을 자주 달려요.", "하이브리드", "서울 송파구", "male", "31"};
+            case "jiyoung" -> new String[]{"주말마다 크루와 장거리를 달려요.", "로드", "서울 강남구", "female", "29"};
+            case "hyunwoo" -> new String[]{"업힐 연습 중이에요.", "MTB", "서울 성동구", "male", "34"};
+            default -> new String[]{"혼자 달리다 같이 탈 사람을 찾고 있어요.", "로드", "서울 마포구", "female", "27"};
+        };
+        if (u.getBio() == null || u.getBio().isBlank()) u.setBio(p[0]);
+        if (u.getBikeInfo() == null || u.getBikeInfo().isBlank()) u.setBikeInfo(p[1]);
+        if (u.getRegion() == null || u.getRegion().isBlank()) u.setRegion(p[2]);
+        if (u.getGender() == null || u.getGender().isBlank()) u.setGender(p[3]);
+        if (u.getAge() == null) u.setAge(Integer.valueOf(p[4]));
         return userRepository.save(u);
     }
 
@@ -250,6 +292,8 @@ public class DemoService {
         if (crew.isEmpty()) return null;
         List<Rider> riders = new ArrayList<>();
         for (int i = 0; i < RIDERS.size(); i++) riders.add(new Rider(RIDERS.get(i), users.get(i).getId()));
+        // 서연은 [시연 준비]를 다시 누르기 전에 만든 계정이 없을 수 있다 — 없으면 파티 추가만 못 쓴다
+        userRepository.findByEmail(GUEST.email()).ifPresent(u -> riders.add(new Rider(GUEST, u.getId())));
         return new Session(leaderId, crew.get().getId(), crew.get().getName(), riders);
     }
 
@@ -270,12 +314,17 @@ public class DemoService {
             m.put("progressKm", Math.round(s.progress) / 1000.0);
             m.put("lengthKm", s.path == null ? 0 : Math.round(s.path.length) / 1000.0);
             m.put("canSkip", s.phase == Phase.RIDING && s.path != null && s.path.length - s.progress > SKIP_LEFT_M + 50);
+            Rider guest = s.guest();
+            m.put("canPartyAdd", s.phase == Phase.RIDING && s.path != null && s.partyId != null
+                    && guest != null && !guest.active && !Double.isNaN(meetStart(s)));
             List<Map<String, Object>> riders = new ArrayList<>();
             for (Rider r : s.riders) {
                 Map<String, Object> d = new LinkedHashMap<>();
                 d.put("key", r.def.key());
                 d.put("name", r.def.name());
                 d.put("email", r.def.email());
+                d.put("guest", isGuest(r));
+                if (isGuest(r)) d.put("match", r.match.name().toLowerCase());
                 d.put("active", r.active);
                 d.put("mode", r.mode.name().toLowerCase());
                 d.put("distanceM", r.placed && s.placed ? Math.round(distanceM(s.lat, s.lng, r.lat, r.lng)) : null);
@@ -294,7 +343,7 @@ public class DemoService {
         return s == null ? Optional.empty() : Optional.ofNullable(fixes.get(userId));
     }
 
-    /** 시연 패널 버튼 — stray(민수 이탈) | return(민수 복귀) | join(현우 합류) | finish(도착 지점으로) */
+    /** 시연 패널 버튼 — stray(민수 이탈) | return(민수 복귀) | join(현우 합류) | party(파티 추가) | finish(도착 지점으로) */
     public Map<String, Object> action(Long userId, String action) {
         Session s = current;
         if (s == null || !s.leaderId.equals(userId)) throw new RuntimeException("먼저 [시연 준비]를 눌러 주세요.");
@@ -324,6 +373,27 @@ public class DemoService {
                     require(hyunwoo.active, "현우가 이번 라이딩에 없어요.");
                     require(hyunwoo.mode == Mode.LATE, "현우는 이미 합류했어요.");
                     hyunwoo.mode = Mode.JOINING;
+                }
+                case "party" -> {
+                    Rider guest = s.guest();
+                    require(guest != null, "[시연 준비]를 한 번 더 눌러 주세요. (서연 계정이 아직 없어요)");
+                    require(!guest.active, "서연은 이미 이번 라이딩에 들어와 있어요.");
+                    require(s.partyId != null, "라이딩 파티를 찾지 못했어요.");
+                    double at = meetStart(s);
+                    require(!Double.isNaN(at), "도착이 가까워 서연이 나타날 자리가 없어요.");
+                    expirePendingMatch(s, guest);   // 지난 리허설에 답하지 않은 신청이 남아 있으면 새로 보내지 못한다
+                    guest.active = true;            // 이번 라이딩에서 움직인다 — 파티 멤버는 매칭을 수락한 뒤부터
+                    guest.match = Match.NONE;
+                    guest.mode = Mode.MEETING;
+                    guest.meetS = at;
+                    double[] p = side(s.path, at, -MEET_LANE_M);
+                    guest.lat = p[0];
+                    guest.lng = p[1];
+                    guest.heading = (s.path.bearingAt(at) + 180) % 360;
+                    guest.placed = true;
+                    guest.published = false;   // 지난번 자리와 비교해 순간 이동으로 숨기지 않게
+                    guest.hiddenUntil = 0;
+                    publish(s, guest, System.currentTimeMillis(), true);
                 }
                 case "finish" -> {
                     require(s.path.length - s.progress > SKIP_LEFT_M + 50, "이미 도착 지점 가까이 왔어요.");
@@ -362,40 +432,31 @@ public class DemoService {
             sync(s, now);
         }
         switch (s.phase) {
-            case IDLE -> placeAtStart(s, now, false);
-            case WAITING -> placeAtStart(s, now, true);
+            case IDLE, WAITING -> placeAtStart(s, now);
             case RIDING -> ride(s, dt, now);
-            case DONE -> { }   // 도착한 자리에 그대로 둔다
+            case DONE -> s.riders.forEach(r -> keepSharing(s, r, now));   // 도착한 자리에 그대로 둔다
         }
     }
 
     // 라이딩 단계를 DB 에서 다시 읽는다 — 발표자가 화면에서 열기·체크·시작·종료한 것을 따라간다
     private void sync(Session s, long now) {
-        LocalDate today = LocalDate.now();
-        CrewEvent active = null;
+        // 크루 화면과 같은 규칙으로 찾는다 — 날짜가 더 늦은 취소된 리허설이 쌓여도 지금 연 라이딩을 놓치지 않게
+        CrewEvent active = crewRideService.findActive(s.crewId).orElse(null);
         Party party = null;
-        List<CrewEvent> events = eventRepository.findByCrew_IdOrderByStartAtDesc(s.crewId);
-        for (CrewEvent e : events.subList(0, Math.min(5, events.size()))) {
-            String st = e.getStatus();
-            if (("recruiting".equals(st) || "checking".equals(st)) && !e.getStartAt().toLocalDate().isBefore(today)) {
-                active = e;
-                break;
-            }
-            if ("riding".equals(st) && e.getPartyId() != null) {
-                Party p = partyRepository.findById(e.getPartyId()).orElse(null);
-                if (p != null && !"ended".equals(p.getStatus()) && p.getRideStartedAt() != null) {
-                    active = e;
-                    party = p;
-                    break;
-                }
-            }
+        if (active != null && "riding".equals(active.getStatus())) {
+            party = partyRepository.findById(active.getPartyId()).orElse(null);
+            if (party == null || party.getRideStartedAt() == null) active = null;
         }
 
         if (active == null) {
             if (s.phase == Phase.WAITING || s.phase == Phase.RIDING) {
-                // 취소했거나 라이딩을 끝냈다 — 라이더는 다른 사람 지도에서 내린다
+                // 취소했거나 라이딩을 끝냈다 — 서연만 지도에서 내리고 크루에서 다시 뺀다 (크루 멤버 라이더는 그 자리에서 계속 위치 공유)
+                Rider guest = s.guest();
+                if (guest != null) {
+                    if (s.phase == Phase.RIDING) endGuest(s, guest);
+                    liveLocations.remove(guest.userId);
+                }
                 s.phase = s.phase == Phase.RIDING ? Phase.DONE : Phase.IDLE;
-                s.riders.forEach(r -> liveLocations.remove(r.userId));
             }
             if (s.phase == Phase.IDLE && now - s.lastRouteLoad >= 10_000) {
                 s.lastRouteLoad = now;
@@ -417,6 +478,7 @@ public class DemoService {
     // 새 라이딩이 열렸다 — 그 코스 출발 지점으로 모인다
     private void openEvent(Session s, CrewEvent e) {
         s.eventId = e.getId();
+        s.partyId = null;
         s.phase = Phase.WAITING;
         s.progress = 0;
         s.speed = 0;
@@ -431,7 +493,7 @@ public class DemoService {
         }
     }
 
-    // 초대받은 라이더가 한 명씩 [참여] — 채팅 초대 카드의 참여 표시가 차례로 바뀐다
+    // 아직 응답하지 않은 라이더를 모두 [참여] — 라이딩을 열 때 이미 참여시키므로 보통은 할 일이 없다 (그 전에 열린 라이딩 대비)
     private void acceptNext(Session s) {
         for (Rider r : s.riders) {
             if (!r.active || r.answered) continue;
@@ -442,13 +504,13 @@ public class DemoService {
             } catch (RuntimeException e) {
                 log.info("시연 라이더 {} 참여 응답 실패: {}", r.def.name(), e.getMessage());
             }
-            return;
         }
     }
 
-    // 라이딩 시작 — 체크된 라이더만 함께 간다
+    // 라이딩 시작 — 체크된 라이더만 함께 간다 (서연은 이 파티에 이미 들어와 있을 때만 — 서버를 다시 켠 경우)
     private void beginRide(Session s, CrewEvent e, Party p) {
         s.phase = Phase.RIDING;
+        s.partyId = p.getId();
         if (!Objects.equals(s.pathRouteId, e.getRouteId())) {
             usePath(s, e.getRouteId() == null ? null : routeRepository.findById(e.getRouteId()).orElse(null));
         }
@@ -459,13 +521,159 @@ public class DemoService {
         s.simT = Math.max(0, elapsed);
         s.stoppedT = 0;
         for (Rider r : s.riders) {
-            r.active = "checked".equals(memberStatus(e.getId(), r.userId));
+            r.active = isGuest(r) ? inParty(p.getId(), r.userId) : "checked".equals(memberStatus(e.getId(), r.userId));
             r.mode = isLateRider(r) && s.progress == 0 ? Mode.LATE : Mode.FORMATION;
+            if (isGuest(r)) r.match = r.active ? Match.ACCEPTED : Match.NONE;
         }
+    }
+
+    // ───────── 매칭으로 라이딩에 합류 (MatchService 가 부른다) ─────────
+
+    /** 크루 라이딩 중인 발표자에게 개인 라이딩 중인 서연이 보낸(보낼) 매칭인지 — 이 매칭만 파티 중이어도 받고, 수락하면 그 라이딩에 넣는다 */
+    public boolean isRideJoinMatch(Long fromUserId, Long toUserId) {
+        Session s = current;
+        if (s == null || toUserId == null || !s.leaderId.equals(toUserId)) return false;
+        synchronized (s) {
+            Rider guest = s.guest();
+            return s.phase == Phase.RIDING && s.partyId != null && guest != null && guest.active
+                    && guest.userId.equals(fromUserId) && guest.match != Match.ACCEPTED;
+        }
+    }
+
+    /** 발표자가 [수락] — 서연을 크루에 가입시키고, 이번 크루 라이딩 멤버(체크됨)와 라이딩 파티에 넣는다. 라이딩 파티 id 를 돌려준다 */
+    public Long joinRideByMatch(Long fromUserId, Long toUserId) {
+        require(isRideJoinMatch(fromUserId, toUserId), "지금은 서연을 라이딩에 합류시킬 수 없어요.");
+        Session s = current;
+        synchronized (s) {
+            Rider guest = s.guest();
+            User user = userRepository.findById(guest.userId).orElseThrow();
+            Crew crew = crewRepository.findById(s.crewId).orElseThrow();
+            // 크루가 승인제여도 바로 가입 — 매칭을 수락한 팀장이 곧 승인한 것이다
+            CrewMember cm = crewMemberRepository.findByCrewAndUser(crew, user).orElseGet(() -> {
+                CrewMember n = new CrewMember();
+                n.setCrew(crew);
+                n.setUser(user);
+                return n;
+            });
+            cm.setStatus("joined");
+            crewMemberRepository.save(cm);
+            // 이미 달리는 중이라 이번 라이딩에는 체크된 것으로 들어온다
+            LocalDateTime now = LocalDateTime.now();
+            CrewEventMember em = eventMemberRepository.findByEvent_IdAndUser_Id(s.eventId, user.getId()).orElseGet(() -> {
+                CrewEventMember n = new CrewEventMember();
+                n.setEvent(eventRepository.findById(s.eventId).orElseThrow());
+                n.setUser(user);
+                return n;
+            });
+            em.setStatus("checked");
+            em.setRespondedAt(now);
+            em.setCheckedAt(now);
+            eventMemberRepository.save(em);
+            joinParty(s.partyId, user.getId());
+            postCrewChat(crew.getId(), user, "안녕하세요, 서연이에요! 매칭으로 크루에 가입했어요. 같이 달려요.");
+            guest.match = Match.ACCEPTED;
+            return s.partyId;
+        }
+    }
+
+    /** 발표자가 [거절] — 서연은 그대로 지나간다 */
+    public void matchRejected(Long fromUserId, Long toUserId) {
+        Session s = current;
+        if (s == null || !s.leaderId.equals(toUserId)) return;
+        synchronized (s) {
+            Rider guest = s.guest();
+            if (guest != null && guest.userId.equals(fromUserId) && guest.match == Match.PENDING) guest.match = Match.REJECTED;
+        }
+    }
+
+    // 220m 안에 들어온 서연이 발표자에게 매칭 신청 — 실패하면(이미 처리된 신청 등) 지나간다
+    private void requestMatch(Session s, Rider guest) {
+        try {
+            matchService.send(guest.userId, s.leaderId);
+            guest.match = Match.PENDING;
+        } catch (RuntimeException e) {
+            log.info("시연 라이더 {} 매칭 신청 실패: {}", guest.def.name(), e.getMessage());
+            guest.match = Match.REJECTED;
+        }
+    }
+
+    // 답하지 않은 서연의 신청을 만료로 — 라이딩이 끝난 뒤 수락하면 엉뚱하게 2인 파티가 생기고, 다음 신청도 막힌다
+    private void expirePendingMatch(Session s, Rider guest) {
+        matchRequestRepository.findByFromUser_IdAndToUser_IdAndStatus(guest.userId, s.leaderId, "pending").ifPresent(r -> {
+            r.setStatus("expired");
+            matchRequestRepository.save(r);
+        });
+    }
+
+    // 라이딩이 끝났다 — 서연을 내리고 크루에서 뺀다 (다음 리허설에서 [전체 선택]에 섞이지 않게)
+    private void endGuest(Session s, Rider guest) {
+        expirePendingMatch(s, guest);
+        leaveCrew(s.crewId, guest.userId);
+        guest.active = false;
+        guest.match = Match.NONE;
+        guest.mode = Mode.FORMATION;
+    }
+
+    private void leaveCrew(Long crewId, Long userId) {
+        crewRepository.findById(crewId).ifPresent(c -> userRepository.findById(userId)
+                .flatMap(u -> crewMemberRepository.findByCrewAndUser(c, u))
+                .ifPresent(crewMemberRepository::delete));
+    }
+
+    // 크루 채팅에 서연의 첫인사 — 채팅 화면(CrewChatController)과 같은 저장·전송
+    private void postCrewChat(Long crewId, User sender, String text) {
+        LocalDateTime now = LocalDateTime.now();
+        CrewChatMessageEntity entity = new CrewChatMessageEntity();
+        entity.setCrewId(crewId);
+        entity.setSenderId(sender.getId());
+        entity.setSenderName(sender.getName());
+        entity.setContent(text);
+        entity.setType("TEXT");
+        entity.setCreatedAt(now);
+        crewChatRepository.save(entity);
+
+        ChatMessage msg = new ChatMessage();
+        msg.setRoomId(crewId);
+        msg.setSenderId(sender.getId());
+        msg.setSenderName(sender.getName());
+        msg.setContent(text);
+        msg.setType("TEXT");
+        msg.setSentAt(now.toString());
+        messaging.convertAndSend("/topic/crew-chat/" + crewId, msg);
     }
 
     private static boolean isLateRider(Rider r) {
         return "hyunwoo".equals(r.def.key());
+    }
+
+    private static boolean isGuest(Rider r) {
+        return r.def == GUEST;
+    }
+
+    private boolean inParty(Long partyId, Long userId) {
+        return partyMemberRepository.findByParty_IdAndUser_Id(partyId, userId).map(m -> "joined".equals(m.getStatus())).orElse(false);
+    }
+
+    // 서연을 라이딩 중인 파티의 참여 확정 멤버로 넣는다 — 라이딩 화면은 그 파티 멤버의 위치만 보여 준다
+    private void joinParty(Long partyId, Long userId) {
+        PartyMember m = partyMemberRepository.findByParty_IdAndUser_Id(partyId, userId).orElseGet(() -> {
+            PartyMember n = new PartyMember();
+            n.setParty(partyRepository.findById(partyId).orElseThrow());
+            n.setUser(userRepository.findById(userId).orElseThrow());
+            return n;
+        });
+        m.setStatus("joined");
+        m.setReady(true);
+        partyMemberRepository.save(m);
+    }
+
+    // 서연이 나타날 코스 위치 — 선두 앞에서 발표자와 직선으로 NEAR_START_M 이상 떨어진 첫 지점. 도착이 가까우면 NaN
+    private static double meetStart(Session s) {
+        for (double d = s.progress + NEAR_START_M; d <= s.path.length - MEET_ROOM_M; d += 5) {
+            double[] p = s.path.pointAt(d);
+            if (distanceM(s.lat, s.lng, p[0], p[1]) >= NEAR_START_M) return d;
+        }
+        return Double.NaN;
     }
 
     private String memberStatus(Long eventId, Long userId) {
@@ -485,12 +693,14 @@ public class DemoService {
     }
 
     // 출발 지점 — 발표자는 코스 시작점, 민수·지영은 바로 옆, 현우는 코스 뒤쪽 140m 에서 오는 중
-    private void placeAtStart(Session s, long now, boolean report) {
+    // 라이딩을 열기 전에도 위치 공유 중으로 둔다 — 크루 관리 인원 체크가 "위치 공유가 꺼져 있어요"로 막히지 않게
+    private void placeAtStart(Session s, long now) {
         if (s.path == null) return;
         double h = s.path.bearingAt(0);
         double[] start = s.path.pointAt(0);
         setLeader(s, start, h, now);
         for (Rider r : s.riders) {
+            if (isGuest(r)) continue;   // 서연은 라이딩 중에 [파티 추가]로만 나타난다
             double[] p = switch (r.def.key()) {
                 case "minsu" -> offset(start[0], start[1], h + 100, 8);
                 case "jiyoung" -> offset(start[0], start[1], h - 120, 12);
@@ -500,8 +710,13 @@ public class DemoService {
             r.lng = p[1];
             r.heading = h;
             r.placed = true;
-            publish(s, r, now, report && r.active);
+            publish(s, r, now, true);
         }
+    }
+
+    // 크루 멤버 라이더는 늘 위치 공유 중 — 이번 라이딩에 빠졌거나 라이딩이 끝나도 서 있는 자리를 내준다 (서연은 [파티 추가] 때만)
+    private void keepSharing(Session s, Rider r, long now) {
+        if (!isGuest(r) && r.placed) publish(s, r, now, true);
     }
 
     private void ride(Session s, double dt, long now) {
@@ -518,7 +733,10 @@ public class DemoService {
         setLeader(s, s.path.pointAt(s.progress), headingAt(s.path, s.progress, s.heading), now);
 
         for (Rider r : s.riders) {
-            if (!r.active) continue;
+            if (!r.active) {
+                keepSharing(s, r, now);   // 체크되지 않아 출발 지점에 남은 라이더
+                continue;
+            }
             double[] slot = slotOf(s, r);
             switch (r.mode) {
                 case FORMATION -> moveToward(r, slot, s.speed + 2.5, dt);
@@ -536,12 +754,51 @@ public class DemoService {
                     if (k == 1) r.mode = Mode.AWAY;
                 }
                 case AWAY -> moveToward(r, shift(slot, r.offN, r.offE), s.speed + 2.5, dt);
+                case MEETING -> {
+                    // 개인 라이딩 중인 서연 — 코스를 거슬러 마주 오는 쪽 차선으로 온다
+                    r.meetS -= MEET_MS * dt;
+                    double[] p = side(s.path, r.meetS, -MEET_LANE_M);
+                    r.lat = p[0];
+                    r.lng = p[1];
+                    r.heading = (s.path.bearingAt(r.meetS) + 180) % 360;
+                    // 근처 라이더 범위에 들어오면 발표자에게 매칭 신청 (한 번)
+                    if (r.match == Match.NONE && distanceM(s.lat, s.lng, r.lat, r.lng) <= PartyService.PARTY_RANGE_M) requestMatch(s, r);
+                    // 그룹 앞까지 왔다 — 수락했으면 서서 합류, 답을 기다리면 함께 가며 기다리고, 거절했으면 그대로 지나간다
+                    if (r.meetS - s.progress <= MEET_STOP_M) {
+                        if (r.match == Match.ACCEPTED) {
+                            r.waitLat = r.lat;
+                            r.waitLng = r.lng;
+                            r.mode = Mode.JOINING;
+                        } else if (r.match == Match.PENDING) {
+                            r.mode = Mode.PACING;
+                        }
+                    }
+                    if (r.meetS < s.progress - PASS_BEHIND_M) {
+                        liveLocations.remove(r.userId);
+                        r.active = false;
+                        r.match = Match.NONE;
+                        r.mode = Mode.FORMATION;
+                        continue;   // 지도에서 내렸다 — 다시 올리지 않는다
+                    }
+                }
+                case PACING -> {
+                    // 답을 기다리며 그룹 앞 MEET_STOP_M 에서 같은 방향으로 함께 간다
+                    moveToward(r, side(s.path, s.progress + MEET_STOP_M, -MEET_LANE_M), s.speed + 2.5, dt);
+                    if (r.match == Match.ACCEPTED) {
+                        r.waitLat = r.lat;
+                        r.waitLng = r.lng;
+                        r.mode = Mode.JOINING;
+                    } else if (r.match == Match.REJECTED) {
+                        r.meetS = s.progress + MEET_STOP_M;
+                        r.mode = Mode.MEETING;   // 돌아서 지나간다
+                    }
+                }
                 case RETURNING, JOINING -> {
                     if (s.stoppedT < REGROUP_HOLD_S) {
-                        // 그룹이 다 서서 잠깐 있을 때까지는 있던 자리(이탈한 자리 · 뒤따라오던 자리)에서 함께 선다
-                        double[] wait = r.mode == Mode.JOINING
-                                ? side(s.path, s.progress - LATE_GAP_M, r.def.side())
-                                : shift(slot, r.offN, r.offE);
+                        // 그룹이 다 서서 잠깐 있을 때까지는 있던 자리(이탈한 자리 · 뒤따라오던 자리 · 마중 나와 선 자리)에서 함께 선다
+                        double[] wait = r.mode == Mode.RETURNING ? shift(slot, r.offN, r.offE)
+                                : isGuest(r) ? new double[]{r.waitLat, r.waitLng}
+                                : side(s.path, s.progress - LATE_GAP_M, r.def.side());
                         moveToward(r, wait, s.speed + 2.5, dt);
                     } else {
                         // 대열 자리로 한 번에 옮긴다 — 다른 화면이 서 있던 자리에서 여기까지 미끄러지듯 이어 보여 준다
@@ -652,6 +909,9 @@ public class DemoService {
         double offN, offE;       // 자기 대열 자리에서 떨어진 거리(m, 북·동) — STRAY 는 가는 곳, AWAY·복귀 대기는 있는 곳
         double fromN, fromE;     // STRAY — 출발할 때 대열 자리에서 떨어져 있던 거리
         double strayT;           // STRAY — 출발한 뒤 지난 시간(초)
+        double meetS;            // MEETING — 서연이 있는 코스 위치(출발점에서 잰 거리, m)
+        Match match = Match.NONE;  // 서연 — 발표자에게 보낸 매칭 신청 상태
+        double waitLat, waitLng; // MEETING 뒤 JOINING — 서연이 서서 기다리는 자리
         boolean dashing;         // 이번 주기에 크게 움직임(이탈·대열로 들어옴) — publish 가 순간 이동으로 보지 않게
         boolean published;
         double pubLat, pubLng;
@@ -672,6 +932,7 @@ public class DemoService {
         Phase phase = Phase.IDLE;
         String eventStatus;
         Long eventId;
+        Long partyId;                   // 라이딩 중인 파티 — [파티 추가]가 서연을 여기에 넣는다
         Path path;
         Long pathRouteId;
         double progress, speed, simT;   // 선두(발표자)가 코스를 따라 간 거리(m) · 속도(m/s) · 라이딩 경과(초)
@@ -690,6 +951,10 @@ public class DemoService {
 
         Rider rider(String key) {
             return riders.stream().filter(r -> r.def.key().equals(key)).findFirst().orElseThrow();
+        }
+
+        Rider guest() {
+            return riders.stream().filter(DemoService::isGuest).findFirst().orElse(null);
         }
 
         boolean has(Long userId) {

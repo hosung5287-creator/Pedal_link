@@ -2,10 +2,12 @@ import '../styles/ridingroom.css';
 
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { makeTileLayer, makeCurrentLocationIcon, makeRiderIcon, makeHeadingIcon, bearingBetween, drawRoutes } from '../utils/leaflet';
+import { makeTileLayer, makeCurrentLocationIcon, makeRiderIcon, makeOtherUserIcon, makeHeadingIcon, bearingBetween, drawRoutes } from '../utils/leaflet';
 import { reportLocation, getOtherLocations } from '../api/locations';
 import { getRouteById } from '../api/routes';
 import { stopPartyRide, getParty } from '../api/parties';
+import { getPublicProfile } from '../api/users';
+import { profileTooltipHtml } from '../utils/riderProfile';
 import { useLocationShare } from '../hooks/useLocationShare';
 import {
   rideSessionKey, beginRideSession, storeRideDistance, finalizePartySession, endRideAsHost,
@@ -25,6 +27,8 @@ const RIDER_MAX_KMH = 80;
 const POLL_MS = 3000;
 const GLIDE_EASE_M = 40;   // 서 있다가 이보다 크게 움직이면(대열로 들어옴) 천천히 출발해 천천히 붙는다
 const GLIDE_MAX_M = 1000;  // 이보다 멀리 옮겨지면(도착 지점으로 건너뜀) 미끄러지지 않고 바로 옮긴다
+// 파티 밖 근처 라이더 — 개인 라이딩·파티 도크와 같은 220m(파티 모집 범위) 안이면 주황 핀으로 보인다 (목록에는 넣지 않는다)
+const NEAR_M = 220;
 
 // 이름 뒤 주격 조사 — 받침이 있으면 '이', 없으면 '가' (한글로 끝나지 않으면 '이(가)')
 const subjectJosa = (name) => {
@@ -207,10 +211,33 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
     let cancelled = false;
     const markers = otherMarkersRef.current;
     const riderStates = riderStatesRef.current;
+    const nearMarkers = new Map();   // userId -> 파티 밖 근처 라이더 핀
+    const profiles = new Map();      // userId -> 공개 프로필 | 'loading' | null(실패)
+
+    // 핀에 마우스를 올리면(휴대폰은 탭) 간단한 프로필 — 처음 볼 때 한 번 불러오고, 거리는 받을 때마다 고친다
+    const showProfile = (marker, o, dist) => {
+      if (!marker.getTooltip()) {
+        marker.bindTooltip('', { direction: 'top', offset: [0, -12], className: 'rrProfileTooltip', opacity: 1 });
+      }
+      if (!profiles.has(o.userId)) {
+        profiles.set(o.userId, 'loading');
+        getPublicProfile(o.userId)
+          .then((p) => { profiles.set(o.userId, p); })
+          .catch(() => { profiles.set(o.userId, null); })
+          .finally(() => {
+            const me = lastPosRef.current;
+            if (!cancelled && me && mapRef.current) {
+              const at = marker.getLatLng();
+              marker.setTooltipContent(profileTooltipHtml(o.name, mapRef.current.distance([me.lat, me.lng], [at.lat, at.lng]), profiles.get(o.userId)));
+            }
+          });
+      }
+      marker.setTooltipContent(profileTooltipHtml(o.name, dist, profiles.get(o.userId)));
+    };
 
     // 마커 미끄러짐 — 지금 보이는 자리에서 받은 자리까지. 이탈·합류 알림은 마커가 기준 거리를 넘을 때
     // (늦어도 닿을 때·다음 위치가 올 때) 띄운다.
-    const glides = new Map(); // userId -> { from, to, start, ms, ease, notice }
+    const glides = new Map(); // 핀 키 -> { marker, from, to, start, ms, ease, notice }
     let frame = 0;
     const endGlide = (id) => {
       const g = glides.get(id);
@@ -229,7 +256,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
         const k = Math.min(1, (now - g.start) / g.ms);
         const f = g.ease ? k * k * (3 - 2 * k) : k;
         const at = [g.from[0] + (g.to[0] - g.from[0]) * f, g.from[1] + (g.to[1] - g.from[1]) * f];
-        markers.get(id)?.setLatLng(at);
+        g.marker.setLatLng(at);
         if (g.notice && passed(g.notice, at)) {
           pushRiderAlertRef.current(g.notice);
           g.notice = null;
@@ -247,9 +274,10 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
         marker.setLatLng(to);
         return;
       }
-      glides.set(id, { from, to, start: Date.now(), ms, ease });
+      glides.set(id, { marker, from, to, start: Date.now(), ms, ease });
       if (!frame) frame = requestAnimationFrame(step);
     };
+    const nearKey = (id) => `near:${id}`;   // 파티원 핀과 같은 사람이 겹쳐도 미끄러짐이 섞이지 않게
 
     const timer = setInterval(async () => {
       const pos = lastPosRef.current;
@@ -262,6 +290,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
           await reportLocation({ userId: user.id, name: user.name, lat: pos.lat, lng: pos.lng });
         }
         const others = (await getOtherLocations(user.id, party.id)) || [];
+        const everyone = (await getOtherLocations(user.id)) || [];   // 파티 밖 근처 라이더를 찾으려고 — 위치 공유 중인 전체
         if (cancelled || !mapRef.current) return;
 
         const seen = new Set();
@@ -304,6 +333,7 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
           // 이탈·합류 — 처음 보일 때는 알리지 않고 상태만 기억한다 (출발할 때 모두에게 합류 알림이 뜨지 않게).
           // 50~250m 사이에서는 상태를 바꾸지 않아 경계에서 알림이 반복되지 않는다.
           const dist = map.distance([pos.lat, pos.lng], [o.lat, o.lng]);
+          showProfile(marker, o, dist);   // 파티원은 거리와 상관없이 프로필을 볼 수 있다
           const state = riderStates.get(o.userId);
           let notice = null;
           if (!state) {
@@ -332,6 +362,30 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
           }
         }
 
+        // 파티 밖 근처 라이더 — 220m 안이면 주황 핀(프로필 미리보기 포함). 매칭으로 파티에 들어오면 파티원 핀으로 바뀐다
+        const nearSeen = new Set();
+        for (const o of everyone) {
+          if (o.userId === user.id || seen.has(o.userId)) continue;
+          const dist = map.distance([pos.lat, pos.lng], [o.lat, o.lng]);
+          if (dist > NEAR_M) continue;
+          nearSeen.add(o.userId);
+          let marker = nearMarkers.get(o.userId);
+          if (!marker) {
+            marker = L.marker([o.lat, o.lng], { icon: makeOtherUserIcon(), zIndexOffset: 850 }).addTo(map);
+            nearMarkers.set(o.userId, marker);
+          } else {
+            glideTo(map, nearKey(o.userId), marker, [o.lat, o.lng], POLL_MS, false);
+          }
+          showProfile(marker, o, dist);
+        }
+        for (const [id, marker] of nearMarkers) {
+          if (!nearSeen.has(id)) {
+            endGlide(nearKey(id));
+            marker.remove();
+            nearMarkers.delete(id);
+          }
+        }
+
         setOtherRiders(list);
       } catch {
         // 다음 폴링에서 재시도
@@ -345,6 +399,9 @@ export default function RidingRoom({ party, user, onClose, onEnded, onPartyChang
       glides.clear();
       markers.forEach((m) => m.remove());
       markers.clear();
+      nearMarkers.forEach((m) => m.remove());
+      nearMarkers.clear();
+      profiles.clear();
       otherSpeedRef.current.clear();
       riderStates.clear();
     };

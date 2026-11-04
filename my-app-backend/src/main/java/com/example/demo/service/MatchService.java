@@ -6,6 +6,7 @@ import com.example.demo.entity.User;
 import com.example.demo.repository.MatchRequestRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,8 @@ public class MatchService {
     private final MatchRequestRepository matchRequestRepository;
     private final UserRepository userRepository;
     private final PartyService partyService;
+    // 시연 모드일 때만 있다 — 크루 라이딩 중인 발표자에게 오는 가상 라이더의 매칭은 그 라이딩에 합류시킨다
+    private final ObjectProvider<DemoService> demo;
 
     @Transactional
     public MatchRequest send(Long fromUserId, Long toUserId) {
@@ -32,10 +35,12 @@ public class MatchService {
         }
         expireOld();
 
-        if (partyService.isInActiveParty(fromUserId)) {
+        // 시연의 라이딩 합류 매칭은 받는 쪽(발표자)이 라이딩 파티 안에 있는 것이 정상이다
+        boolean rideJoin = isDemoRideJoin(fromUserId, toUserId);
+        if (!rideJoin && partyService.isInActiveParty(fromUserId)) {
             throw new RuntimeException("이미 파티에 속해 있어서 신청할 수 없어요.");
         }
-        if (partyService.isInActiveParty(toUserId)) {
+        if (!rideJoin && partyService.isInActiveParty(toUserId)) {
             throw new RuntimeException("상대가 이미 다른 파티에 속해 있어요.");
         }
         matchRequestRepository.findByFromUser_IdAndToUser_IdAndStatus(fromUserId, toUserId, "pending")
@@ -65,7 +70,11 @@ public class MatchService {
             throw new RuntimeException("이미 처리된 신청이에요.");
         }
 
-        PartyResponse party = partyService.createMatchedParty(req.getFromUser().getId(), req.getToUser().getId());
+        Long fromId = req.getFromUser().getId();
+        PartyResponse party = isDemoRideJoin(fromId, userId)
+                // 시연 — 새 2인 파티 대신 발표자가 달리고 있는 크루 라이딩에 넣는다 (크루 가입까지)
+                ? partyService.getParty(demo.getObject().joinRideByMatch(fromId, userId)).orElseThrow()
+                : partyService.createMatchedParty(fromId, userId);
         req.setStatus("accepted");
         req.setPartyId(party.getId());
         matchRequestRepository.save(req);
@@ -83,6 +92,13 @@ public class MatchService {
         }
         req.setStatus("rejected");
         matchRequestRepository.save(req);
+        DemoService d = demo.getIfAvailable();
+        if (d != null) d.matchRejected(req.getFromUser().getId(), userId);   // 거절당한 가상 라이더는 그냥 지나간다
+    }
+
+    private boolean isDemoRideJoin(Long fromUserId, Long toUserId) {
+        DemoService d = demo.getIfAvailable();
+        return d != null && d.isRideJoinMatch(fromUserId, toUserId);
     }
 
     @Transactional

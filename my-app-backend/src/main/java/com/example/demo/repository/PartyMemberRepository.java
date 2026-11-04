@@ -12,6 +12,9 @@ import java.util.Optional;
 public interface PartyMemberRepository extends JpaRepository<PartyMember, Long> {
     Optional<PartyMember> findByPartyAndUser(Party party, User user);
 
+    // 시연 모드 — 라이딩 중인 파티에 가상 라이더가 들어 있는지 (엔티티 없이 id 로)
+    Optional<PartyMember> findByParty_IdAndUser_Id(Long partyId, Long userId);
+
     // 매칭 신청 가능 여부 확인용 — 종료되지 않은 파티에 이미 참여(joined) 중인지
     boolean existsByUser_IdAndStatusAndParty_StatusNot(Long userId, String status, String partyStatus);
 

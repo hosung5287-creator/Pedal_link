@@ -18,6 +18,8 @@ function phaseText(s) {
 function riderText(r, phase) {
   if (phase === 'idle') return t.standby;
   if (!r.active) return t.notInRide;
+  // 서연 — 매칭을 수락하기 전에는 개인 라이딩 중인 낯선 라이더다
+  if (r.guest && r.match && r.match !== 'accepted') return t.guestMatch[r.match] || t.modes[r.mode];
   if (phase === 'waiting') return r.mode === 'late' ? t.coming : t.atStart;
   if (phase === 'done') return t.arrived;
   return t.modes[r.mode] || r.mode;
@@ -104,7 +106,8 @@ export default function DemoPanel({ user }) {
         <>
           <p className="dpText">{phaseText(state)}</p>
           <ul className="dpRiders">
-            {riders.map((r) => (
+            {/* 서연은 [파티 추가]로 라이딩에 들어온 뒤부터 보인다 */}
+            {riders.filter((r) => !r.guest || r.active).map((r) => (
               <li key={r.key} className={r.active ? '' : 'isOff'}>
                 <span className="dpName">{r.name}</span>
                 <span className="dpMode">
@@ -118,7 +121,8 @@ export default function DemoPanel({ user }) {
             <button type="button" disabled={busy || !riding || !minsu?.active || minsu.mode !== 'formation'} onClick={() => act('stray')}>{t.stray}</button>
             <button type="button" disabled={busy || !riding || !['stray', 'away'].includes(minsu?.mode)} onClick={() => act('return')}>{t.back}</button>
             <button type="button" disabled={busy || !riding || !hyunwoo?.active || hyunwoo.mode !== 'late'} onClick={() => act('join')}>{t.join}</button>
-            <button type="button" disabled={busy || !state.canSkip} onClick={() => act('finish')}>{t.finish}</button>
+            <button type="button" disabled={busy || !state.canPartyAdd} onClick={() => act('party')}>{t.partyAdd}</button>
+            <button type="button" className="dpWide" disabled={busy || !state.canSkip} onClick={() => act('finish')}>{t.finish}</button>
           </div>
           {jiyoung && <p className="dpLogin">{t.login(jiyoung.email, state.password)}</p>}
         </>

@@ -155,7 +155,8 @@ export default function PartyDock({ user, onMoveParty }) {
   // 방장이 나를 내보낸 파티 안내 — 서버는 파티가 끝날 때까지 계속 알려 주므로, 한 번 띄운 파티 id 는 사용자별로 기억해 둔다
   const [kickedNotice, setKickedNotice] = useState(null); // { partyId, title } | null
 
-  // 내 상태 확인 (5초) — 받은·보낸 매칭 신청 + 크루 라이딩 자동 이동을 요청 하나로 받는다.
+  // 내 상태 확인 (5초, 라이딩 화면이 열려 있으면 2초) — 받은·보낸 매칭 신청 + 크루 라이딩 자동 이동을 요청 하나로 받는다.
+  // 라이딩 중에는 다가온 라이더의 매칭 신청 배너가 늦지 않게 더 자주 본다.
   // 화면이 안 보일 때(다른 탭·최소화)는 건너뛰고, 다시 보이면 바로 한 번 확인한다.
   useEffect(() => {
     if (!user?.id) return;
@@ -209,7 +210,13 @@ export default function PartyDock({ user, onMoveParty }) {
       } catch { /* 다음 폴링에서 재시도 */ }
     };
     load();
-    const timer = setInterval(load, 5000);
+    let last = Date.now();
+    const timer = setInterval(() => {
+      const gap = ridingIdRef.current != null ? 2000 : 5000;
+      if (Date.now() - last < gap) return;
+      last = Date.now();
+      load();
+    }, 1000);
     const onVisible = () => { if (!document.hidden) load(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => { alive = false; clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };

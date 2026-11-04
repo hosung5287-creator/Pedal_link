@@ -116,6 +116,10 @@ export const text = {
   routeLoaded: (name) => `'${name || '코스'}' 코스를 불러왔어요.`,
   partyMakeButton: '링크 만들기',
   partyCreateSub: '저장한 코스를 골라 같이 탈 사람을 모아보세요.',
+  partyRoutePreview: '경로 미리보기',
+  partyRouteMapLoading: '지도를 불러오는 중…',
+  partyRouteNoMap: '이 경로는 지도 미리보기가 없어요.',
+  partyRouteCount: '개 경로',
   partyCreateFailed: '링크를 만들지 못했습니다.',
   partyOpenList: '모집 중인 링크',
   partyNoParties: '아직 열린 링크가 없어요. 첫 링크를 만들어보세요!',
@@ -522,9 +526,6 @@ export const homeCourse = {
   video: {
     src: '/videos/course-demo.mp4',
     poster: '/videos/course-demo-poster.jpg',
-    duration: 12,
-    // 영상 장면 시작 시각(초) — 아래 단계 표시와 맞물린다
-    steps: [{ title: '코스 그리기', at: 0 }, { title: '자동 계산', at: 4.2 }, { title: '저장', at: 8.2 }],
     copy: {
       aria: '코스 만들기 시연 영상: 지도에 도착지를 찍으면 경로가 그려지고, 거리·고도·시간이 계산된 뒤 코스가 저장됩니다.',
       play: '코스 시연 영상 재생',
@@ -535,18 +536,6 @@ export const homeCourse = {
     { title: '코스 그리기', desc: '지도 위에 출발지와 도착지를 찍어 보세요.', image: '/images/course/draw.png', alt: '한강 지도에서 출발 지점을 지정한 실제 코스 편집 화면' },
     { title: '실시간 계산', desc: '거리·고도·예상 시간을 바로 확인하세요.', image: '/images/course/calculate.png', alt: '거리 0.4km, 상승 3m, 예상 시간 1분이 표시된 실제 계산 결과' },
     { title: '저장한 코스', desc: '마음에 든 코스를 저장해 다시 꺼내 쓰세요.', image: '/images/course/saved.png', alt: '한강 코스와 경로가 저장되었습니다 알림이 표시된 실제 저장 완료 화면' },
-  ],
-};
-
-// 함께 달리기 — 폴더 탭(파티 | 크루). 탭마다 아코디언 + 시연이 바뀐다 (TogetherSection)
-export const homeTogether = {
-  eyebrow: '함께 달리기',
-  title: '즉석으로 파티, 꾸준히 크루',
-  sub: '오늘 바로 모이는 파티와 정기적으로 함께 달리는 크루, 두 가지 방법으로 같이 달려요.',
-  tabsLabel: '함께 달리기 방식',
-  tabs: [
-    { id: 'party', label: '파티', hint: '즉석으로 모여 달리기', slotLabel: '파티 탭 화면 자리 — 실제 화면 캡처 예정' },
-    { id: 'crew', label: '크루', hint: '정기적으로 함께 달리기', slotLabel: '크루 탭 화면 자리 — 실제 화면 캡처 예정' },
   ],
 };
 
@@ -969,6 +958,13 @@ export const homeDraft = {
     primary: '파티 찾기',
     secondary: '코스 만들기',
     mediaLabel: '히어로 영상 자리 — 풀스크린 16:9 (반복 재생·음소거)',
+    // 배경 영상(HeroVideo) — 음소거 반복, 글씨가 읽히게 위아래를 어둡게 깐다
+    video: {
+      src: '/videos/hero.mp4',
+      poster: '/videos/hero-poster.jpg',
+      play: '배경 영상 재생',
+      pause: '배경 영상 일시정지',
+    },
   },
 
   action: {
@@ -997,24 +993,144 @@ export const homeDraft = {
       ],
     },
   },
-  // 플로팅 버튼(파티 도크) 소개 — 크루 자리였던 섹션
-  dock: {
-    eyebrow: '플로팅 버튼',
-    title: '어느 화면에서든 버튼 하나로',
-    sub: '오른쪽 아래 버튼으로 근처 라이더 찾기, 매칭, 라이딩까지 바로 이어집니다.',
-    cta: '파티 찾기',
-    video: {
-      src: '/videos/dock-demo.mp4',
-      poster: '/videos/dock-demo-poster.jpg',
-      duration: 12,
-      steps: [{ title: '근처 라이더', at: 0 }, { title: '매칭 · 즉석 파티', at: 4 }, { title: '라이딩', at: 8 }],
-      copy: {
-        aria: '플로팅 버튼 시연 영상: 버튼을 누르면 근처 라이더가 보이고, 매칭을 수락하면 즉석 파티가 만들어지며, 라이딩 중에는 초록 버튼으로 바뀝니다.',
-        play: '플로팅 버튼 시연 영상 재생',
-        pause: '플로팅 버튼 시연 영상 일시정지',
-      },
+  // 메인 섹션 — 모두 같은 틀(FeatureSplit): 큰 제목·설명·버튼 2개 + 오른쪽 화면.
+  // 버튼 to: map(지도) · party · crew · browse(피드)
+  sections: {
+    feed: {
+      title: '라이더들의 코스를 둘러보세요',
+      sub: '다른 라이더가 완주한 코스를 피드에서 구경하고, 마음에 든 코스를 저장하세요.',
+      primary: { label: '피드 보기', to: 'browse' },
+      secondary: { label: '코스 만들기', to: 'map' },
+    },
+    course: {
+      title: '지도 위에서 바로 코스를 그리세요',
+      sub: '출발지와 도착지를 찍으면 거리·고도·예상 시간이 자동으로 계산됩니다.',
+      primary: { label: '코스 만들러 가기', to: 'map' },
+      secondary: { label: '다른 코스 보기', to: 'browse' },
+    },
+    party: {
+      title: '파티',
+      sub: '코스를 고르고 인원을 정해 링크를 열면, 근처 라이더와 오늘 바로 출발할 수 있어요.',
+      primary: { label: '파티 찾기', to: 'party' },
+      secondary: { label: '코스 만들기', to: 'map' },
+    },
+    crew: {
+      title: '정기 크루',
+      sub: '지역과 요일이 맞는 크루에 가입하고, 매주 일정에 참석을 체크해 함께 달려요.',
+      primary: { label: '크루 둘러보기', to: 'crew' },
+      secondary: { label: '파티 찾기', to: 'party' },
+    },
+    match: {
+      title: '근처 라이더와 지금 바로 연결',
+      sub: '위치를 공유하면 반경 안의 라이더가 지도에 실시간으로 표시됩니다.',
+      primary: { label: '파티 찾기', to: 'party' },
+      secondary: { label: '지도 보기', to: 'map' },
+    },
+    report: {
+      title: 'AI 리포트',
+      sub: '라이딩 잔디·평균 속도·누적 거리를 한눈에 보고, AI가 내 수준과 다음 목표를 짚어 줍니다.',
+      primary: { label: '내 기록 보기', to: 'profile' },
+      secondary: { label: '코스 만들기', to: 'map' },
+    },
+    start: {
+      title: '어디서부터 시작할까요?',
+      sub: '코스를 만들거나, 파티에 합류하거나, 다른 라이더의 코스부터 구경해 보세요.',
+      primary: { label: '지도 열기', to: 'map' },
+      secondary: { label: '파티 찾기', to: 'party' },
     },
   },
-
+  // 히어로 바로 아래 소개 — 큰 이름 + 섹션 메뉴 (SectionMenu)
+  intro: {
+    title: 'PedalLink',
+    sub: '코스를 그리고, 라이더를 만나고, 함께 달리는 곳.',
+    menuLabel: '메인 섹션 메뉴',
+    menu: [
+      { id: 'feed', label: '피드' },
+      { id: 'party', label: '파티' },
+      { id: 'crew', label: '크루' },
+      { id: 'course', label: '코스 만들기' },
+      { id: 'match', label: '실시간 연결' },
+      { id: 'report', label: 'AI 리포트' },
+    ],
+  },
+  // 시작 카드 3장 (StartCards)
+  start: {
+    cards: [
+      { id: 'course', tag: '코스 만들기', title: '코스', text: '지도에 찍으면 거리·고도·시간이 자동으로 계산돼요.', cta: '지도 열기' },
+      { id: 'party', tag: '함께 달리기', title: '파티', text: '근처에서 모집 중인 링크에 합류하거나 직접 열어 보세요.', cta: '파티 찾기' },
+      { id: 'feed', tag: '둘러보기', title: '피드', text: '라이더들이 완주한 코스를 구경하고 저장하세요.', cta: '피드 보기' },
+    ],
+  },
+  // 파티 탭 체험(PartyPlay) — 예시 데이터, API 호출 없음
+  partyPlay: {
+    scheduleLabel: '일정',
+    membersLabel: '인원',
+    hostParty: {
+      id: 'host', title: '한강 야간 라이딩', routeName: '한강 자전거 코스', from: '이촌', to: '반포대교', km: 4.2,
+      when: '오늘 오후 8:00', max: 3, hostName: '나', requests: ['민재', '소연'],
+    },
+    others: [
+      {
+        id: 'other', title: '이촌 저녁 라이딩', routeName: '이촌 강변', from: '이촌', to: '동작대교', km: 2.8,
+        when: '오늘 오후 7:30', max: 6, members: 2, hostName: '지훈', hostM: 120,
+      },
+      {
+        id: 'west', title: '퇴근길 한강 산책', routeName: '서쪽 강변', from: '용산', to: '이촌', km: 3.1,
+        when: '오늘 오후 7:00', max: 4, members: 1, hostName: '하늘', hostM: 90,
+      },
+      {
+        id: 'east', title: '반포 야경 라이딩', routeName: '반포 코스', from: '동작대교', to: '반포대교', km: 3.6,
+        when: '오늘 오후 9:00', max: 5, members: 3, hostName: '세훈', hostM: 180,
+      },
+    ],
+    start: '출발',
+    ready: '모두 모였어요! 곧 출발해요',
+    riding: '함께 라이딩 중',
+    arrived: '함께 도착했어요',
+    reset: '다시 보기',
+    again: '처음부터',
+    countdown: ['3', '2', '1', '출발!'],
+    credit: '© OpenStreetMap contributors',
+    creditShort: '© OpenStreetMap',
+  },
+  // 크루 탭 체험(CrewPlay) — 예시 데이터, API 호출 없음
+  crewPlay: {
+    me: '나',
+    crews: [
+      {
+        id: 'dawn', name: '한강 새벽 크루', region: '서울 · 이촌', schedule: '매주 토 07:00', memberCount: 12, tag: '입문 환영',
+        members: ['정우', '민재', '소연'], upcoming: [{ title: '이번 주 새벽 라이딩', when: '토 오전 7:00 · 6/12명' }],
+      },
+      {
+        id: 'hill', name: '남산 업힐 클럽', region: '서울 · 남산', schedule: '매주 일 06:30', memberCount: 8, tag: '업힐',
+        members: ['세훈', '지훈', '하늘'], upcoming: [{ title: '남산 순환 업힐', when: '일 오전 6:30 · 5/8명' }],
+      },
+      {
+        id: 'night', name: '반포 나이트 라이드', region: '서울 · 반포', schedule: '매주 수 20:00', memberCount: 15, tag: '야간',
+        members: ['유진', '도윤', '서연'], upcoming: [{ title: '수요 야간 라이딩', when: '수 오후 8:00 · 9/15명' }],
+      },
+      {
+        id: 'long', name: '주말 장거리 클럽', region: '경기 · 양평', schedule: '격주 일 08:00', memberCount: 10, tag: '장거리',
+        members: ['태오', '지안', '민서'], upcoming: [{ title: '양평 왕복 80km', when: '일 오전 8:00 · 4/10명' }],
+      },
+    ],
+  },
+  // 라이딩 기록 시연(RideReportDemo) — 예시 문구. 프로필의 AI 라이딩 리포트와 같은 구성
+  report: {
+    heading: 'AI 라이딩 리포트',
+    by: 'Gemini 분석 · 예시',
+    statsTitle: '라이딩 통계',
+    abilityTitle: '라이더 역량',
+    stats: { rides: '라이딩 횟수', km: '총 거리(km)', hours: '총 시간(h)', ascend: '총 상승고도(m)', perKm: 'km당 상승(m)', mountain: '산악 코스 완주' },
+    abilities: { endurance: '지구력', climbing: '등반력', speed: '스피드', consistency: '꾸준함' },
+    level: '중급',
+    summary: '꾸준히 거리를 늘리고 있는 라이더예요.',
+    advice: ['주 2회 페이스를 유지하면 40km 코스도 무리 없어요.', '다음 목표는 업힐이 섞인 코스로 잡아 보세요.'],
+    tabs: [
+      { id: 'grass', label: '라이딩 잔디' },
+      { id: 'speed', label: '평균 속도' },
+      { id: 'total', label: '누적 거리' },
+    ],
+  },
 };
 

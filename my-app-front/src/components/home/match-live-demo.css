@@ -13,14 +13,16 @@
 
 .mldStage { position: absolute; inset: 0; }
 
-/* 지도 — 위쪽 62% (아래는 패널) */
-.mldMap { position: absolute; inset: 0 0 38% 0; overflow: hidden; }
+/* 지도 — 카드 전체를 채우고, 아래 패널이 위에 떠 있다 */
+.mldMap { position: absolute; inset: 0; overflow: hidden; }
+/* 마우스가 있는 기기 — 지도 위에선 민재 핀이 커서 역할 */
+@media (hover: hover) { .mldMap { cursor: none; } }
 .mldMap > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
 
 .mldMe {
   position: absolute;
   left: 50%;
-  top: 46%;
+  top: 38%;
   width: 18px;
   height: 18px;
   margin: -9px 0 0 -9px;
@@ -47,15 +49,17 @@
 .mldRadius {
   position: absolute;
   left: 50%;
-  top: 46%;
-  width: 46%;
+  top: 38%;
+  width: 38%;
   aspect-ratio: 1;
   translate: -50% -50%;
   border: 2px dashed var(--mint);
   border-radius: 50%;
   background: rgba(14, 165, 233, 0.12);
   z-index: 1;
+  transition: background-color 0.2s, border-color 0.2s;
 }
+.mldRadius.isInside { border-style: solid; background: rgba(14, 165, 233, 0.24); }
 .mldPulse {
   position: absolute;
   inset: -2px;
@@ -88,7 +92,24 @@
   box-shadow: 0 3px 10px rgba(12, 27, 39, 0.25);
   z-index: 2;
 }
-.mldPin { transition: background-color 0.3s; }
+.mldPin { transition: background-color 0.3s, box-shadow 0.2s; }
+/* 커서가 된 민재 — 핀이 커서를 가리지 않게 이벤트를 통과시킨다 */
+.mldPin.isCursor { z-index: 6; pointer-events: none; transition: background-color 0.15s; }
+.mldPin.isHover { z-index: 6; box-shadow: 0 0 0 5px rgba(14, 165, 233, 0.35), 0 4px 14px rgba(12, 27, 39, 0.35); }
+.mldPinTip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  translate: -50% 0;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
 .mldPin.isNear { background: var(--mint); }
 
 .mldAlert {
@@ -112,18 +133,25 @@
 }
 .mldAlertDot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
 
-/* 패널 — 아래쪽 38% */
+/* 패널 — 지도 위에 떠 있는 작은 카드 */
 .mldPanel {
   position: absolute;
-  inset: 62% 0 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 18px 16px;
-  border-top: 1px solid var(--line);
-  background: var(--surface);
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(12, 27, 39, 0.16);
+  backdrop-filter: blur(8px);
 }
-.mldPanelHead { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.mldPanelHead { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .mldPanelHead strong { color: var(--ink); font-weight: 800; }
 .mldPanelHead span {
   padding: 3px 8px;
@@ -134,7 +162,7 @@
   font-weight: 700;
 }
 
-.mldList { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.mldList { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; }
 .mldList li {
   display: flex;
   align-items: center;
@@ -145,7 +173,8 @@
   border-radius: 10px;
   font-size: 12px;
 }
-.mldList li { transition: border-color 0.3s, background-color 0.3s; }
+.mldList li { cursor: default; transition: border-color 0.2s, background-color 0.2s; }
+.mldList li.isHover { border-color: var(--mint); background: var(--accent-soft); }
 .mldList li.isNear { border-color: var(--mint); background: var(--accent-soft); }
 .mldAvatar {
   flex: 0 0 22px;
@@ -162,20 +191,22 @@
 .mldList li.isNear .mldAvatar { background: var(--mint); }
 .mldName { color: var(--ink); font-weight: 700; }
 .mldDist { position: relative; margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mldDistLive.isNear { color: var(--mint-dark); font-weight: 800; }
 .mldDistNear { position: absolute; right: 0; color: var(--mint-dark); font-weight: 800; }
 
 /* 하단 액션 — 매칭 전: 버튼 하나 / 매칭 후: 같은 자리가 완료 배지로 바뀐다 (높이 고정이라 아래가 출렁이지 않음) */
-.mldAction { position: relative; margin-top: auto; padding-top: 4px; }
+.mldAction { grid-column: 2; grid-row: 1; }
 .mldJoin,
 .mldMatched {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 0 18px;
+  min-height: 32px;
+  padding: 0 14px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
   box-sizing: border-box;
 }
 .mldJoin { background: var(--mint); color: var(--surface); }
@@ -198,8 +229,8 @@
 
 .mldReplay {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
+  left: 12px;
+  top: 12px;
   padding: 7px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -214,7 +245,7 @@
 .mldCredit {
   position: absolute;
   right: 6px;
-  top: calc(62% - 16px);
+  top: 4px;
   padding: 0 3px;
   background: rgba(255, 255, 255, 0.86);
   color: var(--muted);
@@ -223,11 +254,10 @@
   z-index: 5;
 }
 
-/* 좁은 카드 — 라이더 목록을 세로로, 패널을 더 길게 */
+/* 좁은 카드 — 지도 위, 패널 아래. 라이더 목록은 세로로 */
 @container (max-width: 460px) {
   .mldMap { inset: 0 0 48% 0; }
-  .mldPanel { inset: 52% 0 0 0; padding: 12px 14px 14px; }
-  .mldCredit { top: calc(52% - 16px); }
+  .mldPanel { inset: 52% 0 0 0; align-content: start; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: var(--surface); box-shadow: none; backdrop-filter: none; padding: 12px 14px 14px; }
   .mldList { grid-template-columns: 1fr; gap: 5px; }
   .mldList li { padding: 5px 8px; }
   .mldAlert { font-size: 12px; padding: 7px 11px; }

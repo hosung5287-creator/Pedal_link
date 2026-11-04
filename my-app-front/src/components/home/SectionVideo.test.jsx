@@ -43,12 +43,3 @@ test('움직임 줄이기 설정이면 자동 재생하지 않는다', () => {
   expect(playSpy).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: copy.play })).toBeInTheDocument();
 });
-
-test('단계 표시: 지금 단계를 표시하고, 누르면 영상이 그 단계로 이동한다', () => {
-  render(<ShowcaseSection {...homeCourse} />);
-  const steps = homeCourse.video.steps;
-  expect(screen.getByRole('button', { name: new RegExp(steps[0].title) })).toHaveAttribute('aria-current', 'step');
-  fireEvent.click(screen.getByRole('button', { name: new RegExp(steps[2].title) }));
-  expect(screen.getByLabelText(copy.aria).currentTime).toBeCloseTo(steps[2].at);
-  expect(screen.getByRole('button', { name: new RegExp(steps[2].title) })).toHaveAttribute('aria-current', 'step');
-});

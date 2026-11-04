@@ -1,48 +1,62 @@
 import '../styles/home.css';
 import '../styles/home-draft.css';
 
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MotionConfig } from 'framer-motion';
-import { text, homeDraft as d, homeFooter, homeCourse, homeMatch, homeBrowse } from '../constants';
+import { text, homeDraft as d, homeFooter, homeCourse } from '../constants';
 import BrandLogo from '../components/BrandLogo';
 import UserMenu from '../components/UserMenu';
-import ShowcaseSection from '../components/home/ShowcaseSection';
-import SplitSection from '../components/home/SplitSection';
 import MatchLiveDemo from '../components/home/MatchLiveDemo';
-import TogetherSection from '../components/home/TogetherSection';
 import FeedMarquee from '../components/home/FeedMarquee';
 import SectionVideo from '../components/home/SectionVideo';
+import RideReportDemo from '../components/home/RideReportDemo';
+import PartyPlay from '../components/home/PartyPlay';
+import CrewPlay from '../components/home/CrewPlay';
 import SiteFooter from '../components/home/SiteFooter';
+import HeroVideo from '../components/home/HeroVideo';
+import StartCards from '../components/home/StartCards';
+import FeatureSplit from '../components/home/FeatureSplit';
+import SectionMenu from '../components/home/SectionMenu';
+import { useSmoothScroll } from '../hooks/useSmoothScroll';
+import '../styles/home-ltx.css';
 
-// 메인 홈 (/) — Meta Muse 페이지의 섹션 '구조'만 참고한 뼈대.
-// 문구·영상·이미지는 전부 자리표시(.hdSlot)라 나중에 교체한다. 이전 홈은 /home-old 에서 볼 수 있다.
-
-// 영상·이미지가 들어갈 자리
-function Slot({ label, className = '' }) {
-  return <div className={`hdSlot ${className}`} aria-hidden="true"><span>{label}</span></div>;
-}
-
-function SectionHead({ eyebrow, title, sub, cta, onCta }) {
-  return (
-    <div className="hdHead">
-      <div>
-        {eyebrow && <span className="hdEyebrow">{eyebrow}</span>}
-        {title && <h2>{title}</h2>}
-        {sub && <p>{sub}</p>}
-      </div>
-      {cta && <button type="button" className="hdCta" onClick={onCta}>{cta}</button>}
-    </div>
-  );
-}
+// 메인 홈 (/) — 히어로 아래 모든 섹션이 같은 틀(FeatureSplit). 틀·연출은 LTX 모델 페이지를 참고했고, 색은 PedalLink 그대로다.
+// 스타일은 home-ltx.css. 이전 홈은 /home-old 에서 볼 수 있다.
 
 export default function HomeDraftPage({
   user, onMoveHome, onMoveParty, onOpenMap, onMoveBrowse, onMoveCrew,
   onMoveLogin, onMoveSignup, onMoveProfile, onMoveSettings, onLogout,
 }) {
+  const hero = useRef(null);
+  const feedMark = useRef(null);
+  const courseMark = useRef(null);
+  const partyMark = useRef(null);
+  const crewMark = useRef(null);
+  const matchMark = useRef(null);
+  const reportMark = useRef(null);
+  const marks = useMemo(() => ({ feed: feedMark, course: courseMark, party: partyMark, crew: crewMark, match: matchMark, report: reportMark }), []);
+  const [solid, setSolid] = useState(false);
+  const s = d.sections;
+  const go = { map: onOpenMap, party: onMoveParty, crew: onMoveCrew, browse: onMoveBrowse, profile: user ? onMoveProfile : onMoveLogin };
+  const onAction = (to) => go[to];
+  useSmoothScroll();
+
+  // 히어로를 지나면 네비를 밝은 반투명 판으로 (영상 위에선 투명·흰 글씨)
+  useEffect(() => {
+    const onScroll = () => setSolid(window.scrollY > (hero.current?.offsetHeight ?? 0) - 90);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, []);
+
   return (
     <div className="app homePage homeDraft">
-      {/* 1. 히어로 — 풀스크린 영상 + 짧은 제목 + 버튼 2개 */}
-      <section className="hdHero">
-        <Slot className="hdHeroMedia" label={d.hero.mediaLabel} />
+      {/* 스크롤해도 따라오는 네비 — 위치는 이전 홈과 같다 */}
+      <header className={`hdTopbar${solid ? ' isSolid' : ''}`}>
         {/* 이전 홈과 같은 네비 — 링크는 화면 정중앙, 오른쪽에 로그인·지도 버튼 (전 탭 네비 위치 통일) */}
         <nav className="navbar" aria-label={text.nav}>
           <a className="brand" href="/" onClick={onMoveHome}><BrandLogo className="brandLogo" />PedalLink</a>
@@ -64,6 +78,11 @@ export default function HomeDraftPage({
             <button className="appButton" type="button" onClick={onOpenMap}>{text.mapButton}</button>
           </div>
         </nav>
+      </header>
+
+      {/* 1. 히어로 — 풀스크린 영상 + 짧은 제목 + 버튼 2개 */}
+      <section className="hdHero" ref={hero}>
+        <HeroVideo {...d.hero.video} />
         <div className="hdHeroText">
           <span className="hdEyebrow">{d.hero.eyebrow}</span>
           <h1>{d.hero.title}</h1>
@@ -76,22 +95,39 @@ export default function HomeDraftPage({
 
       <MotionConfig reducedMotion="user">
         <main>
-          {/* 2. 주요 기능 — 이전 홈의 코스·매칭·파티 시연 (코드로 움직이는 화면) */}
-          <ShowcaseSection {...homeCourse} onCta={onOpenMap} />
-          <SplitSection {...homeMatch} media={<MatchLiveDemo />} />
-          <TogetherSection />
+          <div className="lxContent">
+            {/* 2. 소개 — PedalLink + 섹션 메뉴. 메뉴는 아래 네 섹션을 따라온다 */}
+            <section className="lxIntro" aria-label={d.intro.title}>
+              <h2>{d.intro.title}</h2>
+              <p>{d.intro.sub}</p>
+            </section>
 
-          {/* 6. 둘러보기 — 이전 홈의 흐르는 피드 (아래에서 위로 자동으로 올라감) */}
-          <SplitSection {...homeBrowse} reverse media={<FeedMarquee />} />
+            <div className="lxGroup">
+              <SectionMenu label={d.intro.menuLabel} items={d.intro.menu} marks={marks} />
 
-          {/* 7. 플로팅 버튼 — 시연 영상 */}
-          <section className="hdSection">
-            <div className="hdInner">
-              <SectionHead eyebrow={d.dock.eyebrow} title={d.dock.title} sub={d.dock.sub} cta={d.dock.cta} onCta={onMoveParty} />
-              <SectionVideo {...d.dock.video} />
+              <span ref={feedMark} className="lxMark" aria-hidden="true" />
+              <FeatureSplit {...s.feed} onAction={onAction} coverRef={partyMark} media={<div className="fsFrame isTall"><FeedMarquee /></div>} />
+
+              <span ref={partyMark} className="lxMark" aria-hidden="true" />
+              <FeatureSplit {...s.party} tone="wash" onAction={onAction} coverRef={crewMark} media={<div className="fsFrame isPlay"><PartyPlay onOpenParty={onMoveParty} /></div>} />
+
+              <span ref={crewMark} className="lxMark" aria-hidden="true" />
+              <FeatureSplit {...s.crew} onAction={onAction} coverRef={courseMark} media={<div className="fsFrame isPlay"><CrewPlay onOpenCrew={onMoveCrew} /></div>} />
+
+              <span ref={courseMark} className="lxMark" aria-hidden="true" />
+              <FeatureSplit {...s.course} id="instant" tone="wash" onAction={onAction} coverRef={matchMark} media={<SectionVideo {...homeCourse.video} />} />
+
+              <span ref={matchMark} className="lxMark" aria-hidden="true" />
+              <FeatureSplit {...s.match} onAction={onAction} coverRef={reportMark} media={<div className="fsFrame isTall"><MatchLiveDemo /></div>} />
+
+              <span ref={reportMark} className="lxMark" aria-hidden="true" />
+              <FeatureSplit {...s.report} tone="wash" onAction={onAction} media={<div className="fsFrame isReport isPlay"><RideReportDemo /></div>} />
             </div>
-          </section>
 
+            <FeatureSplit {...s.start} onAction={onAction} media={<div className="fsFrame isCards"><StartCards {...d.start} onCourse={onOpenMap} onParty={onMoveParty} onFeed={onMoveBrowse} /></div>} />
+          </div>
+
+          {/* 본문이 위로 올라가면서 뒤에 깔린 푸터가 드러난다 */}
           <SiteFooter {...homeFooter} />
         </main>
       </MotionConfig>

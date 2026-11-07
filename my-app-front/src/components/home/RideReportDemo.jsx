@@ -64,7 +64,7 @@ function summarize(rides) {
       { key: 'endurance', pct: 72, value: `${Math.round(km).toLocaleString()}km` },
       { key: 'climbing', pct: 58, value: `${ascend.toLocaleString()}m` },
       { key: 'speed', pct: (speed / 30) * 100, value: `${speed.toFixed(1)}km/h` },
-      { key: 'consistency', pct: (rides.length / 80) * 100, value: `${rides.length}회` },
+      { key: 'consistency', pct: (rides.length / 80) * 100, value: `${rides.length}${t.countUnit}` },
     ],
   };
 }

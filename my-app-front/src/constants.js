@@ -146,6 +146,8 @@ export const text = {
   partyFormTitle: '링크 제목 (선택)',
   partyFormTitlePlaceholder: '예) 한강 노을 라이딩 같이 타요',
   partyCreate: '개설하기',
+  partyCreating: '만드는 중…',
+  routeUnnamed: '이름없음',
   partyCancel: '취소',
   partyFull: '모집 완료',
   partyMembers: '명',
@@ -1119,6 +1121,7 @@ export const homeDraft = {
   report: {
     heading: 'AI 라이딩 리포트',
     by: 'Gemini 분석 · 예시',
+    countUnit: '회',
     statsTitle: '라이딩 통계',
     abilityTitle: '라이더 역량',
     stats: { rides: '라이딩 횟수', km: '총 거리(km)', hours: '총 시간(h)', ascend: '총 상승고도(m)', perKm: 'km당 상승(m)', mountain: '산악 코스 완주' },

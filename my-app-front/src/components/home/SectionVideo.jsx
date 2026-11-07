@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useReducedMotion } from 'framer-motion';
+import { useInView, useReducedMotion } from 'framer-motion';
 import './section-video.css';
 
 // jsdom·저전력 모드 등에서 play() 가 막혀도 조용히 넘어간다
@@ -26,14 +26,7 @@ export default function SectionVideo({ src, poster, copy }) {
   }, [visible, paused]);
 
   return (
-    <motion.div
-      className="cvd"
-      ref={wrap}
-      initial={reduced ? false : { filter: 'blur(16px)' }}
-      whileInView={{ filter: 'blur(0px)' }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.5, ease: [0.215, 0.61, 0.355, 1] }}
-    >
+    <div className="cvd" ref={wrap}>
       <div className="cvdFrame">
         <video
           ref={video}
@@ -55,6 +48,6 @@ export default function SectionVideo({ src, poster, copy }) {
           <span aria-hidden="true">{paused ? '▶' : '❚❚'}</span>
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }

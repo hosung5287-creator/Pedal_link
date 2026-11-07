@@ -103,9 +103,25 @@
   .pplMap,
   .pplStageFoot { width: 100%; }
   .ppl .pplAgain { top: 14px; right: 8px; }
-  .ppl .partyGrid,
-  .cpl .crewGrid,
   .cplCols { grid-template-columns: 1fr; }
+  .ppl .partyGrid,
+  .cpl .crewGrid {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-inline: -12px;
+    padding: 2px 12px 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 12px;
+    scrollbar-width: none;
+  }
+  .ppl .partyGrid::-webkit-scrollbar,
+  .cpl .crewGrid::-webkit-scrollbar { display: none; }
+  .ppl .partyGrid > .partyCard,
+  .cpl .crewGrid > .crewCard { flex: 0 0 84%; min-width: 0; scroll-snap-align: start; }
+  .cpl .crewCardCover { height: 150px; }
   .pplRider { width: 26px; height: 26px; margin: -13px 0 0 -13px; font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) {

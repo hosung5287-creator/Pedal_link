@@ -7,13 +7,26 @@ import 'lenis/dist/lenis.css';
 export function useSmoothScroll() {
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-    const lenis = new Lenis({
-      lerp: 0.1,
-      autoRaf: true,
-      allowNestedScroll: true, // 도크·모달 안쪽 목록은 안쪽이 먼저 스크롤
-      prevent: (node) => Boolean(node.closest?.('.partyDock, .composeBackdrop')),
-    });
-    return () => lenis.destroy();
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let lenis = null;
+    const sync = () => {
+      if (media.matches) {
+        lenis?.destroy();
+        lenis = null;
+      } else if (!lenis) {
+        lenis = new Lenis({
+          lerp: 0.1,
+          autoRaf: true,
+          allowNestedScroll: true, // 도크·모달 안쪽 목록은 안쪽이 먼저 스크롤
+          prevent: (node) => Boolean(node.closest?.('.partyDock, .composeBackdrop')),
+        });
+      }
+    };
+    sync();
+    media.addEventListener?.('change', sync);
+    return () => {
+      media.removeEventListener?.('change', sync);
+      lenis?.destroy();
+    };
   }, []);
 }

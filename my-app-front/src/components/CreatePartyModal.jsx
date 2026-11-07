@@ -100,7 +100,7 @@ export default function CreatePartyModal({ user, onClose, onCreate }) {
               </div>
               {route && (
                 <div className="cpmPreviewInfo">
-                  <strong>{route.routeName || '이름없음'}</strong>
+                  <strong>{route.routeName || text.routeUnnamed}</strong>
                   <span>{route.fromLabel} → {route.toLabel}{route.distanceKm != null ? ` · ${route.distanceKm}km` : ''}</span>
                 </div>
               )}
@@ -117,7 +117,7 @@ export default function CreatePartyModal({ user, onClose, onCreate }) {
                       <label key={r.id} className={`cpmRoute${checked ? ' isSelected' : ''}`}>
                         <input type="radio" name="party-route" value={r.id} checked={checked}
                                onChange={(e) => setRouteId(e.target.value)} />
-                        <span className="cpmRouteName">{r.routeName || '이름없음'}</span>
+                        <span className="cpmRouteName">{r.routeName || text.routeUnnamed}</span>
                         <span className="cpmRouteMeta">
                           {r.fromLabel} → {r.toLabel}{r.distanceKm != null ? ` · ${r.distanceKm}km` : ''}
                         </span>
@@ -154,7 +154,7 @@ export default function CreatePartyModal({ user, onClose, onCreate }) {
               <div className="composeActions">
                 <button type="button" className="composeGhostBtn" onClick={onClose}>{text.partyCancel}</button>
                 <button type="submit" className="composePrimaryBtn" disabled={submitting || !startAt}>
-                  {submitting ? '만드는 중…' : text.partyCreate}
+                  {submitting ? text.partyCreating : text.partyCreate}
                 </button>
               </div>
             </div>

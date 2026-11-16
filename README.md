@@ -1,5 +1,7 @@
 # 페달링크 (Pedal Link)
 
+
+
 > 서울 자전거 경로 안내 및 협동 라이딩 웹 플랫폼 — 코스를 만들고, 근처 라이더와 함께 달리고, 기록을 나눈다
 
 | 항목 | 내용 |
@@ -21,6 +23,38 @@
 - [부록. 작업계획일정(11주) 대비 실적](#부록-작업계획일정11주-대비-실적)
 
 ---
+
+## 종속성 설치
+```powershell
+cd my-app-front
+npm install
+```
+백엔드 의존성은 Gradle이 처음 실행할 때 자동으로 받습니다.
+
+## 개발 실행
+```powershell
+# 백엔드 (처음 한 번: 예제를 복사한 뒤 DB 비밀번호 입력)
+cd my-app-backend
+Copy-Item src\main\resources\application.properties.example src\main\resources\application.properties
+.\gradlew bootRun          # http://localhost:8080
+
+# 프론트 (새 터미널)
+cd my-app-front
+npm start                  # http://localhost:3000
+```
+
+## 빌드
+```powershell
+cd my-app-front
+npm run build              # 결과: my-app-front/build/
+
+cd my-app-backend
+.\gradlew bootJar          # 결과: my-app-backend/build/libs/*.jar
+```
+
+
+---
+
 
 ## 개발 단계 한눈에
 
